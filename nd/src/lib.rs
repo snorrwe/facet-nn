@@ -15,9 +15,18 @@ pub struct NdArrayD {
 #[pymethods]
 impl NdArrayD {
     #[new]
-    pub fn new(dims: Vec<u32>) -> Self {
+    pub fn new(shape: Vec<u32>) -> Self {
         Self {
-            inner: NdArray::new(dims.into_boxed_slice()),
+            inner: NdArray::new(shape.into_boxed_slice()),
+        }
+    }
+
+    pub fn shape(&self) -> Vec<u32> {
+        match self.inner.shape() {
+            ndarray::shape::NdArrayShape::Scalar => vec![],
+            ndarray::shape::NdArrayShape::Vector(n) => vec![*n],
+            ndarray::shape::NdArrayShape::Matrix(n, m) => vec![*n, *m],
+            ndarray::shape::NdArrayShape::Nd(s) => s.clone().into_vec(),
         }
     }
 
@@ -41,7 +50,14 @@ impl NdArrayD {
 
     // TODO __str__
     pub fn to_string(&self) -> String {
-        let depth = self.inner.dims().len();
+        let depth = match self.inner.shape() {
+            ndarray::shape::NdArrayShape::Scalar => {
+                return format!("Scalar: {:?}", self.inner.get(&[]));
+            }
+            ndarray::shape::NdArrayShape::Vector(_) => 1,
+            ndarray::shape::NdArrayShape::Matrix(_, _) => 2,
+            ndarray::shape::NdArrayShape::Nd(s) => s.len(),
+        };
         let mut s = String::with_capacity(self.inner.len() * 4);
         for _ in 0..depth - 1 {
             s.push('[');
@@ -62,8 +78,8 @@ impl NdArrayD {
 
 /// Nd array of 64 bit floats
 #[pyfunction]
-pub fn make_ndf64(dims: Vec<u32>, values: Vec<f64>) -> PyResult<NdArrayD> {
-    let mut arr = NdArrayD::new(dims);
+pub fn make_ndf64(shape: Vec<u32>, values: Vec<f64>) -> PyResult<NdArrayD> {
+    let mut arr = NdArrayD::new(shape);
     if let Err(err) = arr.inner.set_slice(values.into_boxed_slice()) {
         return Err(PyValueError::new_err::<String>(format!("{}", err).into()));
     }
