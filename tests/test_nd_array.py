@@ -15,3 +15,11 @@ def test_setter_raises():
     arr = NdArrayD([12, 12, 12])
     with pytest.raises(ValueError):
         arr.set_values([23])
+
+
+def test_mat_mul():
+    a = NdArrayD([2, 3], [1, -2, 1, 2, 1, 3])
+    b = NdArrayD([3, 2], [2, 1, 3, 2, 1, 1])
+
+    c = a @ b
+    assert 0, str(c)

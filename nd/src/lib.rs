@@ -1,8 +1,10 @@
 pub mod ndarray;
 use std::fmt::Write;
 
-use ndarray::NdArray;
-use pyo3::{exceptions::PyValueError, prelude::*, wrap_pyfunction};
+use ndarray::{shape::Shape, NdArray};
+use pyo3::{
+    exceptions::PyValueError, prelude::*, wrap_pyfunction, PyNumberProtocol, PyObjectProtocol,
+};
 
 // TODO: once this is stable use a macro to generate for a variaty of types...
 //
@@ -12,22 +14,46 @@ pub struct NdArrayD {
     inner: NdArray<f64>,
 }
 
+#[pyproto]
+impl PyObjectProtocol for NdArrayD {
+    fn __str__(&self) -> String {
+        self.to_string()
+    }
+}
+
+#[pyproto]
+impl PyNumberProtocol for NdArrayD {
+    fn __matmul__(lhs: PyRef<'p, Self>, rhs: PyRef<'p, Self>) -> PyResult<Self> {
+        lhs.matmul(&*rhs)
+    }
+}
+
 #[pymethods]
 impl NdArrayD {
     #[new]
-    pub fn new(shape: Vec<u32>) -> Self {
-        Self {
-            inner: NdArray::new(shape.into_boxed_slice()),
-        }
+    pub fn new(shape: Vec<u32>, values: Option<Vec<f64>>) -> PyResult<Self> {
+        let inner = match values {
+            Some(v) => NdArray::new_with_values(shape.into_boxed_slice(), v.into_boxed_slice())
+                .map_err(|err| PyValueError::new_err::<String>(format!("{}", err).into()))?,
+            None => NdArray::new(shape.into_boxed_slice()),
+        };
+        Ok(Self { inner })
     }
 
     pub fn shape(&self) -> Vec<u32> {
         match self.inner.shape() {
-            ndarray::shape::NdArrayShape::Scalar => vec![],
-            ndarray::shape::NdArrayShape::Vector(n) => vec![*n],
-            ndarray::shape::NdArrayShape::Matrix(n, m) => vec![*n, *m],
-            ndarray::shape::NdArrayShape::Nd(s) => s.clone().into_vec(),
+            Shape::Scalar => vec![],
+            Shape::Vector(n) => vec![*n],
+            Shape::Matrix(n, m) => vec![*n, *m],
+            Shape::Nd(s) => s.clone().into_vec(),
         }
+    }
+
+    pub fn reshape(&mut self, new_shape: Vec<u32>) -> PyResult<()> {
+        self.inner
+            .reshape(Shape::from(new_shape))
+            .map_err(|err| PyValueError::new_err::<String>(format!("{}", err).into()))?;
+        Ok(())
     }
 
     pub fn get(&self, index: Vec<u32>) -> Option<f64> {
@@ -48,15 +74,22 @@ impl NdArrayD {
             .map_err(|err| PyValueError::new_err::<String>(format!("{}", err).into()))
     }
 
+    pub fn matmul(&self, other: &Self) -> PyResult<Self> {
+        self.inner
+            .matmul(&other.inner)
+            .map(|inner| Self { inner })
+            .map_err(|err| PyValueError::new_err::<String>(format!("{}", err).into()))
+    }
+
     // TODO __str__
     pub fn to_string(&self) -> String {
         let depth = match self.inner.shape() {
-            ndarray::shape::NdArrayShape::Scalar => {
+            Shape::Scalar => {
                 return format!("Scalar: {:?}", self.inner.get(&[]));
             }
-            ndarray::shape::NdArrayShape::Vector(_) => 1,
-            ndarray::shape::NdArrayShape::Matrix(_, _) => 2,
-            ndarray::shape::NdArrayShape::Nd(s) => s.len(),
+            Shape::Vector(_) => 1,
+            Shape::Matrix(_, _) => 2,
+            Shape::Nd(s) => s.len(),
         };
         let mut s = String::with_capacity(self.inner.len() * 4);
         for _ in 0..depth - 1 {
@@ -79,11 +112,7 @@ impl NdArrayD {
 /// Nd array of 64 bit floats
 #[pyfunction]
 pub fn make_ndf64(shape: Vec<u32>, values: Vec<f64>) -> PyResult<NdArrayD> {
-    let mut arr = NdArrayD::new(shape);
-    if let Err(err) = arr.inner.set_slice(values.into_boxed_slice()) {
-        return Err(PyValueError::new_err::<String>(format!("{}", err).into()));
-    }
-    Ok(arr)
+    NdArrayD::new(shape, Some(values))
 }
 
 #[pymodule]
