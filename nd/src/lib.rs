@@ -41,10 +41,6 @@ impl PyObjectProtocol for NdArrayD {
     /// elements.
     // TODO: return bool array
     fn __richcmp__(&'p self, other: PyRef<'p, Self>, op: CompareOp) -> PyResult<NdArrayD> {
-        let mut res = NdArray::<f64>::new_default([self.inner.values.len() as u32].into());
-        res.reshape(self.inner.shape.clone())
-            .map_err(|err| PyValueError::new_err::<String>(format!("{}", err).into()))?;
-
         // TODO: check shape and raise error on uncomparable shapes
         // TODO: support different shapes e.g. compare each element to a scalar
         let op: fn(f64, f64) -> bool = match op {
@@ -55,17 +51,16 @@ impl PyObjectProtocol for NdArrayD {
             CompareOp::Gt => |a, b| a > b,
             CompareOp::Ge => |a, b| a >= b,
         };
-        res.as_mut_slice()
-            .iter_mut()
-            .zip(
-                self.inner
-                    .as_slice()
-                    .iter()
-                    .zip(other.inner.as_slice().iter()),
-            )
-            .for_each(|(c, (a, b))| {
-                *c = if op(*a, *b) { 1.0 } else { 0.0 };
-            });
+        let values: Vec<_> = self
+            .inner
+            .as_slice()
+            .iter()
+            .zip(other.inner.as_slice().iter())
+            .map(|(a, b)| if op(*a, *b) { 1.0 } else { 0.0 })
+            .collect();
+        let mut res = NdArray::<f64>::new_vector(values.into());
+        res.reshape(self.inner.shape.clone())
+            .map_err(|err| PyValueError::new_err::<String>(format!("{}", err).into()))?;
         Ok(Self { inner: res })
     }
 }
