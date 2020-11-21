@@ -186,6 +186,6 @@ fn test_mat_mat_mul_many() {
 
     let c = a.matmul(&b).expect("matmul");
 
-    assert_eq!(c.shape, Shape::Nd([2, 2, 2].into()));
+    assert_eq!(c.shape, Shape::Tensor([2, 2, 2].into()));
     assert_eq!(c.as_slice(), &[5, -4, 4, 5, 5, -4, 4, 5]);
 }

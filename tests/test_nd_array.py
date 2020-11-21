@@ -43,3 +43,48 @@ def test_mat_mul_many():
     d = a.matmul(b)
     assert (c == exp).all()
     assert (c == d).all()
+
+
+def test_adding_scalar():
+    a = NdArrayD([0], [69])
+    b = NdArrayD([8, 8, 3], [0 for _ in range(8 * 8 * 3)])
+
+    c = a + b
+    d = b + a
+
+    assert (c == d).all()
+
+    exp = NdArrayD([8, 8, 3], [69 for _ in range(8 * 8 * 3)])
+
+    assert (c == exp).all()
+
+
+def test_adding_vectors():
+    a = NdArrayD([4], [i for i in range(4)])
+    b = NdArrayD([3, 4])
+
+    c = a + b
+    d = b + a
+
+    assert (c == d).all()
+
+    exp = NdArrayD([3, 4], [i for i in range(4)] * 3)
+
+    assert (c == exp).all()
+
+
+def test_adding_matrix_to_tensor():
+    a_template = [1, -2, 1, 2, 1, 3]
+    b_template = [2, 1, 3, 2, 1, 1]
+
+    a = NdArrayD([2, 3], a_template)
+    b = NdArrayD([8, 2, 3], b_template * 8)
+
+    c = a + b
+    d = b + a
+
+    assert (c == d).all()
+
+    exp = NdArrayD([8, 2, 3], [3, -1, 4, 4, 2, 4] * 8)
+
+    assert (c == exp).all()

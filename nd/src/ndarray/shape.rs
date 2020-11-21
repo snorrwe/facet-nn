@@ -4,7 +4,7 @@ pub enum Shape {
     Vector(u32),
     Matrix(u32, u32),
     /// Over 3 dimensions
-    Nd(Box<[u32]>),
+    Tensor(Box<[u32]>),
 }
 
 impl Shape {
@@ -12,7 +12,23 @@ impl Shape {
         match self {
             Shape::Scalar => None,
             Shape::Matrix(_, n) | Shape::Vector(n) => Some(*n),
-            Shape::Nd(ref s) => s.last().cloned(),
+            Shape::Tensor(ref s) => s.last().cloned(),
+        }
+    }
+
+    /// Return the last two dimensions. Effectively the shape of the matrices contained in the
+    /// shape.
+    pub fn last_two(&self) -> Option<[u32; 2]> {
+        match self {
+            Shape::Scalar => None,
+            Shape::Vector(_) => None,
+            Shape::Matrix(n, m) => Some([*n, *m]),
+            Shape::Tensor(shp) => {
+                let len = shp.len();
+                debug_assert!(len >= 3);
+                let [n, m] = [shp[len - 2], shp[len - 1]];
+                Some([n, m])
+            }
         }
     }
 
@@ -24,7 +40,31 @@ impl Shape {
             Shape::Scalar => 1,
             Shape::Vector(n) => *n as usize,
             Shape::Matrix(n, m) => *n as usize * *m as usize,
-            Shape::Nd(vals) => vals.iter().map(|x| *x as usize).product(),
+            Shape::Tensor(vals) => vals.iter().map(|x| *x as usize).product(),
+        }
+    }
+
+    /// Number of elements the last `i` dimensions of this shape spans
+    ///
+    /// If the total number of dimensions is less than `i` then all are counted
+    pub fn last_span(&self, i: u32) -> usize {
+        if i == 0 {
+            return 0;
+        }
+        match self {
+            Shape::Scalar => 1,
+            Shape::Vector(i) => *i as usize,
+            Shape::Matrix(n, m) => {
+                if i <= 1 {
+                    *m as usize
+                } else {
+                    *n as usize * *m as usize
+                }
+            }
+            Shape::Tensor(shp) => shp[shp.len() - (i as usize).min(shp.len())..]
+                .iter()
+                .map(|x| *x as usize)
+                .product(),
         }
     }
 }
@@ -35,7 +75,7 @@ impl From<Box<[u32]>> for Shape {
             0 | 1 if shape[0] == 0 => Shape::Scalar,
             1 => Shape::Vector(shape[0]),
             2 => Shape::Matrix(shape[0], shape[1]),
-            _ => Shape::Nd(shape),
+            _ => Shape::Tensor(shape),
         }
     }
 }
@@ -46,7 +86,7 @@ impl From<Vec<u32>> for Shape {
             0 | 1 if shape[0] == 0 => Shape::Scalar,
             1 => Shape::Vector(shape[0]),
             2 => Shape::Matrix(shape[0], shape[1]),
-            _ => Shape::Nd(shape.into()),
+            _ => Shape::Tensor(shape.into()),
         }
     }
 }

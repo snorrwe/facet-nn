@@ -1,9 +1,10 @@
 pub mod column_iter;
 pub mod shape;
 
+mod arithmetic;
 mod matrix;
 mod scalar;
-use column_iter::{ColumnIter, ColumnMutIter};
+use column_iter::{ColumnIter, ColumnIterMut};
 pub use scalar::*;
 
 #[cfg(test)]
@@ -17,6 +18,8 @@ use shape::Shape;
 pub enum NdArrayError {
     #[error("DimensionMismatch error, expected: {expected}, actual: {actual}")]
     DimensionMismatch { expected: usize, actual: usize },
+    #[error("DimensionMismatch error, expected: {expected:?}, actual: {actual:?}")]
+    ShapeMismatch { expected: Shape, actual: Shape },
     #[error("Binary operation between the given shapes is not supported. Shape A: {shape_a:?} Shape B: {shape_b:?}")]
     BinaryOpNotSupported { shape_a: Shape, shape_b: Shape },
 }
@@ -25,6 +28,18 @@ pub enum NdArrayError {
 pub struct NdArray<T> {
     pub(crate) shape: Shape,
     pub(crate) values: Box<[T]>,
+}
+
+impl<T> Clone for NdArray<T>
+where
+    T: Clone,
+{
+    fn clone(&self) -> Self {
+        Self {
+            shape: self.shape.clone(),
+            values: self.values.clone(),
+        }
+    }
 }
 
 unsafe impl<T> Send for NdArray<T> {}
@@ -49,7 +64,7 @@ where
             }
             // multiply the internal array with the scalar and sum it
             (Shape::Scalar, Shape::Matrix(_, _))
-            | (Shape::Scalar, Shape::Nd(_))
+            | (Shape::Scalar, Shape::Tensor(_))
             | (Shape::Scalar, Shape::Vector(_)) => {
                 return self.values.get(0).map(|a| {
                     other
@@ -61,7 +76,7 @@ where
             // multiply the internal array with the scalar and sum it
             (Shape::Vector(_), Shape::Scalar)
             | (Shape::Matrix(_, _), Shape::Scalar)
-            | (Shape::Nd(_), Shape::Scalar) => {
+            | (Shape::Tensor(_), Shape::Scalar) => {
                 return other.values.get(0).map(|a| {
                     self.values
                         .iter()
@@ -87,7 +102,7 @@ where
                 }
             }
 
-            (Shape::Nd(shape), Shape::Vector(n)) | (Shape::Vector(n), Shape::Nd(shape)) => {
+            (Shape::Tensor(shape), Shape::Vector(n)) | (Shape::Vector(n), Shape::Tensor(shape)) => {
                 if shape.last()? != n {
                     return None;
                 }
@@ -103,7 +118,7 @@ where
 
             // Frobenius inner product for nd arrays
             //
-            (Shape::Matrix(c, r), Shape::Nd(s)) | (Shape::Nd(s), Shape::Matrix(c, r)) => {
+            (Shape::Matrix(c, r), Shape::Tensor(s)) | (Shape::Tensor(s), Shape::Matrix(c, r)) => {
                 if s.last()? != r {
                     return None;
                 }
@@ -112,7 +127,7 @@ where
                     return None;
                 }
             }
-            (Shape::Nd(sa), Shape::Nd(sb)) => {
+            (Shape::Tensor(sa), Shape::Tensor(sb)) => {
                 // column size mismatch
                 if sa.last()? != sb.last()? {
                     return None;
@@ -250,7 +265,7 @@ impl<T> NdArray<T> {
                 let i = get_index(1, &[*n, *m], index)?;
                 self.values.get(i)
             }
-            Shape::Nd(shape) => {
+            Shape::Tensor(shape) => {
                 let i = get_index(1, shape, index)?;
                 self.values.get(i)
             }
@@ -265,7 +280,7 @@ impl<T> NdArray<T> {
                 let i = get_index(1, &[*n, *m], index)?;
                 self.values.get_mut(i)
             }
-            Shape::Nd(shape) => {
+            Shape::Tensor(shape) => {
                 let i = get_index(1, shape, index)?;
                 self.values.get_mut(i)
             }
@@ -305,7 +320,7 @@ impl<T> NdArray<T> {
                 let i = i * m;
                 Some(&self.as_slice()[i..i + m])
             }
-            Shape::Nd(shape) => {
+            Shape::Tensor(shape) => {
                 let w = *shape.last().unwrap() as usize;
                 let i = get_index(
                     w,
@@ -331,7 +346,7 @@ impl<T> NdArray<T> {
                 let i = i * m;
                 Some(&mut self.as_mut_slice()[i..i + m])
             }
-            Shape::Nd(shape) => {
+            Shape::Tensor(shape) => {
                 let w = *shape.last().unwrap() as usize;
                 let i = get_index(
                     w,
@@ -349,7 +364,7 @@ impl<T> NdArray<T> {
     }
 
     pub fn iter_cols_mut(&mut self) -> impl Iterator<Item = &mut [T]> {
-        ColumnMutIter::new(&mut self.values, self.shape.last().unwrap_or(0) as usize)
+        ColumnIterMut::new(&mut self.values, self.shape.last().unwrap_or(0) as usize)
     }
 
     pub fn len(&self) -> usize {

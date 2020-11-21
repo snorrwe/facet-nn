@@ -69,6 +69,13 @@ impl PyNumberProtocol for NdArrayD {
     fn __matmul__(lhs: PyRef<'p, Self>, rhs: PyRef<'p, Self>) -> PyResult<Self> {
         lhs.matmul(&*rhs)
     }
+
+    fn __add__(lhs: PyRef<'p, Self>, rhs: PyRef<'p, Self>) -> PyResult<Self> {
+        lhs.inner
+            .add(&rhs.inner)
+            .map(|inner| Self { inner })
+            .map_err(|err| PyValueError::new_err::<String>(format!("{}", err).into()))
+    }
 }
 
 #[pymethods]
@@ -88,7 +95,7 @@ impl NdArrayD {
             Shape::Scalar => vec![],
             Shape::Vector(n) => vec![*n],
             Shape::Matrix(n, m) => vec![*n, *m],
-            Shape::Nd(s) => s.clone().into_vec(),
+            Shape::Tensor(s) => s.clone().into_vec(),
         }
     }
 
@@ -142,7 +149,7 @@ impl NdArrayD {
             }
             Shape::Vector(_) => 1,
             Shape::Matrix(_, _) => 2,
-            Shape::Nd(s) => s.len(),
+            Shape::Tensor(s) => s.len(),
         };
         let mut s = String::with_capacity(self.inner.len() * 4);
         for _ in 0..depth - 1 {

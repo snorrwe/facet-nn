@@ -31,13 +31,13 @@ impl<'a, T> Iterator for ColumnIter<'a, T> {
     }
 }
 
-pub struct ColumnMutIter<'a, T> {
+pub struct ColumnIterMut<'a, T> {
     arr: &'a mut [T],
     column_size: usize,
     current: usize,
 }
 
-impl<'a, T> ColumnMutIter<'a, T> {
+impl<'a, T> ColumnIterMut<'a, T> {
     pub fn new(arr: &'a mut [T], column_size: usize) -> Self {
         Self {
             arr,
@@ -47,7 +47,7 @@ impl<'a, T> ColumnMutIter<'a, T> {
     }
 }
 
-impl<'a, T> Iterator for ColumnMutIter<'a, T> {
+impl<'a, T> Iterator for ColumnIterMut<'a, T> {
     type Item = &'a mut [T];
 
     fn next(&mut self) -> Option<Self::Item> {
