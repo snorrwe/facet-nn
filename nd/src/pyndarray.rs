@@ -76,6 +76,27 @@ impl PyNumberProtocol for NdArrayD {
             .map(|inner| Self { inner })
             .map_err(|err| PyValueError::new_err::<String>(format!("{}", err).into()))
     }
+
+    fn __sub__(lhs: PyRef<'p, Self>, rhs: PyRef<'p, Self>) -> PyResult<Self> {
+        lhs.inner
+            .sub(&rhs.inner)
+            .map(|inner| Self { inner })
+            .map_err(|err| PyValueError::new_err::<String>(format!("{}", err).into()))
+    }
+
+    fn __mul__(lhs: PyRef<'p, Self>, rhs: PyRef<'p, Self>) -> PyResult<Self> {
+        lhs.inner
+            .mul(&rhs.inner)
+            .map(|inner| Self { inner })
+            .map_err(|err| PyValueError::new_err::<String>(format!("{}", err).into()))
+    }
+
+    fn __truediv__(lhs: PyRef<'p, Self>, rhs: PyRef<'p, Self>) -> PyResult<Self> {
+        lhs.inner
+            .div(&rhs.inner)
+            .map(|inner| Self { inner })
+            .map_err(|err| PyValueError::new_err::<String>(format!("{}", err).into()))
+    }
 }
 
 #[pymethods]

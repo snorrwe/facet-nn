@@ -1,35 +1,31 @@
 //! Basic arithmetic operations
 //!
-use std::ops::{Add, AddAssign};
+use std::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Sub, SubAssign};
 
 use super::{column_iter::ColumnIterMut, shape::Shape, NdArray, NdArrayError};
 
-impl<'a, T> NdArray<T>
-where
-    &'a T: Add<&'a T>,
-    T: Add<T, Output = T> + AddAssign + Copy + 'a,
-{
-    pub fn add(&self, rhs: &Self) -> Result<Self, NdArrayError> {
-        match (&self.shape, &rhs.shape) {
+macro_rules! arithimpl {
+    ($opeq: tt, $op: tt, $lhs: ident, $rhs: ident) =>{
+        match (&$lhs.shape, &$rhs.shape) {
             (Shape::Scalar, Shape::Scalar) => Ok(NdArray::<T> {
-                values: [self.values[0] + rhs.values[0]].into(),
+                values: [$lhs.values[0] $op $rhs.values[0]].into(),
                 shape: Shape::Scalar,
             }),
             // add the scalar to all elements
             (Shape::Scalar, Shape::Vector(_))
             | (Shape::Scalar, Shape::Matrix(_, _))
             | (Shape::Scalar, Shape::Tensor(_)) => {
-                let mut res = rhs.clone();
-                let val = self.values[0];
-                res.values.iter_mut().for_each(|x| *x += val);
+                let mut res = $rhs.clone();
+                let val = $lhs.values[0];
+                res.values.iter_mut().for_each(|x| *x $opeq val);
                 Ok(res)
             }
             (Shape::Vector(_), Shape::Scalar)
             | (Shape::Matrix(_, _), Shape::Scalar)
             | (Shape::Tensor(_), Shape::Scalar) => {
-                let mut res = self.clone();
-                let val = rhs.values[0];
-                res.values.iter_mut().for_each(|x| *x += val);
+                let mut res = $lhs.clone();
+                let val = $rhs.values[0];
+                res.values.iter_mut().for_each(|x| *x $opeq val);
                 Ok(res)
             }
 
@@ -43,14 +39,14 @@ where
                         actual: b.clone(),
                     });
                 }
-                let values: Vec<_> = self
+                let values: Vec<_> = $lhs
                     .values
                     .iter()
-                    .zip(rhs.values.iter())
-                    .map(|(a, b)| *a + *b)
+                    .zip($rhs.values.iter())
+                    .map(|(a, b)| *a $op *b)
                     .collect();
                 let res = NdArray::<T> {
-                    shape: self.shape.clone(),
+                    shape: $lhs.shape.clone(),
                     values: values.into_boxed_slice(),
                 };
                 Ok(res)
@@ -59,32 +55,32 @@ where
             // add vector to each column
             (Shape::Vector(l), Shape::Matrix(_, _)) | (Shape::Vector(l), Shape::Tensor(_)) => {
                 let l = *l;
-                if rhs.shape.last().expect("failed to get column shape") != l {
+                if $rhs.shape.last().expect("failed to get column shape") != l {
                     return Err(NdArrayError::DimensionMismatch {
                         expected: l as usize,
-                        actual: rhs.shape.last().expect("failed to get column shape") as usize,
+                        actual: $rhs.shape.last().expect("failed to get column shape") as usize,
                     });
                 }
-                let mut res = rhs.clone();
+                let mut res = $rhs.clone();
                 for col in res.iter_cols_mut() {
-                    for (a, b) in col.iter_mut().zip(self.values.iter()) {
-                        *a += *b;
+                    for (a, b) in col.iter_mut().zip($lhs.values.iter()) {
+                        *a $opeq *b;
                     }
                 }
                 Ok(res)
             }
             (Shape::Matrix(_, _), Shape::Vector(l)) | (Shape::Tensor(_), Shape::Vector(l)) => {
                 let l = *l;
-                if self.shape.last().expect("failed to get column shape") != l {
+                if $lhs.shape.last().expect("failed to get column shape") != l {
                     return Err(NdArrayError::DimensionMismatch {
                         expected: l as usize,
-                        actual: self.shape.last().expect("failed to get column shape") as usize,
+                        actual: $lhs.shape.last().expect("failed to get column shape") as usize,
                     });
                 }
-                let mut res = self.clone();
+                let mut res = $lhs.clone();
                 for col in res.iter_cols_mut() {
-                    for (a, b) in col.iter_mut().zip(rhs.values.iter()) {
-                        *a += *b;
+                    for (a, b) in col.iter_mut().zip($rhs.values.iter()) {
+                        *a $opeq *b;
                     }
                 }
                 Ok(res)
@@ -96,18 +92,18 @@ where
                 let [k, l] = shp.last_two().unwrap();
                 if n != k || m != l {
                     return Err(NdArrayError::ShapeMismatch {
-                        expected: self.shape.clone(),
+                        expected: $lhs.shape.clone(),
                         actual: shp.clone(),
                     });
                 }
 
-                let mut res = rhs.clone();
+                let mut res = $rhs.clone();
                 for submat in ColumnIterMut::new(&mut res.values, k as usize * l as usize) {
                     submat
                         .iter_mut()
-                        .zip(self.values.iter())
+                        .zip($lhs.values.iter())
                         .for_each(|(a, b)| {
-                            *a += *b;
+                            *a $opeq *b;
                         })
                 }
                 Ok(res)
@@ -117,19 +113,55 @@ where
                 let [k, l] = shp.last_two().unwrap();
                 if n != k || m != l {
                     return Err(NdArrayError::ShapeMismatch {
-                        expected: self.shape.clone(),
+                        expected: $lhs.shape.clone(),
                         actual: shp.clone(),
                     });
                 }
 
-                let mut res = self.clone();
+                let mut res = $lhs.clone();
                 for submat in ColumnIterMut::new(&mut res.values, k as usize * l as usize) {
-                    submat.iter_mut().zip(rhs.values.iter()).for_each(|(a, b)| {
-                        *a += *b;
+                    submat.iter_mut().zip($rhs.values.iter()).for_each(|(a, b)| {
+                        *a $opeq *b;
                     })
                 }
                 Ok(res)
             }
         }
+    }
+}
+
+impl<'a, T> NdArray<T>
+where
+    T: Add<T, Output = T> + AddAssign + Copy + 'a,
+{
+    pub fn add(&self, rhs: &Self) -> Result<Self, NdArrayError> {
+        arithimpl!(+=, +, self, rhs)
+    }
+}
+
+impl<'a, T> NdArray<T>
+where
+    T: Sub<T, Output = T> + SubAssign + Copy + 'a,
+{
+    pub fn sub(&self, rhs: &Self) -> Result<Self, NdArrayError> {
+        arithimpl!(-=, -, self, rhs)
+    }
+}
+
+impl<'a, T> NdArray<T>
+where
+    T: Mul<T, Output = T> + MulAssign + Copy + 'a,
+{
+    pub fn mul(&self, rhs: &Self) -> Result<Self, NdArrayError> {
+        arithimpl!(*=, *, self, rhs)
+    }
+}
+
+impl<'a, T> NdArray<T>
+where
+    T: Div<T, Output = T> + DivAssign + Copy + 'a,
+{
+    pub fn div(&self, rhs: &Self) -> Result<Self, NdArrayError> {
+        arithimpl!(/=, /, self, rhs)
     }
 }
