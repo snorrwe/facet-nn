@@ -3,6 +3,7 @@ pub enum Shape {
     Scalar,
     Vector(u32),
     Matrix(u32, u32),
+    /// Over 3 dimensions
     Nd(Box<[u32]>),
 }
 
@@ -15,7 +16,9 @@ impl Shape {
         }
     }
 
-    /// Total number of elements in an array this shape spans
+    /// Total number of elements in an array this shape spans.
+    ///
+    /// For NdArrays this is equal to the `len` of its value array
     pub fn span(&self) -> usize {
         match self {
             Shape::Scalar => 1,

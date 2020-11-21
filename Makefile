@@ -6,4 +6,4 @@ foo:
 
 test:
 	cd nd && cargo test && maturin develop
-	pytest tests
+	pytest tests -v

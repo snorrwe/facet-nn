@@ -1,7 +1,9 @@
+pub mod column_iter;
 pub mod shape;
 
 mod matrix;
 mod scalar;
+use column_iter::{ColumnIter, ColumnMutIter};
 use matrix::matmul;
 pub use scalar::*;
 
@@ -35,6 +37,32 @@ where
 {
     /// - Scalars not allowed.
     /// - Nd arrays are treated as a colection of matrices and are broadcast accordingly
+    ///
+    /// ## Nd arrays Example
+    ///
+    /// This example will take a single 2 by 3 matrix and multiply it with 2 3 by 2 matrices.
+    /// The output is 2(!) 2 by 2 matrices.
+    ///
+    /// ```
+    /// use nd::ndarray::NdArray;
+    /// use nd::ndarray::shape::Shape;
+    ///
+    /// // 2 by 3 matrix
+    /// let a = NdArray::new_with_values([2, 3].into(), [1, 2, -1, 2, 0, 1].into()).unwrap();
+    ///
+    /// // the same 3 by 2 matrix twice
+    /// let b = NdArray::new_with_values(
+    ///     [2, 3, 2].into(),
+    ///     [3, 1, 0, -1, -2, 3, /*|*/ 3, 1, 0, -1, -2, 3].into(),
+    /// )
+    /// .unwrap();
+    ///
+    /// let c = a.matmul(&b).expect("matmul");
+    ///
+    /// // output 2 2 by 2 matrices
+    /// assert_eq!(c.shape(), &Shape::Nd([2, 2, 2].into()));
+    /// assert_eq!(c.as_slice(), &[5, -4, 4, 5, /*|*/ 5, -4, 4, 5]);
+    /// ```
     pub fn matmul(&'a self, other: &'a Self) -> Result<Self, NdArrayError> {
         match (&self.shape, &other.shape) {
             shapes @ (Shape::Scalar, Shape::Scalar)
@@ -57,24 +85,95 @@ where
             }
 
             (Shape::Vector(l), Shape::Matrix(n, m)) => {
-                let mut res = matmul([1, *l], self.as_slice(), [*n, *m], other.as_slice())?;
+                let mut res = Self::new_default([1, *m].into());
+                matmul(
+                    [1, *l],
+                    self.as_slice(),
+                    [*n, *m],
+                    other.as_slice(),
+                    res.as_mut_slice(),
+                )?;
                 res.reshape(Shape::Vector(*m))?;
                 Ok(res)
             }
             (Shape::Matrix(n, m), Shape::Vector(l)) => {
-                let mut res = matmul([*n, *m], self.as_slice(), [*l, 1], other.as_slice())?;
+                let mut res = Self::new_default([*n, 1].into());
+                matmul(
+                    [*n, *m],
+                    self.as_slice(),
+                    [*l, 1],
+                    other.as_slice(),
+                    res.as_mut_slice(),
+                )?;
                 res.reshape(Shape::Vector(*m))?;
                 Ok(res)
             }
             (Shape::Matrix(a, b), Shape::Matrix(c, d)) => {
-                matmul([*a, *b], self.as_slice(), [*c, *d], other.as_slice())
+                let mut res = Self::new_default([*a, *d].into());
+                matmul(
+                    [*a, *b],
+                    self.as_slice(),
+                    [*c, *d],
+                    other.as_slice(),
+                    res.as_mut_slice(),
+                )?;
+                Ok(res)
             }
 
             // broadcast matrices
-            (Shape::Vector(_), Shape::Nd(_)) => todo!(),
-            (Shape::Matrix(_, _), Shape::Nd(_)) => todo!(),
-            (Shape::Nd(_), Shape::Vector(_)) => todo!(),
-            (Shape::Nd(_), Shape::Matrix(_, _)) => todo!(),
+            (Shape::Vector(l), Shape::Nd(shp)) => {
+                let [m, n] = [shp[shp.len() - 1], shp[shp.len() - 2]];
+
+                let it = ColumnIter::new(&other.values, n as usize * m as usize);
+                let mut out = Self::new_default(
+                    [(other.len() / (n as usize * m as usize)) as u32, *l].into(),
+                );
+                for (mat, out) in it.zip(ColumnMutIter::new(&mut out.values, *l as usize)) {
+                    matmul([1, *l], self.as_slice(), [n, m], mat, out)?;
+                }
+                Ok(out)
+            }
+            (Shape::Nd(shp), Shape::Vector(l)) => {
+                let [m, n] = [shp[shp.len() - 1], shp[shp.len() - 2]];
+
+                let it = ColumnIter::new(&self.values, n as usize * m as usize);
+                let mut out =
+                    Self::new_default([(self.len() / (n as usize * m as usize)) as u32, *l].into());
+                for (mat, out) in it.zip(ColumnMutIter::new(&mut out.values, *l as usize)) {
+                    matmul([n, m], mat, [*l, 1], other.as_slice(), out)?;
+                }
+                Ok(out)
+            }
+            (Shape::Matrix(a, b), Shape::Nd(shp)) => {
+                let [a, b] = [*a, *b];
+                let [d, c] = [shp[shp.len() - 1], shp[shp.len() - 2]];
+
+                let it = ColumnIter::new(&other.values, c as usize * d as usize);
+                let mut out = Self::new_default(
+                    [(other.len() / (c as usize * d as usize)) as u32, a, d].into(),
+                );
+                for (mat, out) in
+                    it.zip(ColumnMutIter::new(&mut out.values, a as usize * d as usize))
+                {
+                    matmul([a, b], self.as_slice(), [c, d], mat, out)?;
+                }
+                Ok(out)
+            }
+            (Shape::Nd(shp), Shape::Matrix(c, d)) => {
+                let [b, a] = [shp[shp.len() - 1], shp[shp.len() - 2]];
+                let [c, d] = [*c, *d];
+
+                let it = ColumnIter::new(&self.values, c as usize * d as usize);
+                let mut out = Self::new_default(
+                    [(self.len() / (c as usize * d as usize)) as u32, a, d].into(),
+                );
+                for (mat, out) in
+                    it.zip(ColumnMutIter::new(&mut out.values, a as usize * d as usize))
+                {
+                    matmul([a, b], self.as_slice(), [c, d], mat, out)?;
+                }
+                Ok(out)
+            }
             (Shape::Nd(_), Shape::Nd(_)) => todo!(),
         }
     }
@@ -396,7 +495,7 @@ impl<T> NdArray<T> {
     }
 
     pub fn iter_cols(&self) -> impl Iterator<Item = &[T]> {
-        ColumnIterator::new(&self.values, self.shape.last().unwrap_or(0) as usize)
+        ColumnIter::new(&self.values, self.shape.last().unwrap_or(0) as usize)
     }
 
     pub fn len(&self) -> usize {
@@ -405,37 +504,6 @@ impl<T> NdArray<T> {
 
     pub fn is_empty(&self) -> bool {
         self.len() == 0
-    }
-}
-
-pub struct ColumnIterator<'a, T> {
-    arr: &'a [T],
-    column_size: usize,
-    current: usize,
-}
-
-impl<'a, T> ColumnIterator<'a, T> {
-    pub fn new(arr: &'a [T], column_size: usize) -> Self {
-        Self {
-            arr,
-            column_size,
-            current: 0,
-        }
-    }
-}
-
-impl<'a, T> Iterator for ColumnIterator<'a, T> {
-    type Item = &'a [T];
-
-    fn next(&mut self) -> Option<Self::Item> {
-        let tail = self.current + self.column_size;
-        if tail <= self.arr.len() {
-            let res = &self.arr[self.current..tail];
-            self.current = tail;
-            Some(res)
-        } else {
-            None
-        }
     }
 }
 

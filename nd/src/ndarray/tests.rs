@@ -112,6 +112,37 @@ fn test_vector_matrix_mul() {
 }
 
 #[test]
+fn test_vector_matrix_mul_w_broadcasting() {
+    // transpose matrix, displacing the 3d homogeneous vector by 5,5,5
+    #[rustfmt::skip]
+    fn mat() -> Box<[i32]> {
+        [1, 0, 0, 0, 
+         0, 1, 0, 0,
+         0, 0, 1, 0,
+         5, 5, 5, 1].into()
+    }
+    let mat = mat();
+
+    let a = NdArray::new_with_values([4].into(), [1, 2, 3, 1].into()).unwrap();
+    let b = NdArray::new_with_values(
+        [4, 4, 4].into(),
+        (0..4)
+            .flat_map(|_| mat.iter().cloned())
+            .collect::<Vec<_>>()
+            .into(),
+    )
+    .unwrap();
+
+    let c = a.matmul(&b).expect("matmul");
+
+    println!("{:?}", c);
+    assert_eq!(c.shape, Shape::Matrix(4, 4));
+    for col in c.iter_cols() {
+        assert_eq!(col, &[6, 7, 8, 1]);
+    }
+}
+
+#[test]
 fn test_matrix_vector_mul() {
     // transpose matrix, displacing the 3d homogeneous vector by 5,5,5
     #[rustfmt::skip]
@@ -140,4 +171,21 @@ fn test_mat_mat_mul() {
 
     assert_eq!(c.shape, Shape::Matrix(2, 2));
     assert_eq!(c.as_slice(), &[5, -4, 4, 5]);
+}
+
+#[test]
+fn test_mat_mat_mul_many() {
+    let a = NdArray::new_with_values([2, 3].into(), [1, 2, -1, 2, 0, 1].into()).unwrap();
+
+    // 2 times the matrix from above
+    let b = NdArray::new_with_values(
+        [2, 3, 2].into(),
+        [3, 1, 0, -1, -2, 3, 3, 1, 0, -1, -2, 3].into(),
+    )
+    .unwrap();
+
+    let c = a.matmul(&b).expect("matmul");
+
+    assert_eq!(c.shape, Shape::Nd([2, 2, 2].into()));
+    assert_eq!(c.as_slice(), &[5, -4, 4, 5, 5, -4, 4, 5]);
 }
