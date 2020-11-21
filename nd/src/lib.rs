@@ -19,6 +19,14 @@ impl PyObjectProtocol for NdArrayD {
     fn __str__(&self) -> String {
         self.to_string()
     }
+
+    fn __repr__(&self) -> String {
+        format!(
+            "NdArray of f64, shape: {:?}, data:\n{}",
+            self.inner.shape,
+            self.to_string()
+        )
+    }
 }
 
 #[pyproto]
@@ -100,7 +108,11 @@ impl NdArrayD {
             write!(s, "{:?}", col).unwrap();
         }
         for col in it {
-            write!(s, "\n{:?}", col).unwrap();
+            s.push('\n');
+            for _ in 0..depth - 1 {
+                s.push(' ');
+            }
+            write!(s, "{:?}", col).unwrap();
         }
         for _ in 0..depth - 1 {
             s.push(']');

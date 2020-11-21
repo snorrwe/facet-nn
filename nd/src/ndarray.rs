@@ -22,8 +22,8 @@ pub enum NdArrayError {
 
 #[derive(Debug)]
 pub struct NdArray<T> {
-    shape: Shape,
-    values: Box<[T]>,
+    pub(crate) shape: Shape,
+    pub(crate) values: Box<[T]>,
 }
 
 unsafe impl<T> Send for NdArray<T> {}

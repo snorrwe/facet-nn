@@ -22,4 +22,5 @@ def test_mat_mul():
     b = NdArrayD([3, 2], [2, 1, 3, 2, 1, 1])
 
     c = a @ b
-    assert 0, str(c)
+    print(c)
+    assert 0, c
