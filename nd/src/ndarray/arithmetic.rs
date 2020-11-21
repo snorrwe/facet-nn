@@ -165,3 +165,39 @@ where
         arithimpl!(/=, /, self, rhs)
     }
 }
+
+impl<'a, T> NdArray<T> {
+    /// Maps the current array to another array with the same shape
+    pub fn map<U>(&self, f: impl FnMut(&T) -> U) -> NdArray<U> {
+        let res: Vec<_> = self.values.iter().map(f).collect();
+        NdArray {
+            shape: self.shape.clone(),
+            values: res.into_boxed_slice(),
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_map() {
+        let a = NdArray::<i32>::new_with_values(
+            [2, 4, 2].into(),
+            [0, 69, 0, 69, 0, 69, 0, 0, 0, 0, 69, 0, 69, 0, 69, 0].into(),
+        )
+        .unwrap();
+
+        let b: NdArray<bool> = a.map(|x| *x > 0);
+
+        assert_eq!(a.shape, b.shape);
+        assert_eq!(
+            b.values.as_ref(),
+            &[
+                false, true, false, true, false, true, false, false, false, false, true, false,
+                true, false, true, false
+            ]
+        );
+    }
+}
