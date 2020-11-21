@@ -3,7 +3,10 @@ use std::fmt::Write;
 
 use ndarray::{shape::Shape, NdArray};
 use pyo3::{
-    exceptions::PyValueError, prelude::*, wrap_pyfunction, PyNumberProtocol, PyObjectProtocol,
+    basic::CompareOp,
+    exceptions::{PyNotImplementedError, PyValueError},
+    prelude::*,
+    wrap_pyfunction, PyNumberProtocol, PyObjectProtocol,
 };
 
 // TODO: once this is stable use a macro to generate for a variaty of types...
@@ -26,6 +29,44 @@ impl PyObjectProtocol for NdArrayD {
             self.inner.shape,
             self.to_string()
         )
+    }
+
+    fn __bool__(&'p self) -> PyResult<bool> {
+        Err(PyNotImplementedError::new_err::<String>(
+            format!("Array to bool conversion is ambigous! Use .any or .all").into(),
+        ))
+    }
+
+    /// Returns an NdArray where each element is 1 if true 0 if false for the given pair of
+    /// elements.
+    // TODO: return bool array
+    fn __richcmp__(&'p self, other: PyRef<'p, Self>, op: CompareOp) -> PyResult<NdArrayD> {
+        let mut res = NdArray::<f64>::new_default([self.inner.values.len() as u32].into());
+        res.reshape(self.inner.shape.clone())
+            .map_err(|err| PyValueError::new_err::<String>(format!("{}", err).into()))?;
+
+        // TODO: check shape and raise error on uncomparable shapes
+        // TODO: support different shapes e.g. compare each element to a scalar
+        let op: fn(f64, f64) -> bool = match op {
+            CompareOp::Lt => |a, b| a < b,
+            CompareOp::Le => |a, b| a <= b,
+            CompareOp::Eq => |a, b| (a - b).abs() < std::f64::EPSILON,
+            CompareOp::Ne => |a, b| (a - b).abs() >= std::f64::EPSILON,
+            CompareOp::Gt => |a, b| a > b,
+            CompareOp::Ge => |a, b| a >= b,
+        };
+        res.as_mut_slice()
+            .iter_mut()
+            .zip(
+                self.inner
+                    .as_slice()
+                    .iter()
+                    .zip(other.inner.as_slice().iter()),
+            )
+            .for_each(|(c, (a, b))| {
+                *c = if op(*a, *b) { 1.0 } else { 0.0 };
+            });
+        Ok(Self { inner: res })
     }
 }
 
@@ -72,6 +113,16 @@ impl NdArrayD {
         if let Some(x) = self.inner.get_mut(&index) {
             *x = value;
         }
+    }
+
+    /// Return if all values are truthy
+    pub fn all(&self) -> bool {
+        self.inner.values.iter().all(|x| *x != 0.0)
+    }
+
+    /// Return if any value is truthy
+    pub fn any(&self) -> bool {
+        self.inner.values.iter().any(|x| *x != 0.0)
     }
 
     /// The values must have a length equal to the product of the dimensions!

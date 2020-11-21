@@ -20,7 +20,7 @@ pub enum NdArrayError {
     BinaryOpNotSupported { shape_a: Shape, shape_b: Shape },
 }
 
-#[derive(Debug)]
+#[derive(Debug, Eq, PartialEq)]
 pub struct NdArray<T> {
     pub(crate) shape: Shape,
     pub(crate) values: Box<[T]>,
@@ -225,6 +225,14 @@ impl<T> NdArray<T> {
 
         let shape = Shape::from(shape);
         Ok(Self { shape, values })
+    }
+
+    /// Construct a new 'vector' type (1D) array
+    pub fn new_vector(values: Box<[T]>) -> Self {
+        Self {
+            shape: Shape::Vector(values.len() as u32),
+            values,
+        }
     }
 }
 

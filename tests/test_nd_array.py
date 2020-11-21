@@ -21,6 +21,6 @@ def test_mat_mul():
     a = NdArrayD([2, 3], [1, -2, 1, 2, 1, 3])
     b = NdArrayD([3, 2], [2, 1, 3, 2, 1, 1])
 
+    exp = NdArrayD([2, 2], [-3, -2, 10, 7])
     c = a @ b
-    print(c)
-    assert 0, c
+    assert (c == exp).all()
