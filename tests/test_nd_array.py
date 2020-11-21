@@ -88,3 +88,7 @@ def test_adding_matrix_to_tensor():
     exp = NdArrayD([8, 2, 3], [3, -1, 4, 4, 2, 4] * 8)
 
     assert (c == exp).all()
+
+    # convert back by subtraction...
+    e = c - a
+    assert (e == b).all()
