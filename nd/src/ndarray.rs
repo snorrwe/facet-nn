@@ -204,8 +204,9 @@ impl<T> NdArray<T>
 where
     T: Default,
 {
-    pub fn new_default(shape: Box<[u32]>) -> Self {
-        let len: usize = shape.iter().map(|x| *x as usize).product();
+    pub fn new_default<S: Into<Shape>>(shape: S) -> Self {
+        let shape: Shape = shape.into();
+        let len: usize = shape.span().max(1);
         let values = (0..len).map(|_| Default::default()).collect::<Vec<_>>();
 
         let shape = Shape::from(shape);

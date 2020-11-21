@@ -71,17 +71,33 @@ impl Shape {
 
 impl From<Box<[u32]>> for Shape {
     fn from(shape: Box<[u32]>) -> Self {
-        match shape.len() {
-            0 | 1 if shape[0] == 0 => Shape::Scalar,
-            1 => Shape::Vector(shape[0]),
-            2 => Shape::Matrix(shape[0], shape[1]),
-            _ => Shape::Tensor(shape),
-        }
+        Shape::from(shape.as_ref())
     }
 }
 
 impl From<Vec<u32>> for Shape {
     fn from(shape: Vec<u32>) -> Self {
+        Shape::from(shape.as_slice())
+    }
+}
+
+impl From<u32> for Shape {
+    fn from(shape: u32) -> Self {
+        match shape {
+            0 => Shape::Scalar,
+            _ => Shape::Vector(shape),
+        }
+    }
+}
+
+impl From<[u32; 2]> for Shape {
+    fn from([n, m]: [u32; 2]) -> Self {
+        Shape::Matrix(n, m)
+    }
+}
+
+impl<'a> From<&'a [u32]> for Shape {
+    fn from(shape: &'a [u32]) -> Self {
         match shape.len() {
             0 | 1 if shape[0] == 0 => Shape::Scalar,
             1 => Shape::Vector(shape[0]),

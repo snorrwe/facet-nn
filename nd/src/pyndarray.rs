@@ -13,7 +13,7 @@ use crate::ndarray::{shape::Shape, NdArray};
 #[pyclass]
 #[derive(Debug)]
 pub struct NdArrayD {
-    inner: NdArray<f64>,
+    pub(crate) inner: NdArray<f64>,
 }
 
 #[pyproto]

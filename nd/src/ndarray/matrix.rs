@@ -98,7 +98,7 @@ where
             }
 
             (Shape::Vector(l), Shape::Matrix(n, m)) => {
-                let mut res = Self::new_default([1, *m].into());
+                let mut res = Self::new_default(Shape::Matrix(1, *m));
                 matmul_impl(
                     [1, *l],
                     self.as_slice(),
@@ -110,7 +110,7 @@ where
                 Ok(res)
             }
             (Shape::Matrix(n, m), Shape::Vector(l)) => {
-                let mut res = Self::new_default([*n, 1].into());
+                let mut res = Self::new_default(Shape::Matrix(*n, 1));
                 matmul_impl(
                     [*n, *m],
                     self.as_slice(),
@@ -122,7 +122,7 @@ where
                 Ok(res)
             }
             (Shape::Matrix(a, b), Shape::Matrix(c, d)) => {
-                let mut res = Self::new_default([*a, *d].into());
+                let mut res = Self::new_default(Shape::Matrix(*a, *d));
                 matmul_impl(
                     [*a, *b],
                     self.as_slice(),
@@ -138,9 +138,8 @@ where
                 let [m, n] = shp.last_two().unwrap();
 
                 let it = ColumnIter::new(&other.values, n as usize * m as usize);
-                let mut out = Self::new_default(
-                    [(other.len() / (n as usize * m as usize)) as u32, *l].into(),
-                );
+                let mut out =
+                    Self::new_default([(other.len() / (n as usize * m as usize)) as u32, *l]);
                 for (mat, out) in it.zip(ColumnIterMut::new(&mut out.values, *l as usize)) {
                     matmul_impl([1, *l], self.as_slice(), [n, m], mat, out)?;
                 }
@@ -151,7 +150,7 @@ where
 
                 let it = ColumnIter::new(&self.values, n as usize * m as usize);
                 let mut out =
-                    Self::new_default([(self.len() / (n as usize * m as usize)) as u32, *l].into());
+                    Self::new_default([(self.len() / (n as usize * m as usize)) as u32, *l]);
                 for (mat, out) in it.zip(ColumnIterMut::new(&mut out.values, *l as usize)) {
                     matmul_impl([n, m], mat, [*l, 1], other.as_slice(), out)?;
                 }
@@ -162,9 +161,8 @@ where
                 let [c, d] = shp.last_two().unwrap();
 
                 let it = ColumnIter::new(&other.values, c as usize * d as usize);
-                let mut out = Self::new_default(
-                    [(other.len() / (c as usize * d as usize)) as u32, a, d].into(),
-                );
+                let mut out =
+                    Self::new_default(vec![(other.len() / (c as usize * d as usize)) as u32, a, d]);
                 for (mat, out) in
                     it.zip(ColumnIterMut::new(&mut out.values, a as usize * d as usize))
                 {
@@ -177,9 +175,8 @@ where
                 let [c, d] = [*c, *d];
 
                 let it = ColumnIter::new(&self.values, c as usize * d as usize);
-                let mut out = Self::new_default(
-                    [(self.len() / (c as usize * d as usize)) as u32, a, d].into(),
-                );
+                let mut out =
+                    Self::new_default(vec![(self.len() / (c as usize * d as usize)) as u32, a, d]);
                 for (mat, out) in
                     it.zip(ColumnIterMut::new(&mut out.values, a as usize * d as usize))
                 {
@@ -205,7 +202,7 @@ where
                 let it_0 = ColumnIter::new(&self.values, a as usize * b as usize);
                 let it_1 = ColumnIter::new(&other.values, c as usize * d as usize);
 
-                let mut out = Self::new_default([nmatrices as u32, a, d].into());
+                let mut out = Self::new_default(vec![nmatrices as u32, a, d]);
 
                 for (out, (lhs, rhs)) in
                     ColumnIterMut::new(&mut out.values, a as usize * d as usize).zip(it_0.zip(it_1))
