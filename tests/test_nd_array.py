@@ -22,4 +22,24 @@ def test_mat_mul():
 
     exp = NdArrayD([2, 2], [-3, -2, 10, 7])
     c = a @ b
+    d = a.matmul(b)
     assert (c == exp).all()
+    assert (c == d).all()
+
+
+def test_mat_mul_many():
+    """
+    take 8 of each 'template' matrix then apply matmul
+
+    the result should be the same as `test_mat_mul` 8 times
+    """
+    a_template = [1, -2, 1, 2, 1, 3]
+    b_template = [2, 1, 3, 2, 1, 1]
+    a = NdArrayD([2, 4, 2, 3], a_template * 8)
+    b = NdArrayD([8, 3, 2], b_template * 8)
+
+    exp = NdArrayD([8, 2, 2], [-3, -2, 10, 7] * 8)
+    c = a @ b
+    d = a.matmul(b)
+    assert (c == exp).all()
+    assert (c == d).all()

@@ -174,14 +174,35 @@ where
                 }
                 Ok(out)
             }
-            (Shape::Nd(_), Shape::Nd(_)) => todo!(),
-        }
-    }
+            (Shape::Nd(ab), Shape::Nd(cd)) => {
+                let [b, a] = [ab[ab.len() - 1], ab[ab.len() - 2]];
+                let [d, c] = [cd[cd.len() - 1], cd[cd.len() - 2]];
 
-    /// - If both are 1D arrays, `dot` equals `inner`
-    /// - If both are 2D arrays, it's equal to `matmul`
-    pub fn dot(&'a self, _other: &'a Self) -> Option<Self> {
-        todo!()
+                // number of matrices
+                let nmatrices = self.shape.span() / (b as usize * a as usize);
+                let other_nmatrices = other.shape.span() / (c as usize * d as usize);
+                if nmatrices != other_nmatrices {
+                    // the two arrays have a different number of inner matrices
+                    return Err(NdArrayError::DimensionMismatch {
+                        expected: nmatrices,
+                        actual: other_nmatrices,
+                    });
+                }
+
+                let it_0 = ColumnIter::new(&self.values, a as usize * b as usize);
+                let it_1 = ColumnIter::new(&other.values, c as usize * d as usize);
+
+                let mut out = Self::new_default([nmatrices as u32, a, d].into());
+
+                for (out, (lhs, rhs)) in
+                    ColumnMutIter::new(&mut out.values, a as usize * d as usize).zip(it_0.zip(it_1))
+                {
+                    matmul([a, b], lhs, [c, d], rhs, out)?;
+                }
+
+                Ok(out)
+            }
+        }
     }
 
     /// Ordinary inner product of vectors for 1-D arrays (without complex conjugation),
