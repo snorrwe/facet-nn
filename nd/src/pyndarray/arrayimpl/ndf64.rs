@@ -102,4 +102,13 @@ impl NdArrayD {
             .map(|inner| Self { inner })
             .map_err(|err| PyValueError::new_err::<String>(format!("{}", err).into()))
     }
+
+    pub fn clip(mut this: PyRefMut<Self>, min: f64, max: f64) -> PyResult<PyRefMut<Self>> {
+        this.inner
+            .values
+            .iter_mut()
+            .for_each(|v| *v = v.max(min).min(max));
+
+        Ok(this)
+    }
 }

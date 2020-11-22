@@ -3,8 +3,6 @@ use std::f64::consts::E;
 use crate::{ndarray::NdArray, pyndarray::NdArrayD};
 use pyo3::{exceptions::PyValueError, prelude::*, wrap_pyfunction};
 
-/// Note that 0 inputs will produce `NaN` output.
-///
 /// The author recommends running `softmax` on the output before calling this function
 #[pyfunction]
 pub fn categorical_cross_entropy(predictions: &NdArrayD, targets: &NdArrayD) -> PyResult<NdArrayD> {
@@ -23,7 +21,12 @@ pub fn categorical_cross_entropy(predictions: &NdArrayD, targets: &NdArrayD) -> 
             .iter()
             .cloned()
             .zip(y.iter().cloned())
-            .map(|(x, y)| -> f64 { x.log(E) * y })
+            .map(|(x, y)| -> f64 {
+                // clip x to prevent division by 0
+                // and prevent the dragging of the mean error later
+                let x = x.max(1e-7).min(1.0 - 1e-7);
+                x.log(E) * y
+            })
             .sum();
         // loss is always < 0 so let's flip it...
         out.push(-loss);

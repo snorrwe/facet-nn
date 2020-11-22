@@ -36,6 +36,13 @@ class Loss:
         assert callable(lossfn)
         self.loss = lossfn
 
+    def calculate(self, pred, target):
+        assert pred.shape == target.shape
+
+        losses = self.loss(pred, target)
+        data_loss = losses.mean()
+        return data_loss
+
 
 def first_n(n, it):
     """

@@ -22,3 +22,12 @@ nw = Network(
 
 
 y = nw.forward(dataset["data"])
+
+
+l = Loss(nd.categorical_cross_entropy)
+
+
+err = l.calculate(y, y)
+
+
+print(err)
