@@ -162,7 +162,6 @@ impl NdArrayD {
             .map_err(|err| PyValueError::new_err::<String>(format!("{}", err).into()))
     }
 
-    // TODO __str__
     pub fn to_string(&self) -> String {
         let depth = match self.inner.shape() {
             Shape::Scalar => {

@@ -10,7 +10,7 @@ pub use scalar::*;
 #[cfg(test)]
 mod tests;
 
-use std::{mem::MaybeUninit, ops::Add, ops::AddAssign, ops::Mul};
+use std::{iter::FromIterator, mem::MaybeUninit, ops::Add, ops::AddAssign, ops::Mul};
 
 use shape::Shape;
 
@@ -392,4 +392,23 @@ fn get_index(width: usize, shape: &[u32], index: &[u32]) -> Option<usize> {
         res += a * *ind as usize;
     }
     Some(res * width)
+}
+
+impl<T> From<T> for NdArray<T> {
+    fn from(val: T) -> Self {
+        NdArray {
+            shape: Shape::Scalar,
+            values: [val].into(),
+        }
+    }
+}
+
+impl<'a, T> FromIterator<T> for NdArray<T> {
+    fn from_iter<It: IntoIterator<Item = T>>(iter: It) -> Self {
+        let values = iter.into_iter().collect::<Vec<T>>();
+        Self {
+            shape: Shape::Vector(values.len() as u32),
+            values: values.into(),
+        }
+    }
 }
