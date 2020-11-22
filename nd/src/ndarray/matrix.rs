@@ -1,7 +1,10 @@
 //! Matrix operation implementations
 //!
 
-use std::ops::{Add, AddAssign, Mul};
+use std::{
+    convert::TryInto,
+    ops::{Add, AddAssign, Mul},
+};
 
 use super::{
     column_iter::ColumnIter, column_iter::ColumnIterMut, shape::Shape, NdArray, NdArrayError,
@@ -100,13 +103,13 @@ where
             (Shape::Vector(l), Shape::Matrix(n, m)) => {
                 let mut res = Self::new_default(Shape::Matrix(1, *m));
                 matmul_impl(
-                    [1, *l],
+                    [1, (*l).try_into().unwrap()],
                     self.as_slice(),
                     [*n, *m],
                     other.as_slice(),
                     res.as_mut_slice(),
                 )?;
-                res.reshape(Shape::Vector(*m))?;
+                res.reshape(Shape::Vector(*m as u64))?;
                 Ok(res)
             }
             (Shape::Matrix(n, m), Shape::Vector(l)) => {
@@ -114,11 +117,11 @@ where
                 matmul_impl(
                     [*n, *m],
                     self.as_slice(),
-                    [*l, 1],
+                    [(*l).try_into().unwrap(), 1],
                     other.as_slice(),
                     res.as_mut_slice(),
                 )?;
-                res.reshape(Shape::Vector(*m))?;
+                res.reshape(Shape::Vector(*m as u64))?;
                 Ok(res)
             }
             (Shape::Matrix(a, b), Shape::Matrix(c, d)) => {
@@ -138,10 +141,18 @@ where
                 let [m, n] = shp.last_two().unwrap();
 
                 let it = ColumnIter::new(&other.values, n as usize * m as usize);
-                let mut out =
-                    Self::new_default([(other.len() / (n as usize * m as usize)) as u32, *l]);
+                let mut out = Self::new_default([
+                    (other.len() / (n as usize * m as usize)) as u32,
+                    (*l).try_into().unwrap(),
+                ]);
                 for (mat, out) in it.zip(ColumnIterMut::new(&mut out.values, *l as usize)) {
-                    matmul_impl([1, *l], self.as_slice(), [n, m], mat, out)?;
+                    matmul_impl(
+                        [1, (*l).try_into().unwrap()],
+                        self.as_slice(),
+                        [n, m],
+                        mat,
+                        out,
+                    )?;
                 }
                 Ok(out)
             }
@@ -149,10 +160,11 @@ where
                 let [m, n] = shp.last_two().unwrap();
 
                 let it = ColumnIter::new(&self.values, n as usize * m as usize);
+                let l: u32 = (*l).try_into().unwrap();
                 let mut out =
-                    Self::new_default([(self.len() / (n as usize * m as usize)) as u32, *l]);
-                for (mat, out) in it.zip(ColumnIterMut::new(&mut out.values, *l as usize)) {
-                    matmul_impl([n, m], mat, [*l, 1], other.as_slice(), out)?;
+                    Self::new_default([(self.len() / (n as usize * m as usize)) as u32, l]);
+                for (mat, out) in it.zip(ColumnIterMut::new(&mut out.values, l as usize)) {
+                    matmul_impl([n, m], mat, [l, 1], other.as_slice(), out)?;
                 }
                 Ok(out)
             }

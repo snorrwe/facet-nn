@@ -97,13 +97,13 @@ where
 
             // sum over the columns, vector products
             (Shape::Matrix(c, _), Shape::Vector(n)) | (Shape::Vector(n), Shape::Matrix(c, _)) => {
-                if c != n {
+                if *c as u64 != *n {
                     return None;
                 }
             }
 
             (Shape::Tensor(shape), Shape::Vector(n)) | (Shape::Vector(n), Shape::Tensor(shape)) => {
-                if shape.last()? != n {
+                if *shape.last()? as u64 != *n {
                     return None;
                 }
             }
@@ -194,7 +194,7 @@ impl<T> NdArray<T> {
     /// Construct a new 'vector' type (1D) array
     pub fn new_vector(values: Box<[T]>) -> Self {
         Self {
-            shape: Shape::Vector(values.len() as u32),
+            shape: Shape::Vector(values.len() as u64),
             values,
         }
     }
@@ -407,7 +407,7 @@ impl<'a, T> FromIterator<T> for NdArray<T> {
     fn from_iter<It: IntoIterator<Item = T>>(iter: It) -> Self {
         let values = iter.into_iter().collect::<Vec<T>>();
         Self {
-            shape: Shape::Vector(values.len() as u32),
+            shape: Shape::Vector(values.len() as u64),
             values: values.into(),
         }
     }

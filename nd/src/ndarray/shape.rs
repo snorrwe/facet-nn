@@ -1,7 +1,9 @@
+use std::convert::TryInto;
+
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub enum Shape {
     Scalar,
-    Vector(u32),
+    Vector(u64),
     Matrix(u32, u32),
     /// Over 3 dimensions
     Tensor(Box<[u32]>),
@@ -11,7 +13,8 @@ impl Shape {
     pub fn last(&self) -> Option<u32> {
         match self {
             Shape::Scalar => None,
-            Shape::Matrix(_, n) | Shape::Vector(n) => Some(*n),
+            Shape::Matrix(_, n) => Some(*n),
+            Shape::Vector(n) => Some(*n).map(|n| n.try_into().unwrap()),
             Shape::Tensor(ref s) => s.last().cloned(),
         }
     }
@@ -85,7 +88,7 @@ impl From<u32> for Shape {
     fn from(shape: u32) -> Self {
         match shape {
             0 => Shape::Scalar,
-            _ => Shape::Vector(shape),
+            _ => Shape::Vector(shape as u64),
         }
     }
 }
@@ -100,7 +103,7 @@ impl<'a> From<&'a [u32]> for Shape {
     fn from(shape: &'a [u32]) -> Self {
         match shape.len() {
             0 | 1 if shape[0] == 0 => Shape::Scalar,
-            1 => Shape::Vector(shape[0]),
+            1 => Shape::Vector(shape[0] as u64),
             2 => Shape::Matrix(shape[0], shape[1]),
             _ => Shape::Tensor(shape.into()),
         }

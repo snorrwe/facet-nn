@@ -2,11 +2,11 @@ use pyo3::{
     basic::CompareOp,
     exceptions::{PyNotImplementedError, PyValueError},
     prelude::*,
-    PyNumberProtocol, PyObjectProtocol,
+    PyGCProtocol, PyIterProtocol, PyNumberProtocol, PyObjectProtocol,
 };
-use std::fmt::Write;
+use std::{convert::TryInto, fmt::Write};
 
-use crate::ndarray::{shape::Shape, NdArray};
+use crate::ndarray::{column_iter::ColumnIter, shape::Shape, NdArray};
 
 // TODO: once this is stable use a macro to generate for a variaty of types...
 //
@@ -14,6 +14,35 @@ use crate::ndarray::{shape::Shape, NdArray};
 #[derive(Debug)]
 pub struct NdArrayD {
     pub(crate) inner: NdArray<f64>,
+}
+
+#[pyclass]
+pub struct NdArrayDColIter {
+    iter: ColumnIter<'static, f64>,
+    /// hold a reference to the original array to prevent the GC from collecting it
+    arr: Option<Py<NdArrayD>>,
+}
+
+#[pyproto]
+impl PyGCProtocol for NdArrayDColIter {
+    fn __traverse__(&'p self, visit: pyo3::PyVisit) -> Result<(), pyo3::PyTraverseError> {
+        visit.call(&self.arr)
+    }
+
+    fn __clear__(&'p mut self) {
+        self.arr = None
+    }
+}
+
+#[pyproto]
+impl PyIterProtocol for NdArrayDColIter {
+    fn __iter__(slf: PyRef<Self>) -> PyRef<Self> {
+        slf
+    }
+
+    fn __next__(mut slf: PyRefMut<Self>) -> Option<Vec<f64>> {
+        slf.iter.next().map(|col| col.into())
+    }
 }
 
 #[pyproto]
@@ -114,7 +143,7 @@ impl NdArrayD {
     pub fn shape(&self) -> Vec<u32> {
         match self.inner.shape() {
             Shape::Scalar => vec![],
-            Shape::Vector(n) => vec![*n],
+            Shape::Vector(n) => vec![(*n).try_into().unwrap()],
             Shape::Matrix(n, m) => vec![*n, *m],
             Shape::Tensor(s) => s.clone().into_vec(),
         }
@@ -135,6 +164,17 @@ impl NdArrayD {
         if let Some(x) = self.inner.get_mut(&index) {
             *x = value;
         }
+    }
+
+    pub fn iter_cols<'py>(slf: Py<Self>, py: Python<'py>) -> PyResult<Py<NdArrayDColIter>> {
+        let s = slf.borrow(py);
+        let it = s.inner.iter_cols();
+        let it = unsafe { std::mem::transmute(it) };
+        let it = NdArrayDColIter {
+            iter: it,
+            arr: Some(slf.clone()),
+        };
+        Py::new(py, it)
     }
 
     /// Return if all values are truthy

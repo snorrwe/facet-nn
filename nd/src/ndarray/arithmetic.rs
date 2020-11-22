@@ -55,7 +55,7 @@ macro_rules! arithimpl {
             // add vector to each column
             (Shape::Vector(l), Shape::Matrix(_, _)) | (Shape::Vector(l), Shape::Tensor(_)) => {
                 let l = *l;
-                if $rhs.shape.last().expect("failed to get column shape") != l {
+                if $rhs.shape.last().expect("failed to get column shape") as u64 != l {
                     return Err(NdArrayError::DimensionMismatch {
                         expected: l as usize,
                         actual: $rhs.shape.last().expect("failed to get column shape") as usize,
@@ -71,7 +71,7 @@ macro_rules! arithimpl {
             }
             (Shape::Matrix(_, _), Shape::Vector(l)) | (Shape::Tensor(_), Shape::Vector(l)) => {
                 let l = *l;
-                if $lhs.shape.last().expect("failed to get column shape") != l {
+                if $lhs.shape.last().expect("failed to get column shape") as u64 != l {
                     return Err(NdArrayError::DimensionMismatch {
                         expected: l as usize,
                         actual: $lhs.shape.last().expect("failed to get column shape") as usize,

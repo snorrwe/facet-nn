@@ -1,4 +1,4 @@
-use std::f64::consts::E;
+use std::{convert::TryInto, f64::consts::E};
 
 use pyo3::{prelude::*, wrap_pyfunction};
 
@@ -31,7 +31,7 @@ pub fn softmax(inp: PyRef<'_, NdArrayD>) -> PyResult<NdArrayD> {
 
     let expvalues = inner
         .sub(&NdArray::from(max))
-        .expect("Failed to sub max")
+        .expect("Failed to sub max from the input")
         .map(|v: &f64| E.powf(*v));
 
     let mut norm_base: NdArray<f64> = expvalues
@@ -41,7 +41,11 @@ pub fn softmax(inp: PyRef<'_, NdArrayD>) -> PyResult<NdArrayD> {
 
     debug_assert_eq!(
         norm_base.shape,
-        Shape::Vector((expvalues.shape.span() / expvalues.shape.last().unwrap() as usize) as u32),
+        Shape::Vector(
+            (expvalues.shape.span() / expvalues.shape.last().unwrap() as usize)
+                .try_into()
+                .expect("failed to convert vector len to u32")
+        ),
         "internal error when producing norm_base"
     );
 
