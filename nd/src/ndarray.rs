@@ -10,7 +10,10 @@ pub use scalar::*;
 #[cfg(test)]
 mod tests;
 
-use std::{iter::FromIterator, mem::MaybeUninit, ops::Add, ops::AddAssign, ops::Mul};
+use std::{
+    fmt::Debug, fmt::Write, iter::FromIterator, mem::MaybeUninit, ops::Add, ops::AddAssign,
+    ops::Mul,
+};
 
 use shape::Shape;
 
@@ -46,8 +49,7 @@ unsafe impl<T> Send for NdArray<T> {}
 
 impl<'a, T> NdArray<T>
 where
-    T: AddAssign + Add<Output = T> + Mul<Output = T> + Default + 'a,
-    &'a T: Add<Output = T> + 'a + Mul<Output = T>,
+    T: AddAssign + Add<Output = T> + Mul<Output = T> + Default + 'a + Copy,
 {
     /// Ordinary inner product of vectors for 1-D arrays (without complex conjugation),
     /// in higher dimensions a sum product over the last axes.
@@ -60,7 +62,7 @@ where
                 return self
                     .values
                     .get(0)
-                    .and_then(|a| other.values.get(0).map(|b| a * b))
+                    .and_then(|a| other.values.get(0).map(|b| *a * *b))
             }
             // multiply the internal array with the scalar and sum it
             (Shape::Scalar, Shape::Matrix(_, _))
@@ -70,7 +72,7 @@ where
                     other
                         .values
                         .iter()
-                        .fold(T::default(), |res, b| res + (a * b))
+                        .fold(T::default(), |res, b| res + (*a * *b))
                 })
             }
             // multiply the internal array with the scalar and sum it
@@ -80,7 +82,7 @@ where
                 return other.values.get(0).map(|a| {
                     self.values
                         .iter()
-                        .fold(T::default(), |res, b| res + (a * b))
+                        .fold(T::default(), |res, b| res + (*a * *b))
                 })
             }
 
@@ -90,7 +92,7 @@ where
                     .values
                     .iter()
                     .zip(other.values.iter())
-                    .map(|(a, b)| a * b)
+                    .map(|(a, b)| *a * *b)
                     .fold(Default::default(), |a: T, b| a + b);
                 return Some(val);
             }
@@ -148,7 +150,7 @@ where
                 self.values
                     .iter()
                     .zip(col.iter())
-                    .map(|(a, b)| a * b)
+                    .map(|(a, b)| *a * *b)
                     .fold(T::default(), |a, b| a + b)
             })
             // sum over the dot product result vector
@@ -414,5 +416,40 @@ impl<'a, T> FromIterator<T> for NdArray<T> {
             shape: Shape::Vector(values.len() as u64),
             values: values.into(),
         }
+    }
+}
+
+impl<T> NdArray<T>
+where
+    T: Debug,
+{
+    pub fn to_string(&self) -> String {
+        let depth = match self.shape() {
+            Shape::Scalar => {
+                return format!("Scalar: {:?}", self.get(&[]));
+            }
+            Shape::Vector(_) => 1,
+            Shape::Matrix(_, _) => 2,
+            Shape::Tensor(s) => s.len(),
+        };
+        let mut s = String::with_capacity(self.len() * 4);
+        for _ in 0..depth - 1 {
+            s.push('[');
+        }
+        let mut it = self.iter_cols();
+        if let Some(col) = it.next() {
+            write!(s, "{:?}", col).unwrap();
+        }
+        for col in it {
+            s.push('\n');
+            for _ in 0..depth - 1 {
+                s.push(' ');
+            }
+            write!(s, "{:?}", col).unwrap();
+        }
+        for _ in 0..depth - 1 {
+            s.push(']');
+        }
+        s
     }
 }

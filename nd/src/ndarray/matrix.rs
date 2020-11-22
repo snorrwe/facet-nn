@@ -18,8 +18,7 @@ fn matmul_impl<'a, T>(
     out: &mut [T],
 ) -> Result<(), NdArrayError>
 where
-    T: AddAssign + Add<Output = T> + Mul<Output = T> + Default + 'a,
-    &'a T: Add<Output = T> + 'a + Mul<Output = T>,
+    T: AddAssign + Add<Output = T> + Mul<Output = T> + Default + 'a + Copy,
 {
     if m != m1 {
         return Err(NdArrayError::DimensionMismatch {
@@ -36,7 +35,7 @@ where
             for k in 0..m {
                 let val0 = &values0[(i * m + k) as usize];
                 let val1 = &values1[(k * p + j) as usize];
-                out[(i * p + j) as usize] += val0 * val1
+                out[(i * p + j) as usize] += *val0 * *val1
             }
         }
     }
@@ -47,7 +46,6 @@ where
 impl<'a, T> NdArray<T>
 where
     T: AddAssign + Add<Output = T> + Mul<Output = T> + Default + 'a + Copy,
-    &'a T: Add<Output = T> + 'a + Mul<Output = T>,
 {
     /// - Scalars not allowed.
     /// - Tensor arrays are treated as a colection of matrices and are broadcast accordingly

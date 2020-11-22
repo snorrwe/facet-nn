@@ -6,7 +6,12 @@ def test_factory():
     arr = array([[[2], [2], [2]], [[1], [1], [1]]])
     assert arr.shape == [2, 3, 1]
     exp = NdArrayD([2, 3, 1], [2, 2, 2, 1, 1, 1])
-    assert (arr == exp).all()
+
+    res = arr == exp
+    assert res.all()
+
+    barray = array([[[True] * 3], [[True] * 3]])
+    assert res == barray
 
 
 def test_ctor():

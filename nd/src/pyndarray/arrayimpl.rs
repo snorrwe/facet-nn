@@ -1,235 +1,197 @@
-use pyo3::{
-    basic::CompareOp,
-    exceptions::{PyNotImplementedError, PyValueError},
-    prelude::*,
-    PyGCProtocol, PyIterProtocol, PyNumberProtocol, PyObjectProtocol,
+mod ndbool;
+mod ndf64;
+
+pub use ndbool::*;
+pub use ndf64::*;
+
+use pyo3::{exceptions::PyValueError, prelude::*, PyClass};
+use std::{
+    ops::Add, ops::AddAssign, ops::Div, ops::DivAssign, ops::Mul, ops::MulAssign, ops::Sub,
+    ops::SubAssign,
 };
-use std::{convert::TryInto, fmt::Write};
 
-use crate::ndarray::{column_iter::ColumnIter, shape::Shape, NdArray};
+use crate::ndarray::NdArray;
 
-// TODO: once this is stable use a macro to generate for a variaty of types...
-//
-#[pyclass]
-#[derive(Debug)]
-pub struct NdArrayD {
-    pub(crate) inner: NdArray<f64>,
-}
+trait AsNumArray: PyClass {
+    type T: Add<Self::T, Output = Self::T>
+        + AddAssign
+        + Sub<Self::T, Output = Self::T>
+        + SubAssign
+        + Mul<Self::T, Output = Self::T>
+        + MulAssign
+        + Div<Self::T, Output = Self::T>
+        + DivAssign
+        + Default
+        + Copy;
 
-#[pyclass]
-pub struct NdArrayDColIter {
-    iter: ColumnIter<'static, f64>,
-    /// hold a reference to the original array to prevent the GC from collecting it
-    arr: Option<Py<NdArrayD>>,
-}
+    fn cast(&self) -> &NdArray<Self::T>;
 
-#[pyproto]
-impl PyGCProtocol for NdArrayDColIter {
-    fn __traverse__(&'p self, visit: pyo3::PyVisit) -> Result<(), pyo3::PyTraverseError> {
-        visit.call(&self.arr)
-    }
-
-    fn __clear__(&'p mut self) {
-        self.arr = None
-    }
-}
-
-#[pyproto]
-impl PyIterProtocol for NdArrayDColIter {
-    fn __iter__(slf: PyRef<Self>) -> PyRef<Self> {
-        slf
-    }
-
-    fn __next__(mut slf: PyRefMut<Self>) -> Option<Vec<f64>> {
-        slf.iter.next().map(|col| col.into())
-    }
-}
-
-#[pyproto]
-impl PyObjectProtocol for NdArrayD {
-    fn __str__(&self) -> String {
-        self.to_string()
-    }
-
-    fn __repr__(&self) -> String {
-        format!(
-            "NdArray of f64, shape: {:?}, data:\n{}",
-            self.inner.shape,
-            self.to_string()
-        )
-    }
-
-    fn __bool__(&'p self) -> PyResult<bool> {
-        Err(PyNotImplementedError::new_err::<String>(
-            format!("Array to bool conversion is ambigous! Use .any or .all").into(),
-        ))
-    }
-
-    /// Returns an NdArray where each element is 1 if true 0 if false for the given pair of
-    /// elements.
-    // TODO: return bool array
-    fn __richcmp__(&'p self, other: PyRef<'p, Self>, op: CompareOp) -> PyResult<NdArrayD> {
+    fn richcmp<'p, F>(&'p self, other: PyRef<'p, Self>, op: F) -> PyResult<NdArrayB>
+    where
+        F: Fn(&Self::T, &Self::T) -> bool,
+    {
         // TODO: check shape and raise error on uncomparable shapes
         // TODO: support different shapes e.g. compare each element to a scalar
-        let op: fn(f64, f64) -> bool = match op {
-            CompareOp::Lt => |a, b| a < b,
-            CompareOp::Le => |a, b| a <= b,
-            CompareOp::Eq => |a, b| (a - b).abs() < std::f64::EPSILON,
-            CompareOp::Ne => |a, b| (a - b).abs() >= std::f64::EPSILON,
-            CompareOp::Gt => |a, b| a > b,
-            CompareOp::Ge => |a, b| a >= b,
-        };
-        let values: Vec<_> = self
-            .inner
+        let a = self.cast();
+        let b = other.cast();
+        let values: Vec<_> = a
             .as_slice()
             .iter()
-            .zip(other.inner.as_slice().iter())
-            .map(|(a, b)| if op(*a, *b) { 1.0 } else { 0.0 })
+            .zip(b.as_slice().iter())
+            .map(|(a, b)| op(a, b))
             .collect();
-        let mut res = NdArray::<f64>::new_vector(values.into());
-        res.reshape(self.inner.shape.clone())
+        let mut res = NdArray::<bool>::new_vector(values.into());
+        res.reshape(a.shape.clone())
             .map_err(|err| PyValueError::new_err::<String>(format!("{}", err).into()))?;
-        Ok(Self { inner: res })
+        Ok(NdArrayB { inner: res })
+    }
+
+    fn matmul<'p>(lhs: PyRef<'p, Self>, rhs: PyRef<'p, Self>) -> PyResult<NdArray<Self::T>> {
+        NdArray::<Self::T>::matmul(lhs.cast(), rhs.cast())
+            .map_err(|err| PyValueError::new_err::<String>(format!("{}", err).into()))
+    }
+
+    fn add<'p>(lhs: PyRef<'p, Self>, rhs: PyRef<'p, Self>) -> PyResult<NdArray<Self::T>> {
+        let lhs: &NdArray<Self::T> = lhs.cast();
+        let rhs: &NdArray<Self::T> = rhs.cast();
+        lhs.add(rhs)
+            .map_err(|err| PyValueError::new_err::<String>(format!("{}", err).into()))
+    }
+
+    fn sub<'p>(lhs: PyRef<'p, Self>, rhs: PyRef<'p, Self>) -> PyResult<NdArray<Self::T>> {
+        let lhs: &NdArray<Self::T> = lhs.cast();
+        let rhs: &NdArray<Self::T> = rhs.cast();
+        lhs.sub(rhs)
+            .map_err(|err| PyValueError::new_err::<String>(format!("{}", err).into()))
+    }
+
+    fn mul<'p>(lhs: PyRef<'p, Self>, rhs: PyRef<'p, Self>) -> PyResult<NdArray<Self::T>> {
+        let lhs: &NdArray<Self::T> = lhs.cast();
+        let rhs: &NdArray<Self::T> = rhs.cast();
+        lhs.mul(rhs)
+            .map_err(|err| PyValueError::new_err::<String>(format!("{}", err).into()))
+    }
+
+    fn truediv<'p>(lhs: PyRef<'p, Self>, rhs: PyRef<'p, Self>) -> PyResult<NdArray<Self::T>> {
+        let lhs: &NdArray<Self::T> = lhs.cast();
+        let rhs: &NdArray<Self::T> = rhs.cast();
+        lhs.div(rhs)
+            .map_err(|err| PyValueError::new_err::<String>(format!("{}", err).into()))
     }
 }
 
-#[pyproto]
-impl PyNumberProtocol for NdArrayD {
-    fn __matmul__(lhs: PyRef<'p, Self>, rhs: PyRef<'p, Self>) -> PyResult<Self> {
-        lhs.matmul(&*rhs)
-    }
-
-    fn __add__(lhs: PyRef<'p, Self>, rhs: PyRef<'p, Self>) -> PyResult<Self> {
-        lhs.inner
-            .add(&rhs.inner)
-            .map(|inner| Self { inner })
-            .map_err(|err| PyValueError::new_err::<String>(format!("{}", err).into()))
-    }
-
-    fn __sub__(lhs: PyRef<'p, Self>, rhs: PyRef<'p, Self>) -> PyResult<Self> {
-        lhs.inner
-            .sub(&rhs.inner)
-            .map(|inner| Self { inner })
-            .map_err(|err| PyValueError::new_err::<String>(format!("{}", err).into()))
-    }
-
-    fn __mul__(lhs: PyRef<'p, Self>, rhs: PyRef<'p, Self>) -> PyResult<Self> {
-        lhs.inner
-            .mul(&rhs.inner)
-            .map(|inner| Self { inner })
-            .map_err(|err| PyValueError::new_err::<String>(format!("{}", err).into()))
-    }
-
-    fn __truediv__(lhs: PyRef<'p, Self>, rhs: PyRef<'p, Self>) -> PyResult<Self> {
-        lhs.inner
-            .div(&rhs.inner)
-            .map(|inner| Self { inner })
-            .map_err(|err| PyValueError::new_err::<String>(format!("{}", err).into()))
-    }
-}
-
-#[pymethods]
-impl NdArrayD {
-    #[new]
-    pub fn new(shape: Vec<u32>, values: Option<Vec<f64>>) -> PyResult<Self> {
-        let inner = match values {
-            Some(v) => NdArray::new_with_values(shape.into_boxed_slice(), v.into_boxed_slice())
-                .map_err(|err| PyValueError::new_err::<String>(format!("{}", err).into()))?,
-            None => NdArray::new(shape.into_boxed_slice()),
-        };
-        Ok(Self { inner })
-    }
-
-    #[getter]
-    pub fn shape(&self) -> Vec<u32> {
-        match self.inner.shape() {
-            Shape::Scalar => vec![],
-            Shape::Vector(n) => vec![(*n).try_into().unwrap()],
-            Shape::Matrix(n, m) => vec![*n, *m],
-            Shape::Tensor(s) => s.clone().into_vec(),
+#[macro_export(internal_macros)]
+macro_rules! impl_ndarray {
+    ($ty: ty, $name: ident, $itname: ident) => {
+        #[pyclass]
+        #[derive(Debug)]
+        pub struct $name {
+            pub(crate) inner: NdArray<$ty>,
         }
-    }
 
-    pub fn reshape(mut this: PyRefMut<Self>, new_shape: Vec<u32>) -> PyResult<PyRefMut<Self>> {
-        this.inner
-            .reshape(Shape::from(new_shape))
-            .map_err(|err| PyValueError::new_err::<String>(format!("{}", err).into()))?;
-        Ok(this)
-    }
-
-    pub fn get(&self, index: Vec<u32>) -> Option<f64> {
-        self.inner.get(&index).cloned()
-    }
-
-    pub fn set(&mut self, index: Vec<u32>, value: f64) {
-        if let Some(x) = self.inner.get_mut(&index) {
-            *x = value;
-        }
-    }
-
-    pub fn iter_cols<'py>(slf: Py<Self>, py: Python<'py>) -> PyResult<Py<NdArrayDColIter>> {
-        let s = slf.borrow(py);
-        let it = s.inner.iter_cols();
-        let it = unsafe { std::mem::transmute(it) };
-        let it = NdArrayDColIter {
-            iter: it,
-            arr: Some(slf.clone()),
-        };
-        Py::new(py, it)
-    }
-
-    /// Return if all values are truthy
-    pub fn all(&self) -> bool {
-        self.inner.values.iter().all(|x| *x != 0.0)
-    }
-
-    /// Return if any value is truthy
-    pub fn any(&self) -> bool {
-        self.inner.values.iter().any(|x| *x != 0.0)
-    }
-
-    /// The values must have a length equal to the product of the dimensions!
-    pub fn set_values(&mut self, values: Vec<f64>) -> PyResult<()> {
-        self.inner
-            .set_slice(values.into_boxed_slice())
-            .map(|_| ())
-            .map_err(|err| PyValueError::new_err::<String>(format!("{}", err).into()))
-    }
-
-    pub fn matmul(&self, other: &Self) -> PyResult<Self> {
-        self.inner
-            .matmul(&other.inner)
-            .map(|inner| Self { inner })
-            .map_err(|err| PyValueError::new_err::<String>(format!("{}", err).into()))
-    }
-
-    pub fn to_string(&self) -> String {
-        let depth = match self.inner.shape() {
-            Shape::Scalar => {
-                return format!("Scalar: {:?}", self.inner.get(&[]));
+        impl From<NdArray<$ty>> for $name {
+            fn from(inner: NdArray<$ty>) -> Self {
+                Self { inner }
             }
-            Shape::Vector(_) => 1,
-            Shape::Matrix(_, _) => 2,
-            Shape::Tensor(s) => s.len(),
-        };
-        let mut s = String::with_capacity(self.inner.len() * 4);
-        for _ in 0..depth - 1 {
-            s.push('[');
         }
-        let mut it = self.inner.iter_cols();
-        if let Some(col) = it.next() {
-            write!(s, "{:?}", col).unwrap();
+
+        #[pyclass]
+        pub struct $itname {
+            iter: ColumnIter<'static, $ty>,
+            /// hold a reference to the original array to prevent the GC from collecting it
+            arr: Option<Py<$name>>,
         }
-        for col in it {
-            s.push('\n');
-            for _ in 0..depth - 1 {
-                s.push(' ');
+
+        #[pyproto]
+        impl PyGCProtocol for $itname {
+            fn __traverse__(&'p self, visit: pyo3::PyVisit) -> Result<(), pyo3::PyTraverseError> {
+                visit.call(&self.arr)
             }
-            write!(s, "{:?}", col).unwrap();
+
+            fn __clear__(&'p mut self) {
+                self.arr = None
+            }
         }
-        for _ in 0..depth - 1 {
-            s.push(']');
+
+        #[pyproto]
+        impl PyIterProtocol for $itname {
+            fn __iter__(slf: PyRef<Self>) -> PyRef<Self> {
+                slf
+            }
+
+            fn __next__(mut slf: PyRefMut<Self>) -> Option<Vec<$ty>> {
+                slf.iter.next().map(|col| col.into())
+            }
         }
-        s
-    }
+
+        #[pymethods]
+        impl $name {
+            #[new]
+            pub fn new(shape: Vec<u32>, values: Option<Vec<$ty>>) -> PyResult<Self> {
+                let inner = match values {
+                    Some(v) => {
+                        NdArray::new_with_values(shape.into_boxed_slice(), v.into_boxed_slice())
+                            .map_err(|err| {
+                                PyValueError::new_err::<String>(format!("{}", err).into())
+                            })?
+                    }
+                    None => NdArray::new(shape.into_boxed_slice()),
+                };
+                Ok(Self { inner })
+            }
+
+            #[getter]
+            pub fn shape(&self) -> Vec<u32> {
+                match self.inner.shape() {
+                    Shape::Scalar => vec![],
+                    Shape::Vector(n) => vec![(*n).try_into().unwrap()],
+                    Shape::Matrix(n, m) => vec![*n, *m],
+                    Shape::Tensor(s) => s.clone().into_vec(),
+                }
+            }
+
+            pub fn reshape(
+                mut this: PyRefMut<Self>,
+                new_shape: Vec<u32>,
+            ) -> PyResult<PyRefMut<Self>> {
+                this.inner
+                    .reshape(Shape::from(new_shape))
+                    .map_err(|err| PyValueError::new_err::<String>(format!("{}", err).into()))?;
+                Ok(this)
+            }
+
+            pub fn get(&self, index: Vec<u32>) -> Option<$ty> {
+                self.inner.get(&index).cloned()
+            }
+
+            pub fn set(&mut self, index: Vec<u32>, value: $ty) {
+                if let Some(x) = self.inner.get_mut(&index) {
+                    *x = value;
+                }
+            }
+
+            pub fn iter_cols<'py>(slf: Py<Self>, py: Python<'py>) -> PyResult<Py<$itname>> {
+                let s = slf.borrow(py);
+                let it = s.inner.iter_cols();
+                let it = unsafe { std::mem::transmute(it) };
+                let it = $itname {
+                    iter: it,
+                    arr: Some(slf.clone()),
+                };
+                Py::new(py, it)
+            }
+
+            /// The values must have a length equal to the product of the dimensions!
+            pub fn set_values(&mut self, values: Vec<$ty>) -> PyResult<()> {
+                self.inner
+                    .set_slice(values.into_boxed_slice())
+                    .map(|_| ())
+                    .map_err(|err| PyValueError::new_err::<String>(format!("{}", err).into()))
+            }
+
+            pub fn to_string(&self) -> String {
+                self.inner.to_string()
+            }
+        }
+    };
 }
