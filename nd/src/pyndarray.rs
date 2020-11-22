@@ -3,7 +3,7 @@ mod factory;
 
 pub use self::arrayimpl::*;
 
-use pyo3::{prelude::*, types::PyList, wrap_pyfunction};
+use pyo3::{exceptions::PyNotImplementedError, prelude::*, types::PyList, wrap_pyfunction};
 use std::convert::TryFrom;
 
 pub fn setup_module(_py: Python, m: &PyModule) -> PyResult<()> {
@@ -27,7 +27,10 @@ pub fn array(py: Python, inp: &PyList) -> PyResult<PyObject> {
             } else if let Ok(_) = i.extract::<f64>() {
                 break factory::array_f64;
             } else {
-                panic!("Value with unexpected type: {:?}", i);
+                return Err(PyNotImplementedError::new_err(format!(
+                    "Value with unexpected type: {:?}",
+                    i
+                )));
             }
         }
     };
