@@ -439,14 +439,14 @@ where
         }
         let mut it = self.iter_cols();
         if let Some(col) = it.next() {
-            write!(s, "{:?}", col).unwrap();
+            write!(s, "{:.5?}", col).unwrap();
         }
         for col in it {
             s.push('\n');
             for _ in 0..depth - 1 {
                 s.push(' ');
             }
-            write!(s, "{:?}", col).unwrap();
+            write!(s, "{:.5?}", col).unwrap();
         }
         for _ in 0..depth - 1 {
             s.push(']');

@@ -15,10 +15,3 @@ out = layer1.forward(inp)
 print(repr(out))
 
 
-print("Loading data")
-
-dataset = nd.load_csv("C:/Users/dkiss/Downloads/IRIS.csv", labels=["species"])
-
-print(dataset["columns"])
-for label, row in list(zip(dataset["labels"], dataset["data"].iter_cols()))[:5]:
-    print(row, label)
