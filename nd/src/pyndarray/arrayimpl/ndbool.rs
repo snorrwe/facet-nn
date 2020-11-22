@@ -1,10 +1,17 @@
+pub use ndarraybimpl::*;
+
 use crate::pyndarray::NdArrayD;
 use crate::{impl_ndarray, ndarray::NdArray};
 
 use pyo3::{basic::CompareOp, exceptions::PyNotImplementedError, prelude::*, PyObjectProtocol};
 
-impl_ndarray!(bool, NdArrayB, NdArrayBColIter, ndarraybimpl);
-pub use ndarraybimpl::*;
+impl_ndarray!(bool, NdArrayB, inner, NdArrayBColIter, ndarraybimpl);
+
+#[pyclass]
+#[derive(Debug)]
+pub struct NdArrayB {
+    pub inner: NdArray<bool>,
+}
 
 #[pymethods]
 impl NdArrayB {

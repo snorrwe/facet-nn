@@ -82,7 +82,7 @@ trait AsNumArray: PyClass {
 
 #[macro_export(internal_macros)]
 macro_rules! impl_ndarray {
-    ($ty: ty, $name: ident, $itname: ident, $mod: ident) => {
+    ($ty: ty, $name: ident, $inner: ident, $itname: ident, $mod: ident) => {
         mod $mod {
             use crate::ndarray::{column_iter::ColumnIter, shape::Shape, NdArray};
             use crate::pyndarray::PyNdIndex;
@@ -92,12 +92,7 @@ macro_rules! impl_ndarray {
                 PyGCProtocol, PyIterProtocol, PyMappingProtocol,
             };
             use std::convert::TryInto;
-
-            #[pyclass]
-            #[derive(Debug)]
-            pub struct $name {
-                pub(crate) inner: NdArray<$ty>,
-            }
+            use super::$name;
 
             impl From<NdArray<$ty>> for $name {
                 fn from(inner: NdArray<$ty>) -> Self {

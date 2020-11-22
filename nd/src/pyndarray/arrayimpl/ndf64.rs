@@ -1,3 +1,5 @@
+pub use ndarraydimpl::*;
+
 use crate::impl_ndarray;
 
 use crate::ndarray::NdArray;
@@ -11,8 +13,13 @@ use pyo3::{
 use super::AsNumArray;
 use super::NdArrayB;
 
-impl_ndarray!(f64, NdArrayD, NdArrayDColIter, ndarraydimpl);
-pub use ndarraydimpl::*;
+impl_ndarray!(f64, NdArrayD, inner, NdArrayDColIter, ndarraydimpl);
+
+#[pyclass]
+#[derive(Debug)]
+pub struct NdArrayD {
+    pub inner: NdArray<f64>,
+}
 
 #[pyproto]
 impl<T> PyNumberProtocol for NdArrayD {
