@@ -60,12 +60,12 @@ where
     /// use nd::ndarray::shape::Shape;
     ///
     /// // 2 by 3 matrix
-    /// let a = NdArray::new_with_values([2, 3], [1, 2, -1, 2, 0, 1].into()).unwrap();
+    /// let a = NdArray::new_with_values([2, 3], [1, 2, -1, 2, 0, 1]).unwrap();
     ///
     /// // the same 3 by 2 matrix twice
     /// let b = NdArray::new_with_values(
     ///     &[2, 3, 2][..],
-    ///     [3, 1, 0, -1, -2, 3, /*|*/ 3, 1, 0, -1, -2, 3].into(),
+    ///     [3, 1, 0, -1, -2, 3, /*|*/ 3, 1, 0, -1, -2, 3],
     /// )
     /// .unwrap();
     ///
@@ -95,7 +95,7 @@ where
                     expected: *a as usize,
                     actual: *b as usize,
                 })?;
-                Self::new_with_values(&[][..], [res].into())
+                Self::new_with_values(&[][..], [res])
             }
 
             (Shape::Vector(l), Shape::Matrix(n, m)) => {

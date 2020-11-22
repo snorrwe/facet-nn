@@ -9,7 +9,34 @@ use std::convert::TryFrom;
 pub fn setup_module(_py: Python, m: &PyModule) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(array, m)?)?;
     m.add_class::<NdArrayD>()?;
+    m.add_class::<NdArrayB>()?;
+    m.add_class::<PyNdIndex>()?;
     Ok(())
+}
+
+#[pyclass]
+#[derive(Clone)]
+pub struct PyNdIndex {
+    pub inner: Vec<u32>,
+}
+
+#[pymethods]
+impl PyNdIndex {
+    #[new]
+    fn new(inp: &PyAny) -> PyResult<Self> {
+        let shape = if let Ok(lst) = inp.extract::<Vec<u32>>() {
+            lst.into()
+        } else if let Ok(n) = inp.extract::<u32>() {
+            if n == 0 {
+                vec![0]
+            } else {
+                vec![n]
+            }
+        } else {
+            todo!()
+        };
+        Ok(Self { inner: shape })
+    }
 }
 
 #[pyfunction]

@@ -1,18 +1,18 @@
-use super::NdArrayB;
 use crate::impl_ndarray;
 
-use crate::ndarray::{column_iter::ColumnIter, shape::Shape, NdArray};
+use crate::ndarray::NdArray;
 use pyo3::{
     basic::CompareOp,
     exceptions::{PyNotImplementedError, PyValueError},
     prelude::*,
-    PyGCProtocol, PyIterProtocol, PyNumberProtocol, PyObjectProtocol,
+    PyNumberProtocol, PyObjectProtocol,
 };
-use std::convert::TryInto;
 
 use super::AsNumArray;
+use super::NdArrayB;
 
-impl_ndarray!(f64, NdArrayD, NdArrayDColIter);
+impl_ndarray!(f64, NdArrayD, NdArrayDColIter, ndarraydimpl);
+pub use ndarraydimpl::*;
 
 #[pyproto]
 impl<T> PyNumberProtocol for NdArrayD {

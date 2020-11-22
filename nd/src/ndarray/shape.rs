@@ -1,4 +1,4 @@
-use std::convert::TryInto;
+use std::{borrow::Cow, convert::TryInto};
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub enum Shape {
@@ -47,6 +47,16 @@ impl Shape {
         }
     }
 
+    /// Number of columns spanned by this shape.
+    pub fn col_span(&self) -> usize {
+        match self {
+            Shape::Scalar => 1,
+            Shape::Vector(n) => *n as usize,
+            Shape::Matrix(n, _) => *n as usize,
+            Shape::Tensor(shp) => shp[..shp.len() - 2].iter().map(|x| *x as usize).product(),
+        }
+    }
+
     /// Number of elements the last `i` dimensions of this shape spans
     ///
     /// If the total number of dimensions is less than `i` then all are counted
@@ -70,6 +80,15 @@ impl Shape {
                 .product(),
         }
     }
+
+    pub fn as_array(&self) -> Cow<Box<[u32]>> {
+        match self {
+            Shape::Scalar => Cow::Owned([].into()),
+            Shape::Vector(n) => Cow::Owned([*n as u32].into()),
+            Shape::Matrix(n, m) => Cow::Owned([*n, *m].into()),
+            Shape::Tensor(t) => Cow::Borrowed(t),
+        }
+    }
 }
 
 impl From<Box<[u32]>> for Shape {
@@ -86,9 +105,15 @@ impl From<Vec<u32>> for Shape {
 
 impl From<u32> for Shape {
     fn from(shape: u32) -> Self {
+        From::from(shape as u64)
+    }
+}
+
+impl From<u64> for Shape {
+    fn from(shape: u64) -> Self {
         match shape {
             0 => Shape::Scalar,
-            _ => Shape::Vector(shape as u64),
+            _ => Shape::Vector(shape),
         }
     }
 }

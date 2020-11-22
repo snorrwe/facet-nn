@@ -1,13 +1,9 @@
 use crate::impl_ndarray;
 
-use crate::ndarray::{column_iter::ColumnIter, shape::Shape, NdArray};
-use pyo3::{
-    basic::CompareOp, exceptions::PyNotImplementedError, exceptions::PyValueError, prelude::*,
-    PyGCProtocol, PyIterProtocol, PyObjectProtocol,
-};
-use std::convert::TryInto;
+use pyo3::{basic::CompareOp, exceptions::PyNotImplementedError, prelude::*, PyObjectProtocol};
 
-impl_ndarray!(bool, NdArrayB, NdArrayBColIter);
+impl_ndarray!(bool, NdArrayB, NdArrayBColIter, ndarraybimpl);
+pub use ndarraybimpl::*;
 
 #[pymethods]
 impl NdArrayB {

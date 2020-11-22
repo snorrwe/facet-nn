@@ -1,4 +1,4 @@
-use crate::pyndarray::NdArrayD;
+use crate::{ndarray::NdArray, pyndarray::NdArrayD};
 use pyo3::{exceptions::PyValueError, prelude::*, types::PyDict, wrap_pyfunction};
 
 use std::{
@@ -80,7 +80,12 @@ pub fn load_csv<'a, 'py>(
         labels.push(rowlabels)
     }
 
-    let data = NdArrayD::new(vec![rows as u32, (data.len() / rows) as u32], Some(data))?;
+    let data = NdArrayD {
+        inner: NdArray::new_with_values(vec![rows as u32, (data.len() / rows) as u32], data)
+            .map_err(|err| {
+                PyValueError::new_err(format!("failed to build nd array of data {}", err))
+            })?,
+    };
 
     let res = PyDict::new(py);
     match label_columns.len() {

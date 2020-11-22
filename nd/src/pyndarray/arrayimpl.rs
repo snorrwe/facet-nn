@@ -40,7 +40,7 @@ trait AsNumArray: PyClass {
             .zip(b.as_slice().iter())
             .map(|(a, b)| op(a, b))
             .collect();
-        let mut res = NdArray::<bool>::new_vector(values.into());
+        let mut res = NdArray::<bool>::new_vector(values);
         res.reshape(a.shape.clone())
             .map_err(|err| PyValueError::new_err::<String>(format!("{}", err).into()))?;
         Ok(NdArrayB { inner: res })
@@ -82,115 +82,148 @@ trait AsNumArray: PyClass {
 
 #[macro_export(internal_macros)]
 macro_rules! impl_ndarray {
-    ($ty: ty, $name: ident, $itname: ident) => {
-        #[pyclass]
-        #[derive(Debug)]
-        pub struct $name {
-            pub(crate) inner: NdArray<$ty>,
-        }
+    ($ty: ty, $name: ident, $itname: ident, $mod: ident) => {
+        mod $mod {
+            use crate::ndarray::{column_iter::ColumnIter, shape::Shape, NdArray};
+            use crate::pyndarray::PyNdIndex;
+            use pyo3::{
+                exceptions::{PyIndexError, PyValueError},
+                prelude::*,
+                PyGCProtocol, PyIterProtocol, PyMappingProtocol,
+            };
+            use std::convert::TryInto;
 
-        impl From<NdArray<$ty>> for $name {
-            fn from(inner: NdArray<$ty>) -> Self {
-                Self { inner }
-            }
-        }
-
-        #[pyclass]
-        pub struct $itname {
-            iter: ColumnIter<'static, $ty>,
-            /// hold a reference to the original array to prevent the GC from collecting it
-            arr: Option<Py<$name>>,
-        }
-
-        #[pyproto]
-        impl PyGCProtocol for $itname {
-            fn __traverse__(&'p self, visit: pyo3::PyVisit) -> Result<(), pyo3::PyTraverseError> {
-                visit.call(&self.arr)
+            #[pyclass]
+            #[derive(Debug)]
+            pub struct $name {
+                pub(crate) inner: NdArray<$ty>,
             }
 
-            fn __clear__(&'p mut self) {
-                self.arr = None
-            }
-        }
-
-        #[pyproto]
-        impl PyIterProtocol for $itname {
-            fn __iter__(slf: PyRef<Self>) -> PyRef<Self> {
-                slf
+            impl From<NdArray<$ty>> for $name {
+                fn from(inner: NdArray<$ty>) -> Self {
+                    Self { inner }
+                }
             }
 
-            fn __next__(mut slf: PyRefMut<Self>) -> Option<Vec<$ty>> {
-                slf.iter.next().map(|col| col.into())
+            #[pyclass]
+            pub struct $itname {
+                iter: ColumnIter<'static, $ty>,
+                /// hold a reference to the original array to prevent the GC from collecting it
+                arr: Option<Py<$name>>,
             }
-        }
 
-        #[pymethods]
-        impl $name {
-            #[new]
-            pub fn new(shape: Vec<u32>, values: Option<Vec<$ty>>) -> PyResult<Self> {
-                let inner = match values {
-                    Some(v) => {
-                        NdArray::new_with_values(shape.into_boxed_slice(), v.into_boxed_slice())
+            #[pyproto]
+            impl PyGCProtocol for $itname {
+                fn __traverse__(
+                    &'p self,
+                    visit: pyo3::PyVisit,
+                ) -> Result<(), pyo3::PyTraverseError> {
+                    visit.call(&self.arr)
+                }
+
+                fn __clear__(&'p mut self) {
+                    self.arr = None
+                }
+            }
+
+            #[pyproto]
+            impl PyIterProtocol for $itname {
+                fn __iter__(slf: PyRef<Self>) -> PyRef<Self> {
+                    slf
+                }
+
+                fn __next__(mut slf: PyRefMut<Self>) -> Option<Vec<$ty>> {
+                    slf.iter.next().map(|col| col.into())
+                }
+            }
+
+            #[pymethods]
+            impl $name {
+                #[new]
+                pub fn new(shape: &PyAny, values: Option<Vec<$ty>>) -> PyResult<Self> {
+                    let shape = PyNdIndex::new(shape)?;
+                    let inner = match values {
+                        Some(v) => NdArray::new_with_values(shape.inner, v.into_boxed_slice())
                             .map_err(|err| {
                                 PyValueError::new_err::<String>(format!("{}", err).into())
-                            })?
+                            })?,
+                        None => NdArray::new(shape.inner),
+                    };
+                    Ok(Self { inner })
+                }
+
+                #[getter]
+                pub fn shape(&self) -> Vec<u32> {
+                    match self.inner.shape() {
+                        Shape::Scalar => vec![],
+                        Shape::Vector(n) => vec![(*n).try_into().unwrap()],
+                        Shape::Matrix(n, m) => vec![*n, *m],
+                        Shape::Tensor(s) => s.clone().into_vec(),
                     }
-                    None => NdArray::new(shape.into_boxed_slice()),
-                };
-                Ok(Self { inner })
-            }
+                }
 
-            #[getter]
-            pub fn shape(&self) -> Vec<u32> {
-                match self.inner.shape() {
-                    Shape::Scalar => vec![],
-                    Shape::Vector(n) => vec![(*n).try_into().unwrap()],
-                    Shape::Matrix(n, m) => vec![*n, *m],
-                    Shape::Tensor(s) => s.clone().into_vec(),
+                pub fn reshape(
+                    mut this: PyRefMut<Self>,
+                    new_shape: Vec<u32>,
+                ) -> PyResult<PyRefMut<Self>> {
+                    this.inner.reshape(Shape::from(new_shape)).map_err(|err| {
+                        PyValueError::new_err::<String>(format!("{}", err).into())
+                    })?;
+                    Ok(this)
+                }
+
+                pub fn get(&self, index: Vec<u32>) -> Option<$ty> {
+                    self.inner.get(&index).cloned()
+                }
+
+                pub fn set(&mut self, index: Vec<u32>, value: $ty) {
+                    if let Some(x) = self.inner.get_mut(&index) {
+                        *x = value;
+                    }
+                }
+
+                pub fn iter_cols<'py>(slf: Py<Self>, py: Python<'py>) -> PyResult<Py<$itname>> {
+                    let s = slf.borrow(py);
+                    let it = s.inner.iter_cols();
+                    let it = unsafe { std::mem::transmute(it) };
+                    let it = $itname {
+                        iter: it,
+                        arr: Some(slf.clone()),
+                    };
+                    Py::new(py, it)
+                }
+
+                /// The values must have a length equal to the product of the dimensions!
+                pub fn set_values(&mut self, values: Vec<$ty>) -> PyResult<()> {
+                    self.inner
+                        .set_slice(values.into_boxed_slice())
+                        .map(|_| ())
+                        .map_err(|err| PyValueError::new_err::<String>(format!("{}", err).into()))
+                }
+
+                pub fn to_string(&self) -> String {
+                    self.inner.to_string()
                 }
             }
 
-            pub fn reshape(
-                mut this: PyRefMut<Self>,
-                new_shape: Vec<u32>,
-            ) -> PyResult<PyRefMut<Self>> {
-                this.inner
-                    .reshape(Shape::from(new_shape))
-                    .map_err(|err| PyValueError::new_err::<String>(format!("{}", err).into()))?;
-                Ok(this)
-            }
-
-            pub fn get(&self, index: Vec<u32>) -> Option<$ty> {
-                self.inner.get(&index).cloned()
-            }
-
-            pub fn set(&mut self, index: Vec<u32>, value: $ty) {
-                if let Some(x) = self.inner.get_mut(&index) {
-                    *x = value;
+            #[pyproto]
+            impl PyMappingProtocol for $name {
+                fn __len__(&self) -> PyResult<usize> {
+                    Ok(self.inner.shape.span())
                 }
-            }
 
-            pub fn iter_cols<'py>(slf: Py<Self>, py: Python<'py>) -> PyResult<Py<$itname>> {
-                let s = slf.borrow(py);
-                let it = s.inner.iter_cols();
-                let it = unsafe { std::mem::transmute(it) };
-                let it = $itname {
-                    iter: it,
-                    arr: Some(slf.clone()),
-                };
-                Py::new(py, it)
-            }
-
-            /// The values must have a length equal to the product of the dimensions!
-            pub fn set_values(&mut self, values: Vec<$ty>) -> PyResult<()> {
-                self.inner
-                    .set_slice(values.into_boxed_slice())
-                    .map(|_| ())
-                    .map_err(|err| PyValueError::new_err::<String>(format!("{}", err).into()))
-            }
-
-            pub fn to_string(&self) -> String {
-                self.inner.to_string()
+                fn __getitem__(&self, shape: &PyAny) -> PyResult<$ty> {
+                    let shape = PyNdIndex::new(shape)?;
+                    self.inner
+                        .get(&shape.inner[..])
+                        .ok_or_else(|| {
+                            PyIndexError::new_err(format!(
+                                "can't find item at index {:?}",
+                                shape.inner
+                            ))
+                        })
+                        .map(|x| x.clone())
+                }
             }
         }
     };

@@ -9,7 +9,7 @@ fn nd_index() {
 
 #[test]
 fn get_column() {
-    let mut arr = NdArray::<i32>::new([4, 2, 3].into());
+    let mut arr = NdArray::<i32>::new(&[4, 2, 3][..]);
     arr.as_mut_slice()
         .iter_mut()
         .enumerate()
@@ -22,7 +22,7 @@ fn get_column() {
 
 #[test]
 fn test_slice_frees_correctly() {
-    let mut arr = NdArray::new([5, 5].into());
+    let mut arr = NdArray::new([5, 5]);
 
     arr.set_slice(vec![69u32; 25].into_boxed_slice()).unwrap();
 
@@ -33,7 +33,7 @@ fn test_slice_frees_correctly() {
 
 #[test]
 fn test_iter_cols() {
-    let mut arr = NdArray::new([5, 8].into());
+    let mut arr = NdArray::new([5, 8]);
     arr.set_slice((0..40).collect::<Vec<_>>().into_boxed_slice())
         .unwrap();
 
@@ -54,11 +54,8 @@ fn test_iter_cols() {
 
 #[test]
 fn test_vector_inner() {
-    let mut a = NdArray::new([8].into());
-    a.set_slice(vec![69; 8].into()).unwrap();
-
-    let mut b = NdArray::new([8].into());
-    b.set_slice(vec![69; 8].into()).unwrap();
+    let a = NdArray::new_vector(vec![69; 8]);
+    let b = NdArray::new_vector(vec![69; 8]);
 
     let c = a.inner(&b);
 
@@ -67,10 +64,10 @@ fn test_vector_inner() {
 
 #[test]
 fn test_mat_mat_inner() {
-    let mut a = NdArray::new([3, 3].into());
+    let mut a = NdArray::new([3, 3]);
     a.set_slice(vec![42; 9].into()).unwrap();
 
-    let mut b = NdArray::new([3, 3].into());
+    let mut b = NdArray::new([3, 3]);
     b.set_slice(vec![69; 9].into()).unwrap();
 
     let c = a.inner(&b).unwrap();
@@ -80,10 +77,10 @@ fn test_mat_mat_inner() {
 
 #[test]
 fn test_nd_nd_inner() {
-    let mut a = NdArray::new([2, 3, 2].into());
+    let mut a = NdArray::new(&[2, 3, 2][..]);
     a.set_slice(vec![42; 12].into()).unwrap();
 
-    let mut b = NdArray::new([3, 2, 2].into());
+    let mut b = NdArray::new(&[3, 2, 2][..]);
     b.set_slice(vec![69; 12].into()).unwrap();
 
     let c = a.inner(&b).unwrap();
@@ -102,7 +99,7 @@ fn test_vector_matrix_mul() {
          5, 5, 5, 1].into()
     }
 
-    let a = NdArray::new_with_values(&[4][..], [1, 2, 3, 1].into()).unwrap();
+    let a = NdArray::new_with_values(&[4][..], [1, 2, 3, 1]).unwrap();
     let b = NdArray::new_with_values(&[4, 4][..], mat()).unwrap();
 
     let c = a.matmul(&b).expect("matmul");
@@ -123,13 +120,10 @@ fn test_vector_matrix_mul_w_broadcasting() {
     }
     let mat = mat();
 
-    let a = NdArray::new_with_values(&[4][..], [1, 2, 3, 1].into()).unwrap();
+    let a = NdArray::new_with_values(&[4][..], [1, 2, 3, 1]).unwrap();
     let b = NdArray::new_with_values(
         &[4, 4, 4][..],
-        (0..4)
-            .flat_map(|_| mat.iter().cloned())
-            .collect::<Vec<_>>()
-            .into(),
+        (0..4).flat_map(|_| mat.iter().cloned()).collect::<Vec<_>>(),
     )
     .unwrap();
 
@@ -154,7 +148,7 @@ fn test_matrix_vector_mul() {
     }
 
     let a = NdArray::new_with_values(&[4, 4][..], mat()).unwrap();
-    let b = NdArray::new_with_values(4, [1, 2, 3, 1].into()).unwrap();
+    let b = NdArray::new_with_values(4u32, [1, 2, 3, 1]).unwrap();
 
     let c = a.matmul(&b).expect("matmul");
 
@@ -164,8 +158,8 @@ fn test_matrix_vector_mul() {
 
 #[test]
 fn test_mat_mat_mul() {
-    let a = NdArray::new_with_values([2, 3], [1, 2, -1, 2, 0, 1].into()).unwrap();
-    let b = NdArray::new_with_values([3, 2], [3, 1, 0, -1, -2, 3].into()).unwrap();
+    let a = NdArray::new_with_values([2, 3], [1, 2, -1, 2, 0, 1]).unwrap();
+    let b = NdArray::new_with_values([3, 2], [3, 1, 0, -1, -2, 3]).unwrap();
 
     let c = a.matmul(&b).expect("matmul");
 
@@ -175,14 +169,11 @@ fn test_mat_mat_mul() {
 
 #[test]
 fn test_mat_mat_mul_many() {
-    let a = NdArray::new_with_values([2, 3], [1, 2, -1, 2, 0, 1].into()).unwrap();
+    let a = NdArray::new_with_values([2, 3], [1, 2, -1, 2, 0, 1]).unwrap();
 
     // 2 times the matrix from above
-    let b = NdArray::new_with_values(
-        &[2, 3, 2][..],
-        [3, 1, 0, -1, -2, 3, 3, 1, 0, -1, -2, 3].into(),
-    )
-    .unwrap();
+    let b =
+        NdArray::new_with_values(&[2, 3, 2][..], [3, 1, 0, -1, -2, 3, 3, 1, 0, -1, -2, 3]).unwrap();
 
     let c = a.matmul(&b).expect("matmul");
 

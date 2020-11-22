@@ -3,11 +3,14 @@
 foo:
 	echo "boooo"
 
+check-rust:
+	cd nd && cargo check
+
 test-rust:
 	cd nd && cargo test
 
 nd:
 	cd nd && maturin develop
 
-test: test-rust nd
+test: check-rust test-rust nd
 	pytest tests -v

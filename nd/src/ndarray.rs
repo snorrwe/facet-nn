@@ -163,13 +163,12 @@ impl<T> NdArray<T>
 where
     T: Copy,
 {
-    pub fn new(shape: Box<[u32]>) -> Self {
-        let len: usize = shape.iter().map(|x| *x as usize).product();
+    pub fn new(shape: impl Into<Shape>) -> Self {
+        let shape = shape.into();
+        let len: usize = shape.span();
         let values = (0..len)
             .map(|_| unsafe { MaybeUninit::uninit().assume_init() })
             .collect::<Vec<_>>();
-
-        let shape = Shape::from(shape);
 
         Self {
             shape,
@@ -179,11 +178,12 @@ where
 }
 
 impl<T> NdArray<T> {
-    pub fn new_with_values<S: Into<Shape>>(
+    pub fn new_with_values<S: Into<Shape>, V: Into<Box<[T]>>>(
         shape: S,
-        values: Box<[T]>,
+        values: V,
     ) -> Result<Self, NdArrayError> {
         let shape = shape.into();
+        let values = values.into();
 
         let len: usize = shape.span();
         if len != 0 && values.len() != len {
@@ -198,7 +198,8 @@ impl<T> NdArray<T> {
     }
 
     /// Construct a new 'vector' type (1D) array
-    pub fn new_vector(values: Box<[T]>) -> Self {
+    pub fn new_vector(values: impl Into<Box<[T]>>) -> Self {
+        let values = values.into();
         Self {
             shape: Shape::Vector(values.len() as u64),
             values,
@@ -304,7 +305,7 @@ impl<T> NdArray<T> {
     /// ```
     /// use nd::ndarray::NdArray;
     ///
-    /// let mut arr = NdArray::<i32>::new([4, 2, 3].into());
+    /// let mut arr = NdArray::<i32>::new(&[4, 2, 3][..]);
     /// arr.as_mut_slice()
     ///     .iter_mut()
     ///     .enumerate()
