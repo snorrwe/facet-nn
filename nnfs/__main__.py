@@ -13,5 +13,3 @@ inp = nd.array([[1, 1, 1]] * 9)
 out = layer1.forward(inp)
 
 print(repr(out))
-
-

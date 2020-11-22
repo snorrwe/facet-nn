@@ -25,6 +25,8 @@ pub enum NdArrayError {
     ShapeMismatch { expected: Shape, actual: Shape },
     #[error("Binary operation between the given shapes is not supported. Shape A: {shape_a:?} Shape B: {shape_b:?}")]
     BinaryOpNotSupported { shape_a: Shape, shape_b: Shape },
+    #[error("Failed to convert value type into another. {0}")] 
+    ConversionError(String)
 }
 
 #[derive(Debug, Eq, PartialEq)]
@@ -243,7 +245,8 @@ impl<T> NdArray<T> {
         &self.shape
     }
 
-    pub fn reshape(&mut self, new_shape: Shape) -> Result<&mut Self, NdArrayError> {
+    pub fn reshape(&mut self, new_shape: impl Into<Shape>) -> Result<&mut Self, NdArrayError> {
+        let new_shape = new_shape.into();
         let len = self.len();
         let new_len = new_shape.span();
         if len != new_len {

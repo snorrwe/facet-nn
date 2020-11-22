@@ -2,19 +2,49 @@ import nd
 
 
 class DenseLayer:
-    def __init__(self, weights, biases, activation):
-        self.weights = weights
-        self.biases = biases
-        self.activation = activation
+    """
+    Dense layers are interconnected, all inputs are connected to all outputs
+    """
 
-        assert [
-            weights.shape[-1]
-        ] == biases.shape, (
-            "Expected weights and biases to accept the same input dimensions"
-        )
-
+    def __init__(self, inp, out, activation):
+        """
+        :param inp: number of input neurons
+        :param out: number of output neurons
+        """
         assert callable(activation)
 
+        self.weights = nd.array([[0] * out] * inp)
+        self.biases = nd.array([0] * out)
+        self.activation = activation
 
     def forward(self, inp):
         return self.activation(inp.matmul(self.weights) + self.biases)
+
+
+class Network:
+    def __init__(self, layers):
+        self.layers = layers
+
+    def forward(self, x):
+        for layer in self.layers:
+            x = layer.forward(x)
+        return x
+
+
+class Loss:
+    def __init__(self, lossfn):
+        assert callable(lossfn)
+        self.loss = lossfn
+
+
+def first_n(n, it):
+    """
+    :param it: iterable
+    :return: the first n items in it
+    """
+
+    try:
+        for _ in range(n):
+            yield next(it)
+    except StopIteration:
+        return

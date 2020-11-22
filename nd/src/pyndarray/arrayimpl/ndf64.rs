@@ -95,4 +95,11 @@ impl NdArrayD {
             .map(|inner| Self { inner })
             .map_err(|err| PyValueError::new_err::<String>(format!("{}", err).into()))
     }
+
+    pub fn mean(&self) -> PyResult<Self> {
+        self.inner
+            .mean()
+            .map(|inner| Self { inner })
+            .map_err(|err| PyValueError::new_err::<String>(format!("{}", err).into()))
+    }
 }

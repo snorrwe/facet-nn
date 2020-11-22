@@ -1,6 +1,11 @@
 //! Basic arithmetic operations
 //!
-use std::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Sub, SubAssign};
+use std::{
+    convert::TryFrom,
+    fmt::Debug,
+    iter::Sum,
+    ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Sub, SubAssign},
+};
 
 use super::{column_iter::ColumnIterMut, shape::Shape, NdArray, NdArrayError};
 
@@ -166,13 +171,62 @@ where
     }
 }
 
-impl<'a, T> NdArray<T> {
+impl<T> NdArray<T> {
     /// Maps the current array to another array with the same shape
     pub fn map<U>(&self, f: impl FnMut(&T) -> U) -> NdArray<U> {
         let res: Vec<_> = self.values.iter().map(f).collect();
         NdArray {
             shape: self.shape.clone(),
             values: res.into_boxed_slice(),
+        }
+    }
+    pub fn try_map<U, E>(&self, mut f: impl FnMut(&T) -> Result<U, E>) -> Result<NdArray<U>, E> {
+        let mut res = Vec::with_capacity(self.values.len());
+        for v in self.values.iter() {
+            res.push(f(v)?);
+        }
+        Ok(NdArray {
+            shape: self.shape.clone(),
+            values: res.into_boxed_slice(),
+        })
+    }
+}
+
+impl<T> NdArray<T>
+where
+    T: Add + Div<Output = T> + Clone + TryFrom<u32> + Sum + Debug,
+{
+    /// Collapses the last columns into a scalar
+    pub fn mean(&self) -> Result<Self, NdArrayError> {
+        match self.shape {
+            Shape::Scalar => Ok(self.clone()),
+            Shape::Vector(n) => {
+                let s: T = self.values.iter().cloned().sum();
+                Ok(Self {
+                    shape: Shape::Scalar,
+                    values: [s / T::try_from(
+                        u32::try_from(n)
+                            .map_err(|_| NdArrayError::ConversionError(format!("{:?}", n)))?,
+                    )
+                    .map_err(|_| NdArrayError::ConversionError(format!("{:?}", n)))?]
+                    .into(),
+                })
+            }
+            Shape::Tensor(_) | Shape::Matrix(_, _) => {
+                let mut values = Vec::with_capacity(self.shape.col_span());
+                for col in self.iter_cols() {
+                    let s: T = col.iter().cloned().sum();
+                    let res = s
+                        / (T::try_from(col.len() as u32)).map_err(|_| {
+                            NdArrayError::ConversionError(format!("{:?}", col.len()))
+                        })?;
+                    values.push(res)
+                }
+                let mut res = Self::new_vector(values);
+                let shape = self.shape.as_array();
+                res.reshape(&shape[..shape.len() - 1]).unwrap();
+                Ok(res)
+            }
         }
     }
 }
