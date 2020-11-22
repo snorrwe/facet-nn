@@ -44,6 +44,13 @@ class Loss:
         return data_loss
 
 
+def accuracy(pred, target):
+    pred = pred.argmax()
+    target = target.argmax()
+    diff = pred == target
+    return diff.as_f64().mean()
+
+
 def first_n(n, it):
     """
     :param it: iterable

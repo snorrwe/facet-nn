@@ -1,8 +1,10 @@
 mod ndbool;
 mod ndf64;
+mod ndi64;
 
 pub use ndbool::*;
 pub use ndf64::*;
+pub use ndi64::*;
 
 use pyo3::{exceptions::PyValueError, prelude::*, PyClass};
 use std::{
@@ -84,6 +86,7 @@ trait AsNumArray: PyClass {
 macro_rules! impl_ndarray {
     ($ty: ty, $name: ident, $inner: ident, $itname: ident, $mod: ident) => {
         mod $mod {
+            use super::$name;
             use crate::ndarray::{column_iter::ColumnIter, shape::Shape, NdArray};
             use crate::pyndarray::PyNdIndex;
             use pyo3::{
@@ -92,7 +95,6 @@ macro_rules! impl_ndarray {
                 PyGCProtocol, PyIterProtocol, PyMappingProtocol,
             };
             use std::convert::TryInto;
-            use super::$name;
 
             impl From<NdArray<$ty>> for $name {
                 fn from(inner: NdArray<$ty>) -> Self {

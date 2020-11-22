@@ -10,6 +10,7 @@ pub fn setup_module(_py: Python, m: &PyModule) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(array, m)?)?;
     m.add_class::<NdArrayD>()?;
     m.add_class::<NdArrayB>()?;
+    m.add_class::<NdArrayI>()?;
     m.add_class::<PyNdIndex>()?;
     Ok(())
 }

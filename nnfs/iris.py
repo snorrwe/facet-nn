@@ -29,5 +29,7 @@ l = Loss(nd.categorical_cross_entropy)
 
 err = l.calculate(y, y)
 
+acc = accuracy(y, y)
 
-print(err)
+
+print(err, acc)

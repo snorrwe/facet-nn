@@ -1,5 +1,5 @@
 import pytest
-from nd import NdArrayD, array
+from nd import NdArrayD, NdArrayI, array
 
 
 def test_factory():
@@ -104,3 +104,12 @@ def test_adding_matrix_to_tensor():
     # convert back by subtraction...
     e = c - a
     assert (e == b).all()
+
+
+def test_argmax():
+    a = array([[1, 2, 3], [4, 2, 3], [1, 5, 3]])
+
+    res = a.argmax()
+
+    assert res.shape == [3]
+    assert (res == NdArrayI([3], [2, 0, 1])).all()
