@@ -140,6 +140,7 @@ impl NdArrayD {
         Ok(Self { inner })
     }
 
+    #[getter]
     pub fn shape(&self) -> Vec<u32> {
         match self.inner.shape() {
             Shape::Scalar => vec![],

@@ -12,6 +12,8 @@ pub fn relu(inp: PyRef<'_, NdArrayD>) -> NdArrayD {
 
 /// Inp is interpreted as a either a collection of vectors, applying softmax to each column or as a
 /// single vector.
+///
+/// Scalars will always return 1
 #[pyfunction]
 pub fn softmax(inp: PyRef<'_, NdArrayD>) -> PyResult<NdArrayD> {
     // softmax of a scalar value is always 1.

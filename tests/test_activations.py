@@ -22,7 +22,7 @@ def test_softmax_rand():
 
     out = softmax(inp)
 
-    assert out.shape() == [M, N]
+    assert out.shape == [M, N]
 
     for (out, inp) in zip(out.iter_cols(), inp.iter_cols()):
         s = sum(out)
