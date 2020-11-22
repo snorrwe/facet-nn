@@ -21,15 +21,15 @@ nw = Network(
 )
 
 
-y = nw.forward(dataset["data"])
+pred = nw.forward(dataset["data"])
 
 
 l = Loss(nd.categorical_cross_entropy)
 
+y = labels_to_y(dataset["labels"])
 
-err = l.calculate(y, y)
+err = l.calculate(pred, y)
 
-acc = accuracy(y, y)
-
+acc = accuracy(pred, y)
 
 print(err, acc)

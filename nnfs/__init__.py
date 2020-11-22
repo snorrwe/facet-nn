@@ -20,6 +20,9 @@ class DenseLayer:
     def forward(self, inp):
         return self.activation(inp.matmul(self.weights) + self.biases)
 
+    def __repr__(self):
+        return f"DenseLayer weights: {self.weights.shape} biases: {self.biases.shape} activation: {self.activation}"
+
 
 class Network:
     def __init__(self, layers):
@@ -29,6 +32,10 @@ class Network:
         for layer in self.layers:
             x = layer.forward(x)
         return x
+
+    def __repr__(self):
+        layers = "\n".join((repr(x) for x in self.layers))
+        return f"Network object of {len(self.layers)} Layers:\n{layers}"
 
 
 class Loss:
@@ -40,13 +47,34 @@ class Loss:
         assert pred.shape == target.shape
 
         losses = self.loss(pred, target)
-        data_loss = losses.mean()
-        return data_loss
+        return losses.mean()
+
+
+def labels_to_y(labels):
+    """
+    convert a list of labels to a dense target matrix
+    """
+    lset = set(labels)
+    label_pos = {label: i for (i, label) in enumerate(lset)}
+    n_classes = len(lset)
+
+    res = []
+    for label in labels:
+        v = [0.0] * n_classes
+        v[label_pos[label]] = 1.0
+        res.append(v)
+
+    return nd.array(res)
 
 
 def accuracy(pred, target):
+    """
+    How often the prediction matches the target, on average
+    """
+    # collapse dense data into sparse data
+    if len(target.shape) == 2:
+        target = target.argmax()
     pred = pred.argmax()
-    target = target.argmax()
     diff = pred == target
     return diff.as_f64().mean()
 
