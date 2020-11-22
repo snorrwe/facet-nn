@@ -1,4 +1,4 @@
-.PHONY: test
+.PHONY: test nd
 
 foo:
 	echo "boooo"
@@ -6,8 +6,8 @@ foo:
 test-rust:
 	cd nd && cargo test
 
-build-nd:
+nd:
 	cd nd && maturin develop
 
-test: test-rust build-nd
+test: test-rust nd
 	pytest tests -v

@@ -102,8 +102,8 @@ fn test_vector_matrix_mul() {
          5, 5, 5, 1].into()
     }
 
-    let a = NdArray::new_with_values([4].into(), [1, 2, 3, 1].into()).unwrap();
-    let b = NdArray::new_with_values([4, 4].into(), mat()).unwrap();
+    let a = NdArray::new_with_values(&[4][..], [1, 2, 3, 1].into()).unwrap();
+    let b = NdArray::new_with_values(&[4, 4][..], mat()).unwrap();
 
     let c = a.matmul(&b).expect("matmul");
 
@@ -123,9 +123,9 @@ fn test_vector_matrix_mul_w_broadcasting() {
     }
     let mat = mat();
 
-    let a = NdArray::new_with_values([4].into(), [1, 2, 3, 1].into()).unwrap();
+    let a = NdArray::new_with_values(&[4][..], [1, 2, 3, 1].into()).unwrap();
     let b = NdArray::new_with_values(
-        [4, 4, 4].into(),
+        &[4, 4, 4][..],
         (0..4)
             .flat_map(|_| mat.iter().cloned())
             .collect::<Vec<_>>()
@@ -153,8 +153,8 @@ fn test_matrix_vector_mul() {
          0, 0, 0, 1].into()
     }
 
-    let a = NdArray::new_with_values([4, 4].into(), mat()).unwrap();
-    let b = NdArray::new_with_values([4].into(), [1, 2, 3, 1].into()).unwrap();
+    let a = NdArray::new_with_values(&[4, 4][..], mat()).unwrap();
+    let b = NdArray::new_with_values(4, [1, 2, 3, 1].into()).unwrap();
 
     let c = a.matmul(&b).expect("matmul");
 
@@ -164,8 +164,8 @@ fn test_matrix_vector_mul() {
 
 #[test]
 fn test_mat_mat_mul() {
-    let a = NdArray::new_with_values([2, 3].into(), [1, 2, -1, 2, 0, 1].into()).unwrap();
-    let b = NdArray::new_with_values([3, 2].into(), [3, 1, 0, -1, -2, 3].into()).unwrap();
+    let a = NdArray::new_with_values([2, 3], [1, 2, -1, 2, 0, 1].into()).unwrap();
+    let b = NdArray::new_with_values([3, 2], [3, 1, 0, -1, -2, 3].into()).unwrap();
 
     let c = a.matmul(&b).expect("matmul");
 
@@ -175,11 +175,11 @@ fn test_mat_mat_mul() {
 
 #[test]
 fn test_mat_mat_mul_many() {
-    let a = NdArray::new_with_values([2, 3].into(), [1, 2, -1, 2, 0, 1].into()).unwrap();
+    let a = NdArray::new_with_values([2, 3], [1, 2, -1, 2, 0, 1].into()).unwrap();
 
     // 2 times the matrix from above
     let b = NdArray::new_with_values(
-        [2, 3, 2].into(),
+        &[2, 3, 2][..],
         [3, 1, 0, -1, -2, 3, 3, 1, 0, -1, -2, 3].into(),
     )
     .unwrap();

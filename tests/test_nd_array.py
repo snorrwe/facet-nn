@@ -1,5 +1,12 @@
 import pytest
-from nd import NdArrayD
+from nd import NdArrayD, array
+
+
+def test_factory():
+    arr = array([[[2], [2], [2]], [[1], [1], [1]]])
+    assert arr.shape == [2, 3, 1]
+    exp = NdArrayD([2, 3, 1], [2, 2, 2, 1, 1, 1])
+    assert (arr == exp).all()
 
 
 def test_ctor():

@@ -177,9 +177,13 @@ where
 }
 
 impl<T> NdArray<T> {
-    pub fn new_with_values(shape: Box<[u32]>, values: Box<[T]>) -> Result<Self, NdArrayError> {
-        let len: usize = shape.iter().map(|x| *x as usize).product();
+    pub fn new_with_values<S: Into<Shape>>(
+        shape: S,
+        values: Box<[T]>,
+    ) -> Result<Self, NdArrayError> {
+        let shape = shape.into();
 
+        let len: usize =shape.span();
         if len != 0 && values.len() != len {
             return Err(NdArrayError::DimensionMismatch {
                 expected: len,

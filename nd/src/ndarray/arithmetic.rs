@@ -184,7 +184,7 @@ mod tests {
     #[test]
     fn test_map() {
         let a = NdArray::<i32>::new_with_values(
-            [2, 4, 2].into(),
+            &[2, 4, 2][..],
             [0, 69, 0, 69, 0, 69, 0, 0, 0, 0, 69, 0, 69, 0, 69, 0].into(),
         )
         .unwrap();

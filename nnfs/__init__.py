@@ -15,5 +15,6 @@ class DenseLayer:
 
         assert callable(activation)
 
+
     def forward(self, inp):
         return self.activation(inp.matmul(self.weights) + self.biases)

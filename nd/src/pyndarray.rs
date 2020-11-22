@@ -2,11 +2,68 @@ use pyo3::{
     basic::CompareOp,
     exceptions::{PyNotImplementedError, PyValueError},
     prelude::*,
-    PyGCProtocol, PyIterProtocol, PyNumberProtocol, PyObjectProtocol,
+    types::PyList,
+    wrap_pyfunction, PyGCProtocol, PyIterProtocol, PyNumberProtocol, PyObjectProtocol,
 };
-use std::{convert::TryInto, fmt::Write};
+use std::{
+    convert::{TryFrom, TryInto},
+    fmt::Write,
+};
 
 use crate::ndarray::{column_iter::ColumnIter, shape::Shape, NdArray};
+
+pub fn setup_module(_py: Python, m: &PyModule) -> PyResult<()> {
+    m.add_function(wrap_pyfunction!(array, m)?)?;
+    m.add_class::<NdArrayD>()?;
+    Ok(())
+}
+
+fn flatten<'a, T: Clone + FromPyObject<'a>>(inp: &'a PyList, out: &mut Vec<T>) -> PyResult<()> {
+    for val in inp.iter() {
+        if let Ok(l) = val.downcast() {
+            flatten(l, out)?;
+        } else {
+            out.push(val.extract()?);
+        }
+    }
+    Ok(())
+}
+
+#[pyfunction(name="array")]
+pub fn array(py: Python, inp: &PyList) -> PyResult<PyObject> {
+    let mut dims = Vec::new();
+    let factory = {
+        let mut inp = inp;
+        loop {
+            dims.push(u32::try_from(inp.len()).expect("expected dimensions to fit into 32 bits"));
+            let i = inp.get_item(0);
+            if let Ok(i) = i.downcast() {
+                inp = i;
+            } else if let Ok(_) = i.extract::<f64>() {
+                break |dims: Vec<u32>, inp: &PyList| {
+                    let mut values: Vec<f64> = Vec::new(); // TODO: reserve
+                    flatten(inp, &mut values)?;
+                    let arr = NdArray::<f64>::new_with_values(dims, values.into_boxed_slice())
+                        .map_err(|err| {
+                            PyValueError::new_err::<String>(
+                                format!("Failed to create nd-array of f64: {}", err).into(),
+                            )
+                        })?;
+                    let res = NdArrayD { inner: arr };
+                    let res = Py::new(py, res)?;
+
+                    // cast result as Any
+                    let res = unsafe { Py::from_owned_ptr(py, res.into_ptr()) };
+                    Ok(res)
+                };
+            } else {
+                panic!("Value with unexpected type: {:?}", i);
+            }
+        }
+    };
+
+    factory(dims, inp)
+}
 
 // TODO: once this is stable use a macro to generate for a variaty of types...
 //
@@ -150,11 +207,11 @@ impl NdArrayD {
         }
     }
 
-    pub fn reshape(&mut self, new_shape: Vec<u32>) -> PyResult<()> {
-        self.inner
+    pub fn reshape(mut this: PyRefMut<Self>, new_shape: Vec<u32>) -> PyResult<PyRefMut<Self>> {
+        this.inner
             .reshape(Shape::from(new_shape))
             .map_err(|err| PyValueError::new_err::<String>(format!("{}", err).into()))?;
-        Ok(())
+        Ok(this)
     }
 
     pub fn get(&self, index: Vec<u32>) -> Option<f64> {
