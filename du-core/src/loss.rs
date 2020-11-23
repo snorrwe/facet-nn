@@ -24,10 +24,13 @@ pub fn categorical_cross_entropy(
             .iter()
             .cloned()
             .zip(y.iter().cloned())
-            .map(|(x, y)| -> f64 {
-                // clip x to prevent division by 0
+            .map(|(mut x, y)| -> f64 {
+                // clamp x to prevent division by 0
                 // and prevent the dragging of the mean error later
-                let x = x.max(1e-7).min(1.0 - 1e-7);
+                const MAX: f64 = 1.0 - 1e-7;
+                const MIN: f64 = 1e-7;
+                x = if x < MAX { x } else { MAX };
+                x = if x > MIN { x } else { MIN };
                 x.log(E) * y
             })
             .sum();
