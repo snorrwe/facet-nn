@@ -2,8 +2,14 @@ use std::{convert::TryInto, f64::consts::E};
 
 use crate::{ndarray::shape::Shape, ndarray::NdArray, DuResult};
 
+/// ReLU
 pub fn relu(inp: &NdArray<f64>) -> NdArray<f64> {
     inp.map(|v| v.max(0.0))
+}
+
+/// derivative of the ReLU function
+pub fn drelu_dz(z: &NdArray<f64>) -> NdArray<f64> {
+    z.map(|v| if *v > 0.0 { 1.0 } else { 0.0 })
 }
 
 /// Inp is interpreted as a either a collection of vectors, applying softmax to each column or as a

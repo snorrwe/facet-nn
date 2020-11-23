@@ -200,6 +200,11 @@ macro_rules! impl_ndarray {
                 pub fn to_string(&self) -> String {
                     self.inner.to_string()
                 }
+
+                pub fn transpose(&self) -> PyResult<Self> {
+                    let res = self.inner.clone().transpose();
+                    Ok(Self { inner: res })
+                }
             }
 
             #[pyproto]

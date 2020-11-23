@@ -177,6 +177,58 @@ where
             values: values.into_boxed_slice(),
         }
     }
+
+    /// In the case of Tensors transpose the inner matrices
+    /// e.g. Shape `[3, 4, 5]` becomes `[3, 5, 4]`
+    pub fn transpose(self) -> Self {
+        match &self.shape {
+            Shape::Scalar => self,
+            Shape::Vector(n) => Self {
+                shape: Shape::Matrix(*n as u32, 1),
+                values: self.values,
+            },
+            Shape::Matrix(n, m) => {
+                let mut values = self.values.clone();
+                for (i, col) in self.iter_cols().enumerate() {
+                    for (j, v) in col.iter().cloned().enumerate() {
+                        values[j * *n as usize + i] = v;
+                    }
+                }
+
+                Self {
+                    shape: Shape::Matrix(*m, *n),
+                    values,
+                }
+            }
+            shape @ Shape::Tensor(_) => {
+                // inner matrix tmp
+                let shape_len = shape.as_array().len();
+                let [m, n] = shape.last_two().unwrap();
+                let [m, n] = [m as usize, n as usize];
+                let mut tmp = Vec::with_capacity(n * m);
+                tmp.extend_from_slice(&self.values[..n * m]);
+
+                let mut values = Vec::with_capacity(shape.span());
+                for submat in ColumnIter::new(&self.values, n * m) {
+                    for i in 0..n {
+                        for j in 0..m {
+                            tmp[i * m + j] = submat[j * n + i];
+                        }
+                    }
+                    values.extend_from_slice(&tmp);
+                }
+
+                let mut shape = shape.as_array().into_owned();
+                shape[shape_len - 1] = m as u32;
+                shape[shape_len - 2] = n as u32;
+
+                Self {
+                    shape: Shape::Tensor(shape),
+                    values: values.into_boxed_slice(),
+                }
+            }
+        }
+    }
 }
 
 impl<T> NdArray<T> {
@@ -226,6 +278,7 @@ where
     }
 }
 
+// Generic methods
 impl<T> NdArray<T> {
     /// If invalid returns false and leaves this instance unchanged
     pub fn set_slice(&mut self, values: Box<[T]>) -> Result<&mut Self, NdArrayError> {
@@ -427,6 +480,8 @@ impl<T> NdArray<T>
 where
     T: Debug,
 {
+    // TODO: fix Tensor printing, currently the inner `[]`'s aren't printed.
+    // maybe do a recursive function?
     pub fn to_string(&self) -> String {
         let depth = match self.shape() {
             Shape::Scalar => {
