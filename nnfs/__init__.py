@@ -1,4 +1,4 @@
-import nd
+import pydu
 
 
 class DenseLayer:
@@ -13,8 +13,8 @@ class DenseLayer:
         """
         assert callable(activation)
 
-        self.weights = nd.array([[0] * out] * inp)
-        self.biases = nd.array([0] * out)
+        self.weights = pydu.array([[0] * out] * inp)
+        self.biases = pydu.array([0] * out)
         self.activation = activation
 
     def forward(self, inp):
@@ -64,7 +64,7 @@ def labels_to_y(labels):
         v[label_pos[label]] = 1.0
         res.append(v)
 
-    return nd.array(res)
+    return pydu.array(res)
 
 
 def accuracy(pred, target):

@@ -1,5 +1,5 @@
 import pytest
-from nd import NdArrayD, NdArrayI, array
+from pydu import NdArrayD, NdArrayI, array
 
 
 def test_factory():

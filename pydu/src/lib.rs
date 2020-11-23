@@ -6,7 +6,7 @@ pub mod pyndarray;
 use pyo3::prelude::*;
 
 #[pymodule]
-fn du(py: Python, m: &PyModule) -> PyResult<()> {
+fn pydu(py: Python, m: &PyModule) -> PyResult<()> {
     pyndarray::setup_module(py, &m)?;
     activation::setup_module(py, &m)?;
     io::setup_module(py, &m)?;

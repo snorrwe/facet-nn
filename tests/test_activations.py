@@ -3,7 +3,7 @@ import sys
 
 import pytest
 
-from nd import NdArrayD, softmax
+from pydu import NdArrayD, softmax
 
 
 def flatten2d(lst):

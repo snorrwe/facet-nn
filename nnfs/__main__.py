@@ -1,11 +1,12 @@
 from nnfs import *
-import nd
+import pydu
 
 
-layer1 = DenseLayer(3, 3, activation=nd.softmax,)
+layer1 = DenseLayer(3, 3, activation=pydu.softmax)
 
-inp = nd.array([[1, 1, 1]] * 9)
+inp = pydu.array([[1, 1, 1]] * 9)
 
 out = layer1.forward(inp)
 
 print(repr(out))
+print(repr(out.transpose()))
