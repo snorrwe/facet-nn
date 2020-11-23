@@ -25,8 +25,8 @@ pub enum NdArrayError {
     ShapeMismatch { expected: Shape, actual: Shape },
     #[error("Binary operation between the given shapes is not supported. Shape A: {shape_a:?} Shape B: {shape_b:?}")]
     BinaryOpNotSupported { shape_a: Shape, shape_b: Shape },
-    #[error("Failed to convert value type into another. {0}")] 
-    ConversionError(String)
+    #[error("Failed to convert value type into another. {0}")]
+    ConversionError(String),
 }
 
 #[derive(Debug, Eq, PartialEq)]

@@ -86,8 +86,8 @@ macro_rules! impl_ndarray {
     ($ty: ty, $name: ident, $inner: ident, $itname: ident, $mod: ident) => {
         mod $mod {
             use super::$name;
-            use du_core::ndarray::{column_iter::ColumnIter, shape::Shape, NdArray};
             use crate::pyndarray::PyNdIndex;
+            use du_core::ndarray::{column_iter::ColumnIter, shape::Shape, NdArray};
             use pyo3::{
                 exceptions::{PyIndexError, PyValueError},
                 prelude::*,

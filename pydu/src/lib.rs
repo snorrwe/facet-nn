@@ -1,7 +1,7 @@
 pub mod activation;
-pub mod pyndarray;
 pub mod io;
 pub mod loss;
+pub mod pyndarray;
 
 use pyo3::prelude::*;
 

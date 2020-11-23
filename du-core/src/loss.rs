@@ -3,6 +3,8 @@ use std::f64::consts::E;
 use crate::{ndarray::NdArray, DuError, DuResult};
 
 /// The author recommends running `softmax` on the output before calling this function
+///
+/// Expect the predictions to be in the interval [0, 1]
 pub fn categorical_cross_entropy(
     predictions: &NdArray<f64>,
     targets: &NdArray<f64>,
