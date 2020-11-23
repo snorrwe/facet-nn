@@ -2,11 +2,13 @@ from nnfs import *
 import pydu
 
 
-layer1 = DenseLayer(3, 3, activation=pydu.softmax)
+layer1 = DenseLayer(3, 3, activation=pydu.relu, dactifn=pydu.drelu_dz)
 
 inp = pydu.array([[1, 1, 1]] * 9)
 
 out = layer1.forward(inp)
 
 print(repr(out))
-print(repr(out.transpose()))
+
+
+layer1.backward(out)

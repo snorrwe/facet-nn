@@ -205,6 +205,13 @@ macro_rules! impl_ndarray {
                     let res = self.inner.clone().transpose();
                     Ok(Self { inner: res })
                 }
+
+                /// Deep-copy this instance
+                pub fn clone(&self) -> Self {
+                    Self {
+                        inner: self.inner.clone(),
+                    }
+                }
             }
 
             #[pyproto]

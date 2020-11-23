@@ -6,19 +6,31 @@ class DenseLayer:
     Dense layers are interconnected, all inputs are connected to all outputs
     """
 
-    def __init__(self, inp, out, activation):
+    def __init__(self, inp, out, activation, dactifn=None):
         """
         :param inp: number of input neurons
         :param out: number of output neurons
+        :param dactifn: derivative of the activaton function. Only required if this layer will perform backward passes
         """
         assert callable(activation)
+        if dactifn:
+            assert callable(dactifn)
 
-        self.weights = pydu.array([[0] * out] * inp)
-        self.biases = pydu.array([0] * out)
+        self.weights = pydu.array([[69] * out] * inp)
+        self.biases = pydu.array([42] * out)
         self.activation = activation
+        self.dactifn = dactifn
+        self.last_input = None
 
     def forward(self, inp):
+        self.last_input = inp
         return self.activation(inp.matmul(self.weights) + self.biases)
+
+    def backward(self, dvalues):
+        self.dinputs = self.dactifn(dvalues)
+        self.dweights = self.last_input.transpose().matmul(dvalues)
+        self.dinputs = dvalues.matmul(self.weights.transpose())
+        #  self.dbiases = dvalues.sum() # TODO
 
     def __repr__(self):
         return f"DenseLayer weights: {self.weights.shape} biases: {self.biases.shape} activation: {self.activation}"
