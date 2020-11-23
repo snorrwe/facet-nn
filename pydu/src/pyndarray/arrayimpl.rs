@@ -2,6 +2,7 @@ mod ndbool;
 mod ndf64;
 mod ndi64;
 
+use du_core::ndarray::NdArray;
 pub use ndbool::*;
 pub use ndf64::*;
 pub use ndi64::*;
@@ -11,8 +12,6 @@ use std::{
     ops::Add, ops::AddAssign, ops::Div, ops::DivAssign, ops::Mul, ops::MulAssign, ops::Sub,
     ops::SubAssign,
 };
-
-use crate::ndarray::NdArray;
 
 trait AsNumArray: PyClass {
     type T: Add<Self::T, Output = Self::T>
@@ -43,7 +42,7 @@ trait AsNumArray: PyClass {
             .map(|(a, b)| op(a, b))
             .collect();
         let mut res = NdArray::<bool>::new_vector(values);
-        res.reshape(a.shape.clone())
+        res.reshape(a.shape().clone())
             .map_err(|err| PyValueError::new_err::<String>(format!("{}", err).into()))?;
         Ok(NdArrayB { inner: res })
     }
@@ -87,7 +86,7 @@ macro_rules! impl_ndarray {
     ($ty: ty, $name: ident, $inner: ident, $itname: ident, $mod: ident) => {
         mod $mod {
             use super::$name;
-            use crate::ndarray::{column_iter::ColumnIter, shape::Shape, NdArray};
+            use du_core::ndarray::{column_iter::ColumnIter, shape::Shape, NdArray};
             use crate::pyndarray::PyNdIndex;
             use pyo3::{
                 exceptions::{PyIndexError, PyValueError},
@@ -206,7 +205,7 @@ macro_rules! impl_ndarray {
             #[pyproto]
             impl PyMappingProtocol for $name {
                 fn __len__(&self) -> PyResult<usize> {
-                    Ok(self.inner.shape.span())
+                    Ok(self.inner.shape().span())
                 }
 
                 fn __getitem__(&self, shape: &PyAny) -> PyResult<$ty> {

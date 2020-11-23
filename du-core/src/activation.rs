@@ -1,37 +1,29 @@
 use std::{convert::TryInto, f64::consts::E};
 
-use pyo3::{prelude::*, wrap_pyfunction};
+use crate::{ndarray::shape::Shape, ndarray::NdArray, DuResult};
 
-use crate::{ndarray::shape::Shape, ndarray::NdArray, pyndarray::NdArrayD};
-
-#[pyfunction]
-pub fn relu(inp: PyRef<'_, NdArrayD>) -> NdArrayD {
-    let res = inp.inner.map(|v| v.max(0.0));
-    NdArrayD { inner: res }
+pub fn relu(inp: &NdArray<f64>) -> NdArray<f64> {
+    inp.map(|v| v.max(0.0))
 }
 
 /// Inp is interpreted as a either a collection of vectors, applying softmax to each column or as a
 /// single vector.
 ///
 /// Scalars will always return 1
-#[pyfunction]
-pub fn softmax(inp: PyRef<'_, NdArrayD>) -> PyResult<NdArrayD> {
+pub fn softmax(inp: &NdArray<f64>) -> DuResult<NdArray<f64>> {
     // softmax of a scalar value is always 1.
-    if matches!(inp.inner.shape, Shape::Scalar) {
-        return Ok(NdArrayD {
-            inner: NdArray::<f64> {
-                shape: Shape::Scalar,
-                values: [1.0].into(),
-            },
+    if matches!(inp.shape, Shape::Scalar) {
+        return Ok(NdArray::<f64> {
+            shape: Shape::Scalar,
+            values: [1.0].into(),
         });
     }
     // else treat the input as a collection of vectors
-    let inner: &NdArray<f64> = &inp.inner;
-    let mut it = inner.values.iter().cloned();
+    let mut it = inp.values.iter().cloned();
     let first = it.next().expect("no value");
     let max: f64 = it.fold(first, |max, value| value.max(max));
 
-    let expvalues = inner
+    let expvalues = inp
         .sub(&NdArray::from(max))
         .expect("Failed to sub max from the input")
         .map(|v: &f64| E.powf(*v));
@@ -60,11 +52,5 @@ pub fn softmax(inp: PyRef<'_, NdArrayD>) -> PyResult<NdArrayD> {
         debug_assert_eq!(norm.len(), 1);
         col.iter_mut().for_each(|v| *v /= norm[0]);
     }
-    Ok(NdArrayD { inner: res })
-}
-
-pub fn setup_module(_py: Python, m: &PyModule) -> PyResult<()> {
-    m.add_function(wrap_pyfunction!(relu, m)?)?;
-    m.add_function(wrap_pyfunction!(softmax, m)?)?;
-    Ok(())
+    Ok(res)
 }

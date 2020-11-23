@@ -1,6 +1,5 @@
+use du_core::ndarray::{NdArray, shape::Shape};
 use pyo3::{exceptions::PyValueError, prelude::*, types::PyList};
-
-use crate::ndarray::{shape::Shape, NdArray};
 
 use super::{NdArrayB, NdArrayD};
 

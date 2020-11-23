@@ -1,8 +1,8 @@
+use du_core::ndarray::NdArray;
 pub use ndarraydimpl::*;
 
 use crate::impl_ndarray;
 
-use crate::ndarray::NdArray;
 use pyo3::{
     basic::CompareOp,
     exceptions::{PyNotImplementedError, PyValueError},
@@ -53,7 +53,7 @@ impl<T> PyObjectProtocol for NdArrayD {
     fn __repr__(&self) -> String {
         format!(
             "NdArray of f64, shape: {:?}, data:\n{}",
-            self.inner.shape,
+            self.inner.shape(),
             self.to_string()
         )
     }
@@ -105,7 +105,7 @@ impl NdArrayD {
 
     pub fn clip(mut this: PyRefMut<Self>, min: f64, max: f64) -> PyResult<PyRefMut<Self>> {
         this.inner
-            .values
+            .as_mut_slice()
             .iter_mut()
             .for_each(|v| *v = v.max(min).min(max));
 
@@ -115,7 +115,7 @@ impl NdArrayD {
     /// Collapses the last columns into an array of indices, where each index is the index of the
     /// largest value of the given column
     pub fn argmax(&self) -> PyResult<NdArrayI> {
-        let mut res = Vec::with_capacity(self.inner.shape.col_span());
+        let mut res = Vec::with_capacity(self.inner.shape().col_span());
         for col in self.inner.iter_cols() {
             let ind = col
                 .iter()
@@ -123,7 +123,7 @@ impl NdArrayD {
                 .fold(0, |i, (j, v)| if col[i] < *v { j } else { i });
             res.push(ind as i64);
         }
-        let shape = self.inner.shape.as_array();
+        let shape = self.inner.shape().as_array();
         let res = NdArray::new_with_values(&shape[..shape.len() - 1], res).unwrap();
         Ok(NdArrayI { inner: res })
     }
@@ -131,7 +131,7 @@ impl NdArrayD {
     /// Collapses the last columns into an array of indices, where each index is the index of the
     /// smallest value of the given column
     pub fn argmin(&self) -> PyResult<NdArrayI> {
-        let mut res = Vec::with_capacity(self.inner.shape.col_span());
+        let mut res = Vec::with_capacity(self.inner.shape().col_span());
         for col in self.inner.iter_cols() {
             let ind = col
                 .iter()
@@ -139,7 +139,7 @@ impl NdArrayD {
                 .fold(0, |i, (j, v)| if col[i] > *v { j } else { i });
             res.push(ind as i64);
         }
-        let shape = self.inner.shape.as_array();
+        let shape = self.inner.shape().as_array();
         let res = NdArray::new_with_values(&shape[..shape.len() - 1], res).unwrap();
         Ok(NdArrayI { inner: res })
     }

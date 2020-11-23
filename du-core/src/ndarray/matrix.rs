@@ -56,8 +56,8 @@ where
     /// The output is 2(!) 2 by 2 matrices.
     ///
     /// ```
-    /// use nd::ndarray::NdArray;
-    /// use nd::ndarray::shape::Shape;
+    /// use du_core::ndarray::NdArray;
+    /// use du_core::ndarray::shape::Shape;
     ///
     /// // 2 by 3 matrix
     /// let a = NdArray::new_with_values([2, 3], [1, 2, -1, 2, 0, 1]).unwrap();

@@ -1,4 +1,5 @@
-use crate::{ndarray::NdArray, pyndarray::NdArrayD};
+use crate::pyndarray::NdArrayD;
+use du_core::ndarray::NdArray;
 use pyo3::{exceptions::PyValueError, prelude::*, types::PyDict, wrap_pyfunction};
 
 use std::{

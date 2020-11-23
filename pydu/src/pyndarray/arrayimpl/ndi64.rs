@@ -1,4 +1,5 @@
-use crate::{impl_ndarray, ndarray::NdArray};
+use crate::impl_ndarray;
+use du_core::ndarray::NdArray;
 pub use ndarraydimpl::*;
 
 use pyo3::{
@@ -49,7 +50,7 @@ impl<T> PyObjectProtocol for NdArrayI {
     fn __repr__(&self) -> String {
         format!(
             "NdArray of i64, shape: {:?}, data:\n{}",
-            self.inner.shape,
+            self.inner.shape(),
             self.to_string()
         )
     }
@@ -87,8 +88,8 @@ impl AsNumArray for NdArrayI {
 impl NdArrayI {
     /// Convert self into float representation
     pub fn as_f64(&self) -> NdArrayD {
-        let values: Vec<f64> = self.inner.values.iter().map(|x| *x as f64).collect();
-        let res = NdArray::new_with_values(self.inner.shape.clone(), values).unwrap();
+        let values: Vec<f64> = self.inner.as_slice().iter().map(|x| *x as f64).collect();
+        let res = NdArray::new_with_values(self.inner.shape().clone(), values).unwrap();
         NdArrayD { inner: res }
     }
 }

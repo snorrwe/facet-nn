@@ -4,13 +4,13 @@ foo:
 	echo "boooo"
 
 check-rust:
-	cd nd && cargo check
+	cargo check
 
 test-rust:
-	cd nd && cargo test
+	cargo test
 
 nd:
-	cd nd && maturin develop
+	cd pydu && maturin develop
 
 test: check-rust test-rust nd
 	pytest tests -v

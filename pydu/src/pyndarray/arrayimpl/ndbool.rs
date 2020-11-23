@@ -1,7 +1,8 @@
+use du_core::ndarray::NdArray;
 pub use ndarraybimpl::*;
 
+use crate::impl_ndarray;
 use crate::pyndarray::NdArrayD;
-use crate::{impl_ndarray, ndarray::NdArray};
 
 use pyo3::{basic::CompareOp, exceptions::PyNotImplementedError, prelude::*, PyObjectProtocol};
 
@@ -17,23 +18,23 @@ pub struct NdArrayB {
 impl NdArrayB {
     /// Return if all values are truthy
     pub fn all(&self) -> bool {
-        self.inner.values.iter().all(|x| *x)
+        self.inner.as_slice().iter().all(|x| *x)
     }
 
     /// Return if any value is truthy
     pub fn any(&self) -> bool {
-        self.inner.values.iter().any(|x| *x)
+        self.inner.as_slice().iter().any(|x| *x)
     }
 
     /// Convert self into float representation, where True becomes 1.0 and False becomes 0.0
     pub fn as_f64(&self) -> NdArrayD {
         let values: Vec<f64> = self
             .inner
-            .values
+            .as_slice()
             .iter()
             .map(|x| if *x { 1.0 } else { 0.0 })
             .collect();
-        let res = NdArray::new_with_values(self.inner.shape.clone(), values).unwrap();
+        let res = NdArray::new_with_values(self.inner.shape().clone(), values).unwrap();
         NdArrayD { inner: res }
     }
 }
@@ -47,7 +48,7 @@ impl<T> PyObjectProtocol for NdArrayB {
     fn __repr__(&self) -> String {
         format!(
             "NdArray of f64, shape: {:?}, data:\n{}",
-            self.inner.shape,
+            self.inner.shape(),
             self.to_string()
         )
     }
@@ -74,9 +75,9 @@ impl<T> PyObjectProtocol for NdArrayB {
 
         Ok(self
             .inner
-            .values
+            .as_slice()
             .iter()
-            .zip(other.inner.values.iter())
+            .zip(other.inner.as_slice().iter())
             .all(move |(a, b)| op(a, b)))
     }
 }
