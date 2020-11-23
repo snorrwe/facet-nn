@@ -189,12 +189,7 @@ where
             },
             Shape::Matrix(n, m) => {
                 let mut values = self.values.clone();
-                for (i, col) in self.iter_cols().enumerate() {
-                    for (j, v) in col.iter().cloned().enumerate() {
-                        values[j * *n as usize + i] = v;
-                    }
-                }
-
+                matrix::transpose_mat([*n as usize, *m as usize], &self.values, &mut values);
                 Self {
                     shape: Shape::Matrix(*m, *n),
                     values,
@@ -203,24 +198,24 @@ where
             shape @ Shape::Tensor(_) => {
                 // inner matrix tmp
                 let shape_len = shape.as_array().len();
-                let [m, n] = shape.last_two().unwrap();
+                let [n, m] = shape.last_two().unwrap();
                 let [m, n] = [m as usize, n as usize];
                 let mut tmp = Vec::with_capacity(n * m);
                 tmp.extend_from_slice(&self.values[..n * m]);
 
+                // TODO
+                // 2 million iq move: copy the first slice then use the first slice as the tmp
+                //   array
+
                 let mut values = Vec::with_capacity(shape.span());
                 for submat in ColumnIter::new(&self.values, n * m) {
-                    for i in 0..n {
-                        for j in 0..m {
-                            tmp[i * m + j] = submat[j * n + i];
-                        }
-                    }
+                    matrix::transpose_mat([n, m], submat, &mut tmp);
                     values.extend_from_slice(&tmp);
                 }
 
                 let mut shape = shape.as_array().into_owned();
-                shape[shape_len - 1] = m as u32;
-                shape[shape_len - 2] = n as u32;
+                shape[shape_len - 1] = n as u32;
+                shape[shape_len - 2] = m as u32;
 
                 Self {
                     shape: Shape::Tensor(shape),

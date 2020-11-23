@@ -180,3 +180,36 @@ fn test_mat_mat_mul_many() {
     assert_eq!(c.shape, Shape::Tensor([2, 2, 2].into()));
     assert_eq!(c.as_slice(), &[5, -4, 4, 5, 5, -4, 4, 5]);
 }
+
+#[test]
+fn test_mat_transpose() {
+    let a = NdArray::new_with_values(&[2, 3][..], [1, 2, 3, 4, 5, 6]).unwrap();
+
+    println!("{}", a.to_string());
+    let b = a.transpose();
+
+    assert_eq!(b.shape, Shape::Matrix(3, 2));
+    assert_eq!(b.as_slice(), &[1, 4, 2, 5, 3, 6], "{}", b.to_string());
+}
+
+#[test]
+fn test_tensor_transpose() {
+    let a = NdArray::new_with_values(
+        &[4, 2, 3][..],
+        [
+            1, 2, 3, 4, 5, 6, 1, 2, 3, 4, 5, 6, 1, 2, 3, 4, 5, 6, 1, 2, 3, 4, 5, 6,
+        ],
+    )
+    .unwrap();
+
+    println!("{}", a.to_string());
+    let b = a.transpose();
+
+    assert_eq!(b.shape, Shape::Tensor([4, 3, 2].into()));
+    assert_eq!(
+        b.as_slice(),
+        &[1, 4, 2, 5, 3, 6, 1, 4, 2, 5, 3, 6, 1, 4, 2, 5, 3, 6, 1, 4, 2, 5, 3, 6],
+        "\n{}",
+        b.to_string()
+    );
+}

@@ -2,11 +2,7 @@ from nnfs import *
 import nd
 
 
-layer1 = DenseLayer(
-    weights=nd.array(list(range(9))).reshape([3, 3]),
-    biases=nd.array(list(range(4, 7))),
-    activation=nd.softmax,
-)
+layer1 = DenseLayer(3, 3, activation=nd.softmax,)
 
 inp = nd.array([[1, 1, 1]] * 9)
 

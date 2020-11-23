@@ -43,6 +43,14 @@ where
     Ok(())
 }
 
+pub fn transpose_mat<T: Clone>([n, m]: [usize; 2], inp: &[T], out: &mut [T]) {
+    for (i, col) in ColumnIter::new(inp, m).enumerate() {
+        for (j, v) in col.iter().cloned().enumerate() {
+            out[j * n + i] = v;
+        }
+    }
+}
+
 impl<'a, T> NdArray<T>
 where
     T: AddAssign + Add<Output = T> + Mul<Output = T> + Default + 'a + Copy,
