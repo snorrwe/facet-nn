@@ -3,6 +3,7 @@ import sys
 
 import pytest
 
+import pydu
 from pydu import NdArrayD, softmax
 
 
@@ -76,3 +77,15 @@ def test_softmax_scalar():
     inp = NdArrayD([0], [1123])
     out = softmax(inp)
     assert (out == NdArrayD([0], [1])).all()
+
+
+def test_softmax_derivative():
+    softmax_output = pydu.array([0.7, 0.1, 0.2]).reshape([3, 1])
+
+    print(softmax_output)
+
+    foo = pydu.diagflat([a for l in list(softmax_output.iter_cols()) for a in l])
+
+    print(foo)
+
+    assert 0

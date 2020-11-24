@@ -1,4 +1,4 @@
-use std::{convert::TryInto, f64::consts::E};
+use std::f64::consts::E;
 
 use crate::{ndarray::shape::Shape, ndarray::NdArray, DuResult};
 
@@ -18,14 +18,11 @@ pub fn drelu_dz(z: &NdArray<f64>) -> NdArray<f64> {
 /// Scalars will always return 1
 pub fn softmax(inp: &NdArray<f64>) -> DuResult<NdArray<f64>> {
     // softmax of a scalar value is always 1.
-    if matches!(inp.shape, Shape::Scalar) {
-        return Ok(NdArray::<f64> {
-            shape: Shape::Scalar,
-            values: [1.0].into(),
-        });
+    if matches!(inp.shape(), Shape::Scalar) {
+        return Ok(NdArray::new_with_values(Shape::Scalar, [1.0])?);
     }
     // else treat the input as a collection of vectors
-    let mut it = inp.values.iter().cloned();
+    let mut it = inp.as_slice().iter().cloned();
     let first = it.next().expect("no value");
     let max: f64 = it.fold(first, |max, value| value.max(max));
 
@@ -39,18 +36,8 @@ pub fn softmax(inp: &NdArray<f64>) -> DuResult<NdArray<f64>> {
         .map(|col| col.iter().cloned().sum())
         .collect();
 
-    debug_assert_eq!(
-        norm_base.shape,
-        Shape::Vector(
-            (expvalues.shape.span() / expvalues.shape.last().unwrap() as usize)
-                .try_into()
-                .expect("failed to convert vector len to u32")
-        ),
-        "internal error when producing norm_base"
-    );
-
     norm_base
-        .reshape(Shape::Matrix(norm_base.shape.last().unwrap(), 1))
+        .reshape(Shape::Matrix(norm_base.shape().last().unwrap(), 1))
         .unwrap();
 
     let mut res = expvalues;

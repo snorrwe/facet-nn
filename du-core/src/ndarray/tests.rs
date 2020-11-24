@@ -2,9 +2,8 @@ use super::*;
 
 #[test]
 fn nd_index() {
-    let i = get_index(1, &[2, 4, 8], &[1, 3, 5]).unwrap();
-
-    assert_eq!(i, 5 + 2 * 8 + 1 * 4 * 8);
+    let i = get_index(&[2, 4, 8], &[4 * 8, 8, 1], &[1, 3, 5]).unwrap();
+    assert_eq!(i, 5 + 3 * 8 + 4 * 8);
 }
 
 #[test]
@@ -93,7 +92,7 @@ fn test_vector_matrix_mul() {
     // transpose matrix, displacing the 3d homogeneous vector by 5,5,5
     #[rustfmt::skip]
     fn mat() -> Box<[i32]> {
-        [1, 0, 0, 0, 
+        [1, 0, 0, 0,
          0, 1, 0, 0,
          0, 0, 1, 0,
          5, 5, 5, 1].into()
@@ -113,7 +112,7 @@ fn test_vector_matrix_mul_w_broadcasting() {
     // transpose matrix, displacing the 3d homogeneous vector by 5,5,5
     #[rustfmt::skip]
     fn mat() -> Box<[i32]> {
-        [1, 0, 0, 0, 
+        [1, 0, 0, 0,
          0, 1, 0, 0,
          0, 0, 1, 0,
          5, 5, 5, 1].into()
@@ -141,7 +140,7 @@ fn test_matrix_vector_mul() {
     // transpose matrix, displacing the 3d homogeneous vector by 5,5,5
     #[rustfmt::skip]
     fn mat() -> Box<[i32]> {
-        [1, 0, 0, 5, 
+        [1, 0, 0, 5,
          0, 1, 0, 5,
          0, 0, 1, 5,
          0, 0, 0, 1].into()

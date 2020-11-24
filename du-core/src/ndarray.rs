@@ -31,8 +31,9 @@ pub enum NdArrayError {
 
 #[derive(Debug, Eq, PartialEq)]
 pub struct NdArray<T> {
-    pub(crate) shape: Shape,
-    pub(crate) values: Box<[T]>,
+    shape: Shape,
+    values: Box<[T]>,
+    stride: Box<[usize]>,
 }
 
 impl<T> Clone for NdArray<T>
@@ -43,6 +44,7 @@ where
         Self {
             shape: self.shape.clone(),
             values: self.values.clone(),
+            stride: self.stride.clone(),
         }
     }
 }
@@ -172,10 +174,7 @@ where
             .map(|_| unsafe { MaybeUninit::uninit().assume_init() })
             .collect::<Vec<_>>();
 
-        Self {
-            shape,
-            values: values.into_boxed_slice(),
-        }
+        Self::new_with_values(shape, values).unwrap()
     }
 
     /// In the case of Tensors transpose the inner matrices
@@ -183,17 +182,13 @@ where
     pub fn transpose(self) -> Self {
         match &self.shape {
             Shape::Scalar => self,
-            Shape::Vector(n) => Self {
-                shape: Shape::Matrix(*n as u32, 1),
-                values: self.values,
-            },
+            Shape::Vector(n) => {
+                Self::new_with_values(Shape::Matrix(*n as u32, 1), self.values).unwrap()
+            }
             Shape::Matrix(n, m) => {
                 let mut values = self.values.clone();
                 matrix::transpose_mat([*n as usize, *m as usize], &self.values, &mut values);
-                Self {
-                    shape: Shape::Matrix(*m, *n),
-                    values,
-                }
+                Self::new_with_values(Shape::Matrix(*m, *n), values).unwrap()
             }
             shape @ Shape::Tensor(_) => {
                 // inner matrix tmp
@@ -217,10 +212,7 @@ where
                 shape[shape_len - 1] = n as u32;
                 shape[shape_len - 2] = m as u32;
 
-                Self {
-                    shape: Shape::Tensor(shape),
-                    values: values.into_boxed_slice(),
-                }
+                Self::new_with_values(Shape::Tensor(shape), values.into_boxed_slice()).unwrap()
             }
         }
     }
@@ -243,16 +235,18 @@ impl<T> NdArray<T> {
         }
 
         let shape = Shape::from(shape);
-        Ok(Self { shape, values })
+        let res = Self {
+            stride: shape::stride_vec(1, &*shape.as_array()).into_boxed_slice(),
+            shape,
+            values,
+        };
+        Ok(res)
     }
 
     /// Construct a new 'vector' type (1D) array
     pub fn new_vector(values: impl Into<Box<[T]>>) -> Self {
         let values = values.into();
-        Self {
-            shape: Shape::Vector(values.len() as u64),
-            values,
-        }
+        Self::new_with_values(Shape::Vector(values.len() as u64), values).unwrap()
     }
 }
 
@@ -266,10 +260,21 @@ where
         let values = (0..len).map(|_| Default::default()).collect::<Vec<_>>();
 
         let shape = Shape::from(shape);
-        Self {
-            shape,
-            values: values.into_boxed_slice(),
+        Self::new_with_values(shape, values.into_boxed_slice()).unwrap()
+    }
+
+    /// Returns a Diagonal matrix where the values are the given default value and the rest of the
+    /// items are Default'ed
+    pub fn diagonal(columns: u32, default: T) -> Self
+    where
+        T: Default + Clone,
+    {
+        let mut res = Self::new_default(Shape::Matrix(columns, columns));
+        let columns = columns as usize;
+        for i in 0..columns {
+            res.values[i * columns + i] = default.clone()
         }
+        res
     }
 }
 
@@ -321,11 +326,11 @@ impl<T> NdArray<T> {
             Shape::Scalar => self.values.get(0),
             Shape::Vector(_) => self.values.get(*index.get(0)? as usize),
             Shape::Matrix(n, m) => {
-                let i = get_index(1, &[*n, *m], index)?;
+                let i = get_index(&[*n, *m], &[*m as usize, 1], index)?;
                 self.values.get(i)
             }
             Shape::Tensor(shape) => {
-                let i = get_index(1, shape, index)?;
+                let i = get_index(shape, &self.stride, index)?;
                 self.values.get(i)
             }
         }
@@ -336,11 +341,11 @@ impl<T> NdArray<T> {
             Shape::Scalar => self.values.get_mut(0),
             Shape::Vector(_) => self.values.get_mut(*index.get(0)? as usize),
             Shape::Matrix(n, m) => {
-                let i = get_index(1, &[*n, *m], index)?;
+                let i = get_index(&[*n, *m], &[*m as usize, 1], index)?;
                 self.values.get_mut(i)
             }
             Shape::Tensor(shape) => {
-                let i = get_index(1, shape, index)?;
+                let i = get_index(shape, &self.stride, index)?;
                 self.values.get_mut(i)
             }
         }
@@ -370,23 +375,21 @@ impl<T> NdArray<T> {
         match &self.shape {
             Shape::Scalar | Shape::Vector(_) => Some(&self.values),
             Shape::Matrix(n, m) => {
-                let m = *m as usize;
                 let i = get_index(
-                    m,
                     &[*n], // skip the last dim
+                    &[1],
                     index,
                 )?;
-                let i = i * m;
+                let m = *m as usize;
                 Some(&self.as_slice()[i..i + m])
             }
             Shape::Tensor(shape) => {
-                let w = *shape.last().unwrap() as usize;
                 let i = get_index(
-                    w,
                     &shape[..shape.len() - 1], // skip the last dim
+                    &self.stride[..shape.len() - 1],
                     index,
                 )?;
-                let i = i * w;
+                let w = self.shape.last().unwrap() as usize;
                 Some(&self.as_slice()[i..i + w])
             }
         }
@@ -396,23 +399,21 @@ impl<T> NdArray<T> {
         match &self.shape {
             Shape::Scalar | Shape::Vector(_) => Some(&mut self.values),
             Shape::Matrix(n, m) => {
-                let m = *m as usize;
                 let i = get_index(
-                    m,
                     &[*n], // skip the last dim
+                    &[1],
                     index,
                 )?;
-                let i = i * m;
+                let m = *m as usize;
                 Some(&mut self.as_mut_slice()[i..i + m])
             }
             Shape::Tensor(shape) => {
-                let w = *shape.last().unwrap() as usize;
                 let i = get_index(
-                    w,
                     &shape[..shape.len() - 1], // skip the last dim
+                    &self.stride[..shape.len() - 1],
                     index,
                 )?;
-                let i = i * w;
+                let w = *shape.last().unwrap() as usize;
                 Some(&mut self.as_mut_slice()[i..i + w])
             }
         }
@@ -437,37 +438,32 @@ impl<T> NdArray<T> {
 
 /// fold the index
 #[inline]
-fn get_index(width: usize, shape: &[u32], index: &[u32]) -> Option<usize> {
-    // they should be equal to avoid confusion, but this is enough to work
-    let mut it = shape.iter().rev();
-    let mut a = *it.next()? as usize;
-
-    let mut res = *index.last()? as usize;
-    let iit = index.iter().rev();
-
-    for (dim, ind) in it.zip(iit).skip(1) {
-        a *= *dim as usize;
-        res += a * *ind as usize;
+fn get_index(shape: &[u32], stride: &[usize], index: &[u32]) -> Option<usize> {
+    if index.len() > shape.len() {
+        return None;
     }
-    Some(res * width)
+    let mut res = 0;
+    for i in 0..index.len() {
+        if index[i] >= shape[i] {
+            return None;
+        }
+        let skip = index[i] as usize;
+        res += skip * stride[i];
+    }
+
+    Some(res)
 }
 
 impl<T> From<T> for NdArray<T> {
     fn from(val: T) -> Self {
-        NdArray {
-            shape: Shape::Scalar,
-            values: [val].into(),
-        }
+        NdArray::new_with_values(Shape::Scalar, [val]).unwrap()
     }
 }
 
 impl<'a, T> FromIterator<T> for NdArray<T> {
     fn from_iter<It: IntoIterator<Item = T>>(iter: It) -> Self {
         let values = iter.into_iter().collect::<Vec<T>>();
-        Self {
-            shape: Shape::Vector(values.len() as u64),
-            values: values.into(),
-        }
+        Self::new_with_values(Shape::Vector(values.len() as u64), values).unwrap()
     }
 }
 

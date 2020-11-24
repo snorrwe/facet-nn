@@ -10,10 +10,7 @@ where
 
     fn add(self, b: T) -> Self::Output {
         let values: Vec<T> = self.values.iter().map(move |a| *a + b).collect();
-        Self {
-            shape: self.shape.clone(),
-            values: values.into_boxed_slice(),
-        }
+        Self::new_with_values(self.shape.clone(), values).unwrap()
     }
 }
 
@@ -36,10 +33,7 @@ where
 
     fn sub(self, b: T) -> Self::Output {
         let values: Vec<T> = self.values.iter().map(move |a| *a - b).collect();
-        Self {
-            shape: self.shape.clone(),
-            values: values.into_boxed_slice(),
-        }
+        Self::new_with_values(self.shape.clone(), values).unwrap()
     }
 }
 
@@ -62,10 +56,7 @@ where
 
     fn mul(self, b: T) -> Self::Output {
         let values: Vec<T> = self.values.iter().map(move |a| *a * b).collect();
-        Self {
-            shape: self.shape.clone(),
-            values: values.into_boxed_slice(),
-        }
+        Self::new_with_values(self.shape.clone(), values).unwrap()
     }
 }
 
@@ -88,10 +79,7 @@ where
 
     fn div(self, b: T) -> Self::Output {
         let values: Vec<T> = self.values.iter().map(move |a| *a / b).collect();
-        Self {
-            shape: self.shape.clone(),
-            values: values.into_boxed_slice(),
-        }
+        Self::new_with_values(self.shape.clone(), values).unwrap()
     }
 }
 

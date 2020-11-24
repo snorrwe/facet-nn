@@ -12,10 +12,10 @@ use super::{column_iter::ColumnIterMut, shape::Shape, NdArray, NdArrayError};
 macro_rules! arithimpl {
     ($opeq: tt, $op: tt, $lhs: ident, $rhs: ident) =>{
         match (&$lhs.shape, &$rhs.shape) {
-            (Shape::Scalar, Shape::Scalar) => Ok(NdArray::<T> {
-                values: [$lhs.values[0] $op $rhs.values[0]].into(),
-                shape: Shape::Scalar,
-            }),
+            (Shape::Scalar, Shape::Scalar) => Ok(NdArray::<T>::new_with_values(
+                Shape::Scalar,
+                [$lhs.values[0] $op $rhs.values[0]],
+            ).unwrap()),
             // add the scalar to all elements
             (Shape::Scalar, Shape::Vector(_))
             | (Shape::Scalar, Shape::Matrix(_, _))
@@ -50,10 +50,10 @@ macro_rules! arithimpl {
                     .zip($rhs.values.iter())
                     .map(|(a, b)| *a $op *b)
                     .collect();
-                let res = NdArray::<T> {
-                    shape: $lhs.shape.clone(),
-                    values: values.into_boxed_slice(),
-                };
+                let res = NdArray::<T> ::new_with_values(
+                    $lhs.shape.clone(),
+                    values.into_boxed_slice(),
+                ).unwrap();
                 Ok(res)
             }
 
@@ -175,20 +175,15 @@ impl<T> NdArray<T> {
     /// Maps the current array to another array with the same shape
     pub fn map<U>(&self, f: impl FnMut(&T) -> U) -> NdArray<U> {
         let res: Vec<_> = self.values.iter().map(f).collect();
-        NdArray {
-            shape: self.shape.clone(),
-            values: res.into_boxed_slice(),
-        }
+        NdArray::new_with_values(self.shape.clone(), res).unwrap()
     }
     pub fn try_map<U, E>(&self, mut f: impl FnMut(&T) -> Result<U, E>) -> Result<NdArray<U>, E> {
         let mut res = Vec::with_capacity(self.values.len());
         for v in self.values.iter() {
             res.push(f(v)?);
         }
-        Ok(NdArray {
-            shape: self.shape.clone(),
-            values: res.into_boxed_slice(),
-        })
+        let res = NdArray::new_with_values(self.shape.clone(), res).unwrap();
+        Ok(res)
     }
 }
 
@@ -202,15 +197,14 @@ where
             Shape::Scalar => Ok(self.clone()),
             Shape::Vector(n) => {
                 let s: T = self.values.iter().cloned().sum();
-                Ok(Self {
-                    shape: Shape::Scalar,
-                    values: [s / T::try_from(
+                Ok(Self::new_with_values(
+                    Shape::Scalar,
+                    [s / T::try_from(
                         u32::try_from(n)
                             .map_err(|_| NdArrayError::ConversionError(format!("{:?}", n)))?,
                     )
-                    .map_err(|_| NdArrayError::ConversionError(format!("{:?}", n)))?]
-                    .into(),
-                })
+                    .map_err(|_| NdArrayError::ConversionError(format!("{:?}", n)))?],
+                )?)
             }
             Shape::Tensor(_) | Shape::Matrix(_, _) => {
                 let mut values = Vec::with_capacity(self.shape.col_span());

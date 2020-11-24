@@ -1,3 +1,4 @@
+from operator import mul
 import pydu
 
 
@@ -51,15 +52,21 @@ class Network:
 
 
 class Loss:
-    def __init__(self, lossfn):
+    def __init__(self, lossfn, dlossfn=None):
         assert callable(lossfn)
+        if dlossfn:
+            assert callable(dlossfn)
         self.loss = lossfn
+        self.dloss = dlossfn
 
     def calculate(self, pred, target):
         assert pred.shape == target.shape
 
         losses = self.loss(pred, target)
         return losses.mean()
+
+    def backward(self, dvalues, y_true):
+        self.dinputs = self.dlossfn(dvalues, y_true)
 
 
 def labels_to_y(labels):
@@ -102,3 +109,17 @@ def first_n(n, it):
             yield next(it)
     except StopIteration:
         return
+
+
+def reduce(op, arr, init):
+    for x in arr:
+        init = op(init, x)
+    return init
+
+
+def cce_backward(z, y):
+    samples = reduce(mul, z.shape[:-1], 1)
+
+    gradient = (y / z) * pydu.array([-1.0]).reshape([0])
+    # Normalize gradient
+    return gradient / pydu.array([samples]).reshape([0])

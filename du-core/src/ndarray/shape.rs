@@ -134,3 +134,21 @@ impl<'a> From<&'a [u32]> for Shape {
         }
     }
 }
+
+/// Vector with the stride of each element of each dimension
+///
+/// 0 long shapes will return [1], they span a single item
+pub fn stride_vec(width: usize, shp: &[u32]) -> Vec<usize> {
+    let len = shp.len();
+
+    if len == 0 {
+        return vec![1];
+    }
+
+    let mut res = Vec::with_capacity(len);
+    for i in 0..len - 1 {
+        res.push(shp[i + 1..].iter().map(|x| *x as usize * width).product());
+    }
+    res.push(width); // stride of the last dimension is always 1
+    res
+}

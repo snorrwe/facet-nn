@@ -9,15 +9,15 @@ pub fn categorical_cross_entropy(
     predictions: &NdArray<f64>,
     targets: &NdArray<f64>,
 ) -> DuResult<NdArray<f64>> {
-    if predictions.shape != targets.shape {
+    if predictions.shape() != targets.shape() {
         return Err(DuError::MismatchedShapes(
-            predictions.shape.clone(),
-            targets.shape.clone(),
+            predictions.shape().clone(),
+            targets.shape().clone(),
         ));
     }
 
     let mut out = Vec::with_capacity(
-        predictions.shape.span() / predictions.shape.last().unwrap_or(1) as usize,
+        predictions.shape().span() / predictions.shape().last().unwrap_or(1) as usize,
     );
     for (x, y) in predictions.iter_cols().zip(targets.iter_cols()) {
         let loss: f64 = x
