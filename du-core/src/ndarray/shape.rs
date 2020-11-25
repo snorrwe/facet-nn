@@ -1,10 +1,11 @@
-use std::{borrow::Cow, convert::TryInto};
+use std::ops::{Index, IndexMut};
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub enum Shape {
-    Scalar,
-    Vector(u64),
-    Matrix(u32, u32),
+    /// this value is meaningless, just helps us convert into slice
+    Scalar([u32; 1]),
+    Vector([u32; 1]),
+    Matrix([u32; 2]),
     /// Over 3 dimensions
     Tensor(Box<[u32]>),
 }
@@ -12,9 +13,9 @@ pub enum Shape {
 impl Shape {
     pub fn last(&self) -> Option<u32> {
         match self {
-            Shape::Scalar => None,
-            Shape::Matrix(_, n) => Some(*n),
-            Shape::Vector(n) => Some(*n).map(|n| n.try_into().unwrap()),
+            Shape::Scalar(_) => None,
+            Shape::Matrix([_, n]) => Some(*n),
+            Shape::Vector(n) => Some(n[0]),
             Shape::Tensor(ref s) => s.last().cloned(),
         }
     }
@@ -23,9 +24,9 @@ impl Shape {
     /// shape.
     pub fn last_two(&self) -> Option<[u32; 2]> {
         match self {
-            Shape::Scalar => None,
+            Shape::Scalar(_) => None,
             Shape::Vector(_) => None,
-            Shape::Matrix(n, m) => Some([*n, *m]),
+            Shape::Matrix([n, m]) => Some([*n, *m]),
             Shape::Tensor(shp) => {
                 let len = shp.len();
                 debug_assert!(len >= 3);
@@ -40,9 +41,9 @@ impl Shape {
     /// For NdArrays this is equal to the `len` of its value array
     pub fn span(&self) -> usize {
         match self {
-            Shape::Scalar => 1,
-            Shape::Vector(n) => *n as usize,
-            Shape::Matrix(n, m) => *n as usize * *m as usize,
+            Shape::Scalar(_) => 1,
+            Shape::Vector([n]) => *n as usize,
+            Shape::Matrix([n, m]) => *n as usize * *m as usize,
             Shape::Tensor(vals) => vals.iter().map(|x| *x as usize).product(),
         }
     }
@@ -50,9 +51,9 @@ impl Shape {
     /// Number of columns spanned by this shape.
     pub fn col_span(&self) -> usize {
         match self {
-            Shape::Scalar => 1,
-            Shape::Vector(n) => *n as usize,
-            Shape::Matrix(n, _) => *n as usize,
+            Shape::Scalar(_) => 1,
+            Shape::Vector([n]) => *n as usize,
+            Shape::Matrix([n, _]) => *n as usize,
             Shape::Tensor(shp) => shp[..shp.len() - 2].iter().map(|x| *x as usize).product(),
         }
     }
@@ -65,9 +66,9 @@ impl Shape {
             return 0;
         }
         match self {
-            Shape::Scalar => 1,
-            Shape::Vector(i) => *i as usize,
-            Shape::Matrix(n, m) => {
+            Shape::Scalar(_) => 1,
+            Shape::Vector([i]) => *i as usize,
+            Shape::Matrix([n, m]) => {
                 if i <= 1 {
                     *m as usize
                 } else {
@@ -81,12 +82,12 @@ impl Shape {
         }
     }
 
-    pub fn as_array(&self) -> Cow<Box<[u32]>> {
-        match self {
-            Shape::Scalar => Cow::Owned([].into()),
-            Shape::Vector(n) => Cow::Owned([*n as u32].into()),
-            Shape::Matrix(n, m) => Cow::Owned([*n, *m].into()),
-            Shape::Tensor(t) => Cow::Borrowed(t),
+    pub fn as_slice(&self) -> &[u32] {
+        match &self {
+            Shape::Scalar(s) => &s[0..0], // empty slice
+            Shape::Vector(s) => s,
+            Shape::Matrix(s) => s,
+            Shape::Tensor(s) => s,
         }
     }
 }
@@ -105,31 +106,25 @@ impl From<Vec<u32>> for Shape {
 
 impl From<u32> for Shape {
     fn from(shape: u32) -> Self {
-        From::from(shape as u64)
-    }
-}
-
-impl From<u64> for Shape {
-    fn from(shape: u64) -> Self {
         match shape {
-            0 => Shape::Scalar,
-            _ => Shape::Vector(shape),
+            0 => Shape::Scalar([0]),
+            _ => Shape::Vector([shape]),
         }
     }
 }
 
 impl From<[u32; 2]> for Shape {
     fn from([n, m]: [u32; 2]) -> Self {
-        Shape::Matrix(n, m)
+        Shape::Matrix([n, m])
     }
 }
 
 impl<'a> From<&'a [u32]> for Shape {
     fn from(shape: &'a [u32]) -> Self {
         match shape.len() {
-            0 | 1 if shape[0] == 0 => Shape::Scalar,
-            1 => Shape::Vector(shape[0] as u64),
-            2 => Shape::Matrix(shape[0], shape[1]),
+            0 | 1 if shape[0] == 0 => Shape::Scalar([0]),
+            1 => Shape::Vector([shape[0]]),
+            2 => Shape::Matrix([shape[0], shape[1]]),
             _ => Shape::Tensor(shape.into()),
         }
     }
@@ -151,4 +146,26 @@ pub fn stride_vec(width: usize, shp: &[u32]) -> Vec<usize> {
     }
     res.push(width); // stride of the last dimension is always 1
     res
+}
+
+impl Index<usize> for Shape {
+    type Output = u32;
+
+    fn index(&self, index: usize) -> &Self::Output {
+        match self {
+            Shape::Scalar(s) | Shape::Vector(s) => &s[0],
+            Shape::Matrix(s) => &s[index],
+            Shape::Tensor(s) => &s[index],
+        }
+    }
+}
+
+impl IndexMut<usize> for Shape {
+    fn index_mut(&mut self, index: usize) -> &mut Self::Output {
+        match self {
+            Shape::Scalar(s) | Shape::Vector(s) => &mut s[0],
+            Shape::Matrix(s) => &mut s[index],
+            Shape::Tensor(s) => &mut s[index],
+        }
+    }
 }

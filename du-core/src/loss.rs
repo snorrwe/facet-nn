@@ -38,6 +38,6 @@ pub fn categorical_cross_entropy(
         out.push(-loss);
     }
 
-    let res = NdArray::new_with_values(out.len() as u64, out.into_boxed_slice())?;
+    let res = NdArray::new_with_values(out.len() as u32, out.into_boxed_slice())?;
     Ok(res)
 }

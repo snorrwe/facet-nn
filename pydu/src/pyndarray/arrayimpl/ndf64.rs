@@ -123,7 +123,7 @@ impl NdArrayD {
                 .fold(0, |i, (j, v)| if col[i] < *v { j } else { i });
             res.push(ind as i64);
         }
-        let shape = self.inner.shape().as_array();
+        let shape = self.inner.shape().as_slice();
         let res = NdArray::new_with_values(&shape[..shape.len() - 1], res).unwrap();
         Ok(NdArrayI { inner: res })
     }
@@ -139,7 +139,7 @@ impl NdArrayD {
                 .fold(0, |i, (j, v)| if col[i] > *v { j } else { i });
             res.push(ind as i64);
         }
-        let shape = self.inner.shape().as_array();
+        let shape = self.inner.shape().as_slice();
         let res = NdArray::new_with_values(&shape[..shape.len() - 1], res).unwrap();
         Ok(NdArrayI { inner: res })
     }

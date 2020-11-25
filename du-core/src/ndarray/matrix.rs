@@ -1,10 +1,7 @@
 //! Matrix operation implementations
 //!
 
-use std::{
-    convert::TryInto,
-    ops::{Add, AddAssign, Mul},
-};
+use std::ops::{Add, AddAssign, Mul};
 
 use super::{
     column_iter::ColumnIter, column_iter::ColumnIterMut, shape::Shape, NdArray, NdArrayError,
@@ -85,20 +82,20 @@ where
     /// ```
     pub fn matmul(&'a self, other: &'a Self) -> Result<Self, NdArrayError> {
         match (&self.shape, &other.shape) {
-            shapes @ (Shape::Scalar, Shape::Scalar)
-            | shapes @ (Shape::Scalar, Shape::Vector(_))
-            | shapes @ (Shape::Scalar, Shape::Matrix(_, _))
-            | shapes @ (Shape::Scalar, Shape::Tensor(_))
-            | shapes @ (Shape::Vector(_), Shape::Scalar)
-            | shapes @ (Shape::Matrix(_, _), Shape::Scalar)
-            | shapes @ (Shape::Tensor(_), Shape::Scalar) => {
+            shapes @ (Shape::Scalar(_), Shape::Scalar(_))
+            | shapes @ (Shape::Scalar(_), Shape::Vector(_))
+            | shapes @ (Shape::Scalar(_), Shape::Matrix(_))
+            | shapes @ (Shape::Scalar(_), Shape::Tensor(_))
+            | shapes @ (Shape::Vector(_), Shape::Scalar(_))
+            | shapes @ (Shape::Matrix(_), Shape::Scalar(_))
+            | shapes @ (Shape::Tensor(_), Shape::Scalar(_)) => {
                 Err(NdArrayError::BinaryOpNotSupported {
                     shape_a: shapes.0.clone(),
                     shape_b: shapes.1.clone(),
                 })
             }
 
-            (Shape::Vector(a), Shape::Vector(b)) => {
+            (Shape::Vector([a]), Shape::Vector([b])) => {
                 let res = self.inner(other).ok_or(NdArrayError::DimensionMismatch {
                     expected: *a as usize,
                     actual: *b as usize,
@@ -106,32 +103,32 @@ where
                 Self::new_with_values(&[][..], [res])
             }
 
-            (Shape::Vector(l), Shape::Matrix(n, m)) => {
-                let mut res = Self::new_default(Shape::Matrix(1, *m));
+            (Shape::Vector([l]), Shape::Matrix([n, m])) => {
+                let mut res = Self::new_default(Shape::Matrix([1, *m]));
                 matmul_impl(
-                    [1, (*l).try_into().unwrap()],
+                    [1, *l],
                     self.as_slice(),
                     [*n, *m],
                     other.as_slice(),
                     res.as_mut_slice(),
                 )?;
-                res.reshape(Shape::Vector(*m as u64))?;
+                res.reshape(*m)?;
                 Ok(res)
             }
-            (Shape::Matrix(n, m), Shape::Vector(l)) => {
-                let mut res = Self::new_default(Shape::Matrix(*n, 1));
+            (Shape::Matrix([n, m]), Shape::Vector([l])) => {
+                let mut res = Self::new_default(Shape::Matrix([*n, 1]));
                 matmul_impl(
                     [*n, *m],
                     self.as_slice(),
-                    [(*l).try_into().unwrap(), 1],
+                    [*l, 1],
                     other.as_slice(),
                     res.as_mut_slice(),
                 )?;
-                res.reshape(Shape::Vector(*m as u64))?;
+                res.reshape(*m)?;
                 Ok(res)
             }
-            (Shape::Matrix(a, b), Shape::Matrix(c, d)) => {
-                let mut res = Self::new_default(Shape::Matrix(*a, *d));
+            (Shape::Matrix([a, b]), Shape::Matrix([c, d])) => {
+                let mut res = Self::new_default(Shape::Matrix([*a, *d]));
                 matmul_impl(
                     [*a, *b],
                     self.as_slice(),
@@ -143,30 +140,22 @@ where
             }
 
             // broadcast matrices
-            (Shape::Vector(l), shp @ Shape::Tensor(_)) => {
+            (Shape::Vector([l]), shp @ Shape::Tensor(_)) => {
                 let [m, n] = shp.last_two().unwrap();
 
                 let it = ColumnIter::new(&other.values, n as usize * m as usize);
-                let mut out = Self::new_default([
-                    (other.len() / (n as usize * m as usize)) as u32,
-                    (*l).try_into().unwrap(),
-                ]);
+                let mut out =
+                    Self::new_default([(other.len() / (n as usize * m as usize)) as u32, *l]);
                 for (mat, out) in it.zip(ColumnIterMut::new(&mut out.values, *l as usize)) {
-                    matmul_impl(
-                        [1, (*l).try_into().unwrap()],
-                        self.as_slice(),
-                        [n, m],
-                        mat,
-                        out,
-                    )?;
+                    matmul_impl([1, *l], self.as_slice(), [n, m], mat, out)?;
                 }
                 Ok(out)
             }
-            (shp @ Shape::Tensor(_), Shape::Vector(l)) => {
+            (shp @ Shape::Tensor(_), Shape::Vector([l])) => {
                 let [m, n] = shp.last_two().unwrap();
 
                 let it = ColumnIter::new(&self.values, n as usize * m as usize);
-                let l: u32 = (*l).try_into().unwrap();
+                let l: u32 = *l;
                 let mut out =
                     Self::new_default([(self.len() / (n as usize * m as usize)) as u32, l]);
                 for (mat, out) in it.zip(ColumnIterMut::new(&mut out.values, l as usize)) {
@@ -174,7 +163,7 @@ where
                 }
                 Ok(out)
             }
-            (Shape::Matrix(a, b), shp @ Shape::Tensor(_)) => {
+            (Shape::Matrix([a, b]), shp @ Shape::Tensor(_)) => {
                 let [a, b] = [*a, *b];
                 let [c, d] = shp.last_two().unwrap();
 
@@ -188,7 +177,7 @@ where
                 }
                 Ok(out)
             }
-            (shp @ Shape::Tensor(_), Shape::Matrix(c, d)) => {
+            (shp @ Shape::Tensor(_), Shape::Matrix([c, d])) => {
                 let [a, b] = shp.last_two().unwrap();
                 let [c, d] = [*c, *d];
 

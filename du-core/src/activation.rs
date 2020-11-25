@@ -18,8 +18,8 @@ pub fn drelu_dz(z: &NdArray<f64>) -> NdArray<f64> {
 /// Scalars will always return 1
 pub fn softmax(inp: &NdArray<f64>) -> DuResult<NdArray<f64>> {
     // softmax of a scalar value is always 1.
-    if matches!(inp.shape(), Shape::Scalar) {
-        return Ok(NdArray::new_with_values(Shape::Scalar, [1.0])?);
+    if matches!(inp.shape(), Shape::Scalar(_)) {
+        return Ok(NdArray::new_with_values(0, [1.0])?);
     }
     // else treat the input as a collection of vectors
     let mut it = inp.as_slice().iter().cloned();
@@ -37,7 +37,7 @@ pub fn softmax(inp: &NdArray<f64>) -> DuResult<NdArray<f64>> {
         .collect();
 
     norm_base
-        .reshape(Shape::Matrix(norm_base.shape().last().unwrap(), 1))
+        .reshape(Shape::Matrix([norm_base.shape().last().unwrap(), 1]))
         .unwrap();
 
     let mut res = expvalues;

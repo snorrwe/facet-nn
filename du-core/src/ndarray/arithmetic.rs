@@ -12,22 +12,22 @@ use super::{column_iter::ColumnIterMut, shape::Shape, NdArray, NdArrayError};
 macro_rules! arithimpl {
     ($opeq: tt, $op: tt, $lhs: ident, $rhs: ident) =>{
         match (&$lhs.shape, &$rhs.shape) {
-            (Shape::Scalar, Shape::Scalar) => Ok(NdArray::<T>::new_with_values(
-                Shape::Scalar,
+            (Shape::Scalar(_), Shape::Scalar(_)) => Ok(NdArray::<T>::new_with_values(
+                    0,
                 [$lhs.values[0] $op $rhs.values[0]],
             ).unwrap()),
             // add the scalar to all elements
-            (Shape::Scalar, Shape::Vector(_))
-            | (Shape::Scalar, Shape::Matrix(_, _))
-            | (Shape::Scalar, Shape::Tensor(_)) => {
+            (Shape::Scalar(_), Shape::Vector(_))
+            | (Shape::Scalar(_), Shape::Matrix([_, _]))
+            | (Shape::Scalar(_), Shape::Tensor(_)) => {
                 let mut res = $rhs.clone();
                 let val = $lhs.values[0];
                 res.values.iter_mut().for_each(|x| *x $opeq val);
                 Ok(res)
             }
-            (Shape::Vector(_), Shape::Scalar)
-            | (Shape::Matrix(_, _), Shape::Scalar)
-            | (Shape::Tensor(_), Shape::Scalar) => {
+            (Shape::Vector(_), Shape::Scalar(_))
+            | (Shape::Matrix([_, _]), Shape::Scalar(_))
+            | (Shape::Tensor(_), Shape::Scalar(_)) => {
                 let mut res = $lhs.clone();
                 let val = $rhs.values[0];
                 res.values.iter_mut().for_each(|x| *x $opeq val);
@@ -35,7 +35,7 @@ macro_rules! arithimpl {
             }
 
             // Element-wise
-            (a @ Shape::Matrix(_, _), b @ Shape::Matrix(_, _))
+            (a @ Shape::Matrix([_, _]), b @ Shape::Matrix([_, _]))
             | (a @ Shape::Tensor(_), b @ Shape::Tensor(_))
             | (a @ Shape::Vector(_), b @ Shape::Vector(_)) => {
                 if a != b {
@@ -58,9 +58,9 @@ macro_rules! arithimpl {
             }
 
             // add vector to each column
-            (Shape::Vector(l), Shape::Matrix(_, _)) | (Shape::Vector(l), Shape::Tensor(_)) => {
+            (Shape::Vector([l]), Shape::Matrix([_, _])) | (Shape::Vector([l]), Shape::Tensor(_)) => {
                 let l = *l;
-                if $rhs.shape.last().expect("failed to get column shape") as u64 != l {
+                if $rhs.shape.last().expect("failed to get column shape") != l {
                     return Err(NdArrayError::DimensionMismatch {
                         expected: l as usize,
                         actual: $rhs.shape.last().expect("failed to get column shape") as usize,
@@ -74,9 +74,9 @@ macro_rules! arithimpl {
                 }
                 Ok(res)
             }
-            (Shape::Matrix(_, _), Shape::Vector(l)) | (Shape::Tensor(_), Shape::Vector(l)) => {
+            (Shape::Matrix([_, _]), Shape::Vector([l])) | (Shape::Tensor(_), Shape::Vector([l])) => {
                 let l = *l;
-                if $lhs.shape.last().expect("failed to get column shape") as u64 != l {
+                if $lhs.shape.last().expect("failed to get column shape") != l {
                     return Err(NdArrayError::DimensionMismatch {
                         expected: l as usize,
                         actual: $lhs.shape.last().expect("failed to get column shape") as usize,
@@ -92,7 +92,7 @@ macro_rules! arithimpl {
             }
 
             // add a matrix to each matrix in a tensor
-            (Shape::Matrix(n, m), shp @ Shape::Tensor(_)) => {
+            (Shape::Matrix([n, m]), shp @ Shape::Tensor(_)) => {
                 let [n, m] = [*n, *m];
                 let [k, l] = shp.last_two().unwrap();
                 if n != k || m != l {
@@ -113,7 +113,7 @@ macro_rules! arithimpl {
                 }
                 Ok(res)
             }
-            (shp @ Shape::Tensor(_), Shape::Matrix(n, m)) => {
+            (shp @ Shape::Tensor(_), Shape::Matrix([n, m])) => {
                 let [n, m] = [*n, *m];
                 let [k, l] = shp.last_two().unwrap();
                 if n != k || m != l {
@@ -194,11 +194,11 @@ where
     /// Collapses the last columns into a scalar
     pub fn mean(&self) -> Result<Self, NdArrayError> {
         match self.shape {
-            Shape::Scalar => Ok(self.clone()),
-            Shape::Vector(n) => {
+            Shape::Scalar(_) => Ok(self.clone()),
+            Shape::Vector([n]) => {
                 let s: T = self.values.iter().cloned().sum();
                 Ok(Self::new_with_values(
-                    Shape::Scalar,
+                    0,
                     [s / T::try_from(
                         u32::try_from(n)
                             .map_err(|_| NdArrayError::ConversionError(format!("{:?}", n)))?,
@@ -206,7 +206,7 @@ where
                     .map_err(|_| NdArrayError::ConversionError(format!("{:?}", n)))?],
                 )?)
             }
-            Shape::Tensor(_) | Shape::Matrix(_, _) => {
+            Shape::Tensor(_) | Shape::Matrix([_, _]) => {
                 let mut values = Vec::with_capacity(self.shape.col_span());
                 for col in self.iter_cols() {
                     let s: T = col.iter().cloned().sum();
@@ -217,7 +217,7 @@ where
                     values.push(res)
                 }
                 let mut res = Self::new_vector(values);
-                let shape = self.shape.as_array();
+                let shape = self.shape.as_slice();
                 res.reshape(&shape[..shape.len() - 1]).unwrap();
                 Ok(res)
             }

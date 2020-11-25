@@ -93,7 +93,6 @@ macro_rules! impl_ndarray {
                 prelude::*,
                 PyGCProtocol, PyIterProtocol, PyMappingProtocol,
             };
-            use std::convert::TryInto;
 
             impl From<NdArray<$ty>> for $name {
                 fn from(inner: NdArray<$ty>) -> Self {
@@ -151,9 +150,9 @@ macro_rules! impl_ndarray {
                 #[getter]
                 pub fn shape(&self) -> Vec<u32> {
                     match self.inner.shape() {
-                        Shape::Scalar => vec![],
-                        Shape::Vector(n) => vec![(*n).try_into().unwrap()],
-                        Shape::Matrix(n, m) => vec![*n, *m],
+                        Shape::Scalar(_) => vec![],
+                        Shape::Vector([n]) => vec![*n],
+                        Shape::Matrix([n, m]) => vec![*n, *m],
                         Shape::Tensor(s) => s.clone().into_vec(),
                     }
                 }

@@ -62,16 +62,16 @@ where
     pub fn inner(&'a self, other: &'a Self) -> Option<T> {
         match (&self.shape, &other.shape) {
             // scalar * scalar
-            (Shape::Scalar, Shape::Scalar) => {
+            (Shape::Scalar(_), Shape::Scalar(_)) => {
                 return self
                     .values
                     .get(0)
                     .and_then(|a| other.values.get(0).map(|b| *a * *b))
             }
             // multiply the internal array with the scalar and sum it
-            (Shape::Scalar, Shape::Matrix(_, _))
-            | (Shape::Scalar, Shape::Tensor(_))
-            | (Shape::Scalar, Shape::Vector(_)) => {
+            (Shape::Scalar(_), Shape::Matrix([_, _]))
+            | (Shape::Scalar(_), Shape::Tensor(_))
+            | (Shape::Scalar(_), Shape::Vector(_)) => {
                 return self.values.get(0).map(|a| {
                     other
                         .values
@@ -80,9 +80,9 @@ where
                 })
             }
             // multiply the internal array with the scalar and sum it
-            (Shape::Vector(_), Shape::Scalar)
-            | (Shape::Matrix(_, _), Shape::Scalar)
-            | (Shape::Tensor(_), Shape::Scalar) => {
+            (Shape::Vector(_), Shape::Scalar(_))
+            | (Shape::Matrix([_, _]), Shape::Scalar(_))
+            | (Shape::Tensor(_), Shape::Scalar(_)) => {
                 return other.values.get(0).map(|a| {
                     self.values
                         .iter()
@@ -102,21 +102,23 @@ where
             }
 
             // sum over the columns, vector products
-            (Shape::Matrix(c, _), Shape::Vector(n)) | (Shape::Vector(n), Shape::Matrix(c, _)) => {
-                if *c as u64 != *n {
+            (Shape::Matrix([c, _]), Shape::Vector([n]))
+            | (Shape::Vector([n]), Shape::Matrix([c, _])) => {
+                if *c != *n {
                     return None;
                 }
             }
 
-            (Shape::Tensor(shape), Shape::Vector(n)) | (Shape::Vector(n), Shape::Tensor(shape)) => {
-                if *shape.last()? as u64 != *n {
+            (Shape::Tensor(shape), Shape::Vector([n]))
+            | (Shape::Vector([n]), Shape::Tensor(shape)) => {
+                if *shape.last()? != *n {
                     return None;
                 }
             }
 
             // Frobenius inner product
             //
-            (Shape::Matrix(c1, r1), Shape::Matrix(c2, r2)) => {
+            (Shape::Matrix([c1, r1]), Shape::Matrix([c2, r2])) => {
                 if c1 != c2 || r1 != r2 {
                     return None;
                 }
@@ -124,7 +126,8 @@ where
 
             // Frobenius inner product for nd arrays
             //
-            (Shape::Matrix(c, r), Shape::Tensor(s)) | (Shape::Tensor(s), Shape::Matrix(c, r)) => {
+            (Shape::Matrix([c, r]), Shape::Tensor(s))
+            | (Shape::Tensor(s), Shape::Matrix([c, r])) => {
                 if s.last()? != r {
                     return None;
                 }
@@ -181,18 +184,16 @@ where
     /// e.g. Shape `[3, 4, 5]` becomes `[3, 5, 4]`
     pub fn transpose(self) -> Self {
         match &self.shape {
-            Shape::Scalar => self,
-            Shape::Vector(n) => {
-                Self::new_with_values(Shape::Matrix(*n as u32, 1), self.values).unwrap()
-            }
-            Shape::Matrix(n, m) => {
+            Shape::Scalar(_) => self,
+            Shape::Vector([n]) => Self::new_with_values([*n, 1], self.values).unwrap(),
+            Shape::Matrix([n, m]) => {
                 let mut values = self.values.clone();
                 matrix::transpose_mat([*n as usize, *m as usize], &self.values, &mut values);
-                Self::new_with_values(Shape::Matrix(*m, *n), values).unwrap()
+                Self::new_with_values(Shape::Matrix([*m, *n]), values).unwrap()
             }
             shape @ Shape::Tensor(_) => {
                 // inner matrix tmp
-                let shape_len = shape.as_array().len();
+                let shape_len = shape.as_slice().len();
                 let [n, m] = shape.last_two().unwrap();
                 let [m, n] = [m as usize, n as usize];
                 let mut tmp = Vec::with_capacity(n * m);
@@ -208,11 +209,11 @@ where
                     values.extend_from_slice(&tmp);
                 }
 
-                let mut shape = shape.as_array().into_owned();
+                let mut shape = shape.clone();
                 shape[shape_len - 1] = n as u32;
                 shape[shape_len - 2] = m as u32;
 
-                Self::new_with_values(Shape::Tensor(shape), values.into_boxed_slice()).unwrap()
+                Self::new_with_values(shape, values.into_boxed_slice()).unwrap()
             }
         }
     }
@@ -236,7 +237,7 @@ impl<T> NdArray<T> {
 
         let shape = Shape::from(shape);
         let res = Self {
-            stride: shape::stride_vec(1, &*shape.as_array()).into_boxed_slice(),
+            stride: shape::stride_vec(1, &*shape.as_slice()).into_boxed_slice(),
             shape,
             values,
         };
@@ -246,7 +247,7 @@ impl<T> NdArray<T> {
     /// Construct a new 'vector' type (1D) array
     pub fn new_vector(values: impl Into<Box<[T]>>) -> Self {
         let values = values.into();
-        Self::new_with_values(Shape::Vector(values.len() as u64), values).unwrap()
+        Self::new_with_values(values.len() as u32, values).unwrap()
     }
 }
 
@@ -269,7 +270,7 @@ where
     where
         T: Default + Clone,
     {
-        let mut res = Self::new_default(Shape::Matrix(columns, columns));
+        let mut res = Self::new_default([columns, columns]);
         let columns = columns as usize;
         for i in 0..columns {
             res.values[i * columns + i] = default.clone()
@@ -323,9 +324,9 @@ impl<T> NdArray<T> {
     /// Returns `None` on invalid index
     pub fn get(&self, index: &[u32]) -> Option<&T> {
         match &self.shape {
-            Shape::Scalar => self.values.get(0),
+            Shape::Scalar(_) => self.values.get(0),
             Shape::Vector(_) => self.values.get(*index.get(0)? as usize),
-            Shape::Matrix(n, m) => {
+            Shape::Matrix([n, m]) => {
                 let i = get_index(&[*n, *m], &[*m as usize, 1], index)?;
                 self.values.get(i)
             }
@@ -338,9 +339,9 @@ impl<T> NdArray<T> {
 
     pub fn get_mut(&mut self, index: &[u32]) -> Option<&mut T> {
         match &self.shape {
-            Shape::Scalar => self.values.get_mut(0),
+            Shape::Scalar(_) => self.values.get_mut(0),
             Shape::Vector(_) => self.values.get_mut(*index.get(0)? as usize),
-            Shape::Matrix(n, m) => {
+            Shape::Matrix([n, m]) => {
                 let i = get_index(&[*n, *m], &[*m as usize, 1], index)?;
                 self.values.get_mut(i)
             }
@@ -373,8 +374,8 @@ impl<T> NdArray<T> {
     /// ```
     pub fn get_column(&self, index: &[u32]) -> Option<&[T]> {
         match &self.shape {
-            Shape::Scalar | Shape::Vector(_) => Some(&self.values),
-            Shape::Matrix(n, m) => {
+            Shape::Scalar(_) | Shape::Vector(_) => Some(&self.values),
+            Shape::Matrix([n, m]) => {
                 let i = get_index(
                     &[*n], // skip the last dim
                     &[1],
@@ -397,8 +398,8 @@ impl<T> NdArray<T> {
 
     pub fn get_column_mut(&mut self, index: &[u32]) -> Option<&mut [T]> {
         match &self.shape {
-            Shape::Scalar | Shape::Vector(_) => Some(&mut self.values),
-            Shape::Matrix(n, m) => {
+            Shape::Scalar(_) | Shape::Vector(_) => Some(&mut self.values),
+            Shape::Matrix([n, m]) => {
                 let i = get_index(
                     &[*n], // skip the last dim
                     &[1],
@@ -456,14 +457,14 @@ fn get_index(shape: &[u32], stride: &[usize], index: &[u32]) -> Option<usize> {
 
 impl<T> From<T> for NdArray<T> {
     fn from(val: T) -> Self {
-        NdArray::new_with_values(Shape::Scalar, [val]).unwrap()
+        NdArray::new_with_values(0, [val]).unwrap()
     }
 }
 
 impl<'a, T> FromIterator<T> for NdArray<T> {
     fn from_iter<It: IntoIterator<Item = T>>(iter: It) -> Self {
         let values = iter.into_iter().collect::<Vec<T>>();
-        Self::new_with_values(Shape::Vector(values.len() as u64), values).unwrap()
+        Self::new_with_values(values.len() as u32, values).unwrap()
     }
 }
 
@@ -475,11 +476,11 @@ where
     // maybe do a recursive function?
     pub fn to_string(&self) -> String {
         let depth = match self.shape() {
-            Shape::Scalar => {
-                return format!("Scalar: {:?}", self.get(&[]));
+            Shape::Scalar(_) => {
+                return format!("Scalar(_): {:?}", self.get(&[]));
             }
             Shape::Vector(_) => 1,
-            Shape::Matrix(_, _) => 2,
+            Shape::Matrix(_) => 2,
             Shape::Tensor(s) => s.len(),
         };
         let mut s = String::with_capacity(self.len() * 4);

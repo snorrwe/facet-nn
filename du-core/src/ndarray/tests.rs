@@ -103,7 +103,7 @@ fn test_vector_matrix_mul() {
 
     let c = a.matmul(&b).expect("matmul");
 
-    assert_eq!(c.shape, Shape::Vector(4));
+    assert_eq!(c.shape, Shape::Vector([4]));
     assert_eq!(c.as_slice(), &[6, 7, 8, 1]);
 }
 
@@ -129,7 +129,7 @@ fn test_vector_matrix_mul_w_broadcasting() {
     let c = a.matmul(&b).expect("matmul");
 
     println!("{:?}", c);
-    assert_eq!(c.shape, Shape::Matrix(4, 4));
+    assert_eq!(c.shape, Shape::Matrix([4, 4]));
     for col in c.iter_cols() {
         assert_eq!(col, &[6, 7, 8, 1]);
     }
@@ -151,7 +151,7 @@ fn test_matrix_vector_mul() {
 
     let c = a.matmul(&b).expect("matmul");
 
-    assert_eq!(c.shape, Shape::Vector(4));
+    assert_eq!(c.shape, Shape::Vector([4]));
     assert_eq!(c.as_slice(), &[6, 7, 8, 1]);
 }
 
@@ -162,7 +162,7 @@ fn test_mat_mat_mul() {
 
     let c = a.matmul(&b).expect("matmul");
 
-    assert_eq!(c.shape, Shape::Matrix(2, 2));
+    assert_eq!(c.shape, Shape::Matrix([2, 2]));
     assert_eq!(c.as_slice(), &[5, -4, 4, 5]);
 }
 
@@ -187,7 +187,7 @@ fn test_mat_transpose() {
     println!("{}", a.to_string());
     let b = a.transpose();
 
-    assert_eq!(b.shape, Shape::Matrix(3, 2));
+    assert_eq!(b.shape, Shape::Matrix([3, 2]));
     assert_eq!(b.as_slice(), &[1, 4, 2, 5, 3, 6], "{}", b.to_string());
 }
 
