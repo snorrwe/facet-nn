@@ -7,15 +7,16 @@ class DenseLayer:
     Dense layers are interconnected, all inputs are connected to all outputs
     """
 
-    def __init__(self, inp, out):
+    def __init__(self, inp, out, name=None):
         """
         :param inp: number of input neurons
         :param out: number of output neurons
         """
 
-        self.weights = pydu.array([[69] * out] * inp)
-        self.biases = pydu.array([42] * out)
+        self.weights = pydu.array([[0.69] * out] * inp)
+        self.biases = pydu.array([0.42] * out)
         self.inputs = None
+        self.name = name
 
     def forward(self, inp):
         self.inputs = inp
@@ -29,7 +30,12 @@ class DenseLayer:
         self.dinputs = dvalues.matmul(self.weights.T)
 
     def __repr__(self):
-        return f"DenseLayer weights: {self.weights.shape} biases: {self.biases.shape}"
+        return (
+            f"DenseLayer {self.name}\nweights:\n{self.weights}\nbiases:\n{self.biases}"
+        )
+
+    def __str__(self):
+        return f"DenseLayer {self.name} weights: {self.weights.shape} biases: {self.biases.shape}"
 
 
 class Activation:
@@ -46,7 +52,7 @@ class Activation:
         return self.output
 
     def backward(self, dvalues):
-        self.dinputs = self.df(dvalues)
+        self.dinputs = self.df(self.inputs, dvalues)
 
 
 class Loss:
@@ -84,9 +90,9 @@ class Activation_Softmax_Loss_CategoricalCrossentropy:
         :param target: at this time we assume that target it 1-hot
         """
         samples = dvalues.shape[0]
-        self.dinputs = dvalues.clone()
-        self.dinputs = self.dinputs - target
-        self.dinputs = self.dinputs / pydu.array([samples]).reshape([0])
+        self.dinputs = dvalues - target
+        s = pydu.scalar(samples)
+        self.dinputs = self.dinputs / s
 
 
 class Optimizer_SGD:

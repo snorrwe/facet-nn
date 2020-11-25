@@ -11,11 +11,6 @@ pub fn relu(inp: &NdArray<f64>) -> NdArray<f64> {
     inp.map(|v| v.max(0.0))
 }
 
-/// derivative of the ReLU function
-pub fn drelu_dz(z: &NdArray<f64>) -> NdArray<f64> {
-    z.map(|v| if *v > 0.0 { 1.0 } else { 0.0 })
-}
-
 /// Inp is interpreted as a either a collection of vectors, applying softmax to each column or as a
 /// single vector.
 ///
@@ -33,7 +28,10 @@ pub fn softmax(inp: &NdArray<f64>) -> DuResult<NdArray<f64>> {
     let expvalues = inp
         .sub(&NdArray::from(max))
         .expect("Failed to sub max from the input")
-        .map(|v: &f64| E.powf(*v));
+        .map(|v: &f64| {
+            let res = E.powf(*v);
+            res.max(1e-8) // make sure res is > 0
+        });
 
     let mut norm_base: NdArray<f64> = expvalues
         .iter_cols()
@@ -41,7 +39,7 @@ pub fn softmax(inp: &NdArray<f64>) -> DuResult<NdArray<f64>> {
         .collect();
 
     norm_base
-        .reshape(Shape::Matrix([norm_base.shape().last().unwrap(), 1]))
+        .reshape([norm_base.shape().span() as u32, 1])
         .unwrap();
 
     let mut res = expvalues;
