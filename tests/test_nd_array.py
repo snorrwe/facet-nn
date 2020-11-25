@@ -37,6 +37,11 @@ def test_sum_vec():
     assert (res == pydu.array([14])).all()
 
 
+def test_sum_scalar():
+    res = pydu.sum(69)
+    assert (res == pydu.scalar(69)).all()
+
+
 def test_ctor():
     """
     smoke test

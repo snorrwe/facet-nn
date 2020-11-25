@@ -15,48 +15,38 @@ class DenseLayer:
 
         self.weights = pydu.array([[69] * out] * inp)
         self.biases = pydu.array([42] * out)
-        self.last_input = None
+        self.inputs = None
 
     def forward(self, inp):
-        self.last_input = inp
-        return inp.matmul(self.weights) + self.biases
+        self.inputs = inp
+        z = inp.matmul(self.weights)
+        self.output = z + self.biases
+        return self.output
 
     def backward(self, dvalues):
-        self.dweights = self.last_input.transpose().matmul(dvalues)
-        self.dinputs = dvalues.matmul(self.weights.transpose())
-        self.dbiases = pydu.sum(dvalues)
+        self.dweights = self.inputs.T.matmul(dvalues)
+        self.dbiases = pydu.sum(dvalues.T)
+        self.dinputs = dvalues.matmul(self.weights.T)
 
     def __repr__(self):
         return f"DenseLayer weights: {self.weights.shape} biases: {self.biases.shape}"
 
 
-class Network:
-    def __init__(self, layers, activations):
-        self.layers = layers
-        self.activations = activations
-
-        assert len(layers) == len(activations)
-
-    def forward(self, x):
-        for (layer, activation) in zip(self.layers, self.activations):
-            x = layer.forward(x)
-            x = activation(x)
-        return x
-
-    def __repr__(self):
-        layers = "\n".join((repr(x) for x in self.layers))
-        return f"Network object of {len(self.layers)} Layers:\n{layers}"
-
-
 class Activation:
-    def __init__(self, fn):
+    def __init__(self, fn, df=None):
         assert callable(fn)
+        if df:
+            assert callable(df)
         self.fn = fn
+        self.df = df
 
     def forward(self, inputs):
         self.inputs = inputs
         self.output = self.fn(inputs)
         return self.output
+
+    def backward(self, dvalues):
+        self.dinputs = self.df(dvalues)
 
 
 class Loss:
@@ -97,6 +87,15 @@ class Activation_Softmax_Loss_CategoricalCrossentropy:
         self.dinputs = dvalues.clone()
         self.dinputs = self.dinputs - target
         self.dinputs = self.dinputs / pydu.array([samples]).reshape([0])
+
+
+class Optimizer_SGD:
+    def __init__(self, learning_rate=1.0):
+        self.lr = pydu.scalar(learning_rate)
+
+    def update_params(self, layer):
+        layer.weights -= self.lr * layer.dweights
+        layer.biases -= self.lr * layer.dbiases
 
 
 def labels_to_y(labels):

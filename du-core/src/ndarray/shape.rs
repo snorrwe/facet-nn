@@ -123,7 +123,7 @@ impl<'a> From<&'a [u32]> for Shape {
     fn from(shape: &'a [u32]) -> Self {
         match shape.len() {
             0 => Shape::Scalar([0]),
-            1 if shape.get(0).unwrap() == &0 => Shape::Scalar([0]),
+            1 if shape[0] == 0 => Shape::Scalar([0]),
             1 => Shape::Vector([shape[0]]),
             2 => Shape::Matrix([shape[0], shape[1]]),
             _ => Shape::Tensor(shape.into()),

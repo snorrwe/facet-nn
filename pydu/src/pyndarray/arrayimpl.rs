@@ -157,6 +157,12 @@ macro_rules! impl_ndarray {
                     }
                 }
 
+                #[getter]
+                #[allow(non_snake_case)]
+                pub fn T(&self) -> PyResult<Self> {
+                    self.transpose()
+                }
+
                 pub fn reshape(
                     mut this: PyRefMut<Self>,
                     new_shape: Vec<u32>,

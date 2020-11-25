@@ -3,7 +3,10 @@ mod factory;
 
 pub use self::arrayimpl::*;
 
-use pyo3::{exceptions::PyNotImplementedError, prelude::*, types::PyList, wrap_pyfunction};
+use pyo3::{
+    exceptions::PyNotImplementedError, exceptions::PyValueError, prelude::*, types::PyList,
+    wrap_pyfunction,
+};
 use std::convert::TryFrom;
 
 pub fn setup_module(_py: Python, m: &PyModule) -> PyResult<()> {
@@ -41,8 +44,15 @@ impl PyNdIndex {
 }
 
 #[pyfunction]
-pub fn array(py: Python, inp: &PyList) -> PyResult<PyObject> {
+pub fn array(py: Python, inp: PyObject) -> PyResult<PyObject> {
     let mut dims = Vec::new();
+    let inp: &PyList = inp.extract(py).or_else(|_| {
+        inp.extract(py)
+            .map_err(|err| {
+                PyValueError::new_err(format!("Failed to convert input to a list {:?}", err))
+            })
+            .map(|f: f64| PyList::new(py, vec![f]))
+    })?;
     let factory: fn(Python, Vec<u32>, &PyList) -> Result<Py<PyAny>, PyErr> = {
         let mut inp = inp;
         loop {

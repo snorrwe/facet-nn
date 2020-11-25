@@ -1,9 +1,10 @@
 import pydu
 from nnfs import *
+import progressbar
 
 print("Loading data")
 
-dataset = pydu.load_csv("C:/Users/dkiss/Downloads/IRIS.csv", labels=["species"])
+dataset = pydu.load_csv("C:/Users/dkiss/Downloads/iris.csv", labels=["Species"])
 
 print("Dataset loaded")
 print(dataset["columns"])
@@ -13,24 +14,33 @@ for label, row in first_n(5, zip(dataset["labels"], dataset["data"].iter_cols())
 
 n_classes = len(set(dataset["labels"]))
 
-nw = Network(
-    [
-        DenseLayer(n_inputs, 8, activation=pydu.softmax),  # input layer
-        DenseLayer(8, 8, activation=pydu.relu),  # hidden 1
-        DenseLayer(8, n_classes, activation=pydu.softmax),  # output layer
-    ]
-)
 
+dense1 = DenseLayer(n_inputs, 64)
+acti1 = Activation(pydu.relu, pydu.drelu_dz)
 
-pred = nw.forward(dataset["data"])
+dense2 = DenseLayer(64, n_classes)
+loss_acti = Activation_Softmax_Loss_CategoricalCrossentropy()
 
-
-l = Loss(pydu.categorical_cross_entropy)
+optim = Optimizer_SGD(0.01)
 
 y = labels_to_y(dataset["labels"])
+print("Lets fucking go")
+for epoch in progressbar.progressbar(range(1000 + 1), redirect_stdout=True):
+    dense1.forward(dataset["data"])
+    acti1.forward(dense1.output)
+    dense2.forward(acti1.output)
+    loss = loss_acti.forward(dense2.output, y)
+    acc = accuracy(loss_acti.output, y)
 
-err = l.calculate(pred, y)
+    if epoch % 100 == 0:
+        print(f"epoch {epoch} Loss: {loss} Accuracy: {acc}")
 
-acc = accuracy(pred, y)
+    # backward pass
+    loss_acti.backward(loss_acti.output, y)
+    dense2.backward(loss_acti.dinputs)
+    acti1.backward(dense2.dinputs)
+    dense1.backward(acti1.dinputs)
 
-print(err, acc)
+    # update weights & biases
+    optim.update_params(dense1)
+    optim.update_params(dense2)

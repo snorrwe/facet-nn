@@ -5,14 +5,15 @@ import pydu
 boi = Activation_Softmax_Loss_CategoricalCrossentropy()
 
 
-x = pydu.array([[1, 2, 8] * 8])
-y = pydu.array([[1, 0, 0] * 8])
-
-res = boi.forward(x, y)
+x = pydu.array([[1, 2, 8]] * 8)
+y = pydu.array([[1, 0, 0]] * 8)
 
 
-print(res)
+dense1 = DenseLayer(3, 8)
 
-res = boi.backward(boi.output, y)
+res= dense1.forward(x)
+dense1.backward(res)
 
-print(boi.dinputs)
+optim = Optimizer_SGD(0.001)
+
+optim.update_params(dense1)

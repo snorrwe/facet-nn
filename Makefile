@@ -9,8 +9,11 @@ check-rust:
 test-rust:
 	cargo test
 
-nd:
+nd-dev:
 	cd pydu && maturin develop
 
-test: check-rust test-rust nd
+nd:
+	cd pydu && maturin develop --release
+
+test: check-rust test-rust nd-dev
 	pytest tests -v
