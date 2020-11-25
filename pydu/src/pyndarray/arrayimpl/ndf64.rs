@@ -16,7 +16,7 @@ use super::{AsNumArray, NdArrayI};
 impl_ndarray!(f64, NdArrayD, inner, NdArrayDColIter, ndarraydimpl);
 
 #[pyclass]
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct NdArrayD {
     pub inner: NdArray<f64>,
 }

@@ -1,4 +1,5 @@
 import pytest
+import pydu
 from pydu import NdArrayD, NdArrayI, array
 
 
@@ -12,6 +13,28 @@ def test_factory():
 
     barray = array([[[True] * 3], [[True] * 3]])
     assert res == barray
+
+
+def test_sum_mat():
+    arr = [[2, 4], [2, 1], [2, 3]] * 2
+
+    res = pydu.sum(arr)
+
+    print(res)
+
+    assert res.shape == [6]
+    assert (res == pydu.array([6, 3, 5, 6, 3, 5])).all()
+
+
+def test_sum_vec():
+    arr = [2, 4, 2, 1, 2, 3]
+
+    res = pydu.sum(arr)
+
+    print(res)
+
+    assert len(res.shape) == 0
+    assert (res == pydu.array([14])).all()
 
 
 def test_ctor():

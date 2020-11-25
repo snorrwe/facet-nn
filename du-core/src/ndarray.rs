@@ -1,8 +1,8 @@
 pub mod column_iter;
+pub mod matrix;
 pub mod shape;
 
 mod arithmetic;
-mod matrix;
 mod scalar;
 use column_iter::{ColumnIter, ColumnIterMut};
 pub use scalar::*;
@@ -235,9 +235,8 @@ impl<T> NdArray<T> {
             });
         }
 
-        let shape = Shape::from(shape);
         let res = Self {
-            stride: shape::stride_vec(1, &*shape.as_slice()).into_boxed_slice(),
+            stride: shape::stride_vec(1, shape.as_slice()).into_boxed_slice(),
             shape,
             values,
         };

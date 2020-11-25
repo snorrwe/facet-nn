@@ -7,48 +7,56 @@ class DenseLayer:
     Dense layers are interconnected, all inputs are connected to all outputs
     """
 
-    def __init__(self, inp, out, activation, dactifn=None):
+    def __init__(self, inp, out):
         """
         :param inp: number of input neurons
         :param out: number of output neurons
-        :param dactifn: derivative of the activaton function. Only required if this layer will perform backward passes
         """
-        assert callable(activation)
-        if dactifn:
-            assert callable(dactifn)
 
         self.weights = pydu.array([[69] * out] * inp)
         self.biases = pydu.array([42] * out)
-        self.activation = activation
-        self.dactifn = dactifn
         self.last_input = None
 
     def forward(self, inp):
         self.last_input = inp
-        return self.activation(inp.matmul(self.weights) + self.biases)
+        return inp.matmul(self.weights) + self.biases
 
     def backward(self, dvalues):
-        self.dinputs = self.dactifn(dvalues)
         self.dweights = self.last_input.transpose().matmul(dvalues)
         self.dinputs = dvalues.matmul(self.weights.transpose())
-        #  self.dbiases = dvalues.sum() # TODO
+        self.dbiases = pydu.sum(dvalues)
 
     def __repr__(self):
-        return f"DenseLayer weights: {self.weights.shape} biases: {self.biases.shape} activation: {self.activation}"
+        return f"DenseLayer weights: {self.weights.shape} biases: {self.biases.shape}"
 
 
 class Network:
-    def __init__(self, layers):
+    def __init__(self, layers, activations):
         self.layers = layers
+        self.activations = activations
+
+        assert len(layers) == len(activations)
 
     def forward(self, x):
-        for layer in self.layers:
+        for (layer, activation) in zip(self.layers, self.activations):
             x = layer.forward(x)
+            x = activation(x)
         return x
 
     def __repr__(self):
         layers = "\n".join((repr(x) for x in self.layers))
         return f"Network object of {len(self.layers)} Layers:\n{layers}"
+
+
+class Activation:
+    def __init__(self, fn):
+        assert callable(fn)
+        self.fn = fn
+
+    def forward(self, inputs):
+        self.inputs = inputs
+        self.output = self.fn(inputs)
+        return self.output
 
 
 class Loss:
@@ -65,8 +73,30 @@ class Loss:
         losses = self.loss(pred, target)
         return losses.mean()
 
-    def backward(self, dvalues, y_true):
-        self.dinputs = self.dlossfn(dvalues, y_true)
+    def backward(self, dvalues, target):
+        self.dinputs = self.dlossfn(dvalues, target)
+
+
+class Activation_Softmax_Loss_CategoricalCrossentropy:
+    def __init__(self):
+        self.activation = Activation(pydu.softmax)
+        self.loss = Loss(pydu.categorical_cross_entropy)
+
+    def forward(self, inputs, target):
+        y = self.activation.forward(inputs)
+        self.output = y
+        return self.loss.calculate(y, target)
+
+    def backward(self, dvalues, target):
+        """
+        optimized backwards step
+
+        :param target: at this time we assume that target it 1-hot
+        """
+        samples = dvalues.shape[0]
+        self.dinputs = dvalues.clone()
+        self.dinputs = self.dinputs - target
+        self.dinputs = self.dinputs / pydu.array([samples]).reshape([0])
 
 
 def labels_to_y(labels):

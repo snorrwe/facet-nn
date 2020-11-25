@@ -84,7 +84,7 @@ def test_softmax_derivative():
 
     print(softmax_output)
 
-    foo = pydu.diagflat([a for l in list(softmax_output.iter_cols()) for a in l])
+    foo = pydu.diagflat([a for l in softmax_output.iter_cols() for a in l])
 
     print(foo)
 

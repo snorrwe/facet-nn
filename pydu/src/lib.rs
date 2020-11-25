@@ -17,17 +17,51 @@ pub fn eye(dims: u32) -> NdArrayD {
     }
 }
 
-/// Creates a squre matrix where the diagonal holds the values of the input vector and the other
+/// Creates a square matrix where the diagonal holds the values of the input vector and the other
 /// values are 0
 #[pyfunction]
-pub fn diagflat(inp: Vec<f64>) -> PyResult<NdArrayD> {
-    let n = u32::try_from(inp.len())
-        .map_err(|err| PyValueError::new_err(format!("Failed to convert inp to u32 {:?}", err)))?;
+pub fn diagflat(py: Python, inp: PyObject) -> PyResult<NdArrayD> {
+    let inp: Py<NdArrayD> = inp
+        .extract(py)
+        .or_else(|_| pyndarray::array(py, inp.extract(py)?)?.extract(py))?;
+    let inp: &PyCell<NdArrayD> = inp.into_ref(py);
+    let mut inp = inp.borrow_mut();
+    let n = inp.inner.shape().span();
+    let n = u32::try_from(n).map_err(|err| {
+        PyValueError::new_err(format!("Failed to convert inp len to u32 {:?}", err))
+    })?;
+    inp.inner.reshape(n).unwrap();
+    let inp = inp.inner.as_slice();
     let mut res = NdArray::new_default([n, n]);
     for i in 0..n {
         *res.get_mut(&[i, i]).unwrap() = inp[i as usize];
     }
 
+    Ok(NdArrayD { inner: res })
+}
+
+#[pyfunction]
+pub fn sum(py: Python, inp: PyObject) -> PyResult<NdArrayD> {
+    let inp: Py<NdArrayD> = inp
+        .extract(py)
+        .or_else(|_| pyndarray::array(py, inp.extract(py)?)?.extract(py))?;
+
+    let inp: &PyCell<NdArrayD> = inp.into_ref(py);
+    let inp = inp.borrow();
+    let res = inp
+        .inner
+        .iter_cols()
+        .map(|x| x.iter().sum())
+        .collect::<Vec<_>>();
+
+    let shape = inp.shape();
+    let shape = shape.as_slice();
+    let res = if shape.len() > 0 {
+        NdArray::new_with_values(&shape[..shape.len() - 1], res).unwrap()
+    } else {
+        // scalar
+        NdArray::new_with_values(0, res).unwrap()
+    };
     Ok(NdArrayD { inner: res })
 }
 
@@ -40,6 +74,7 @@ fn pydu(py: Python, m: &PyModule) -> PyResult<()> {
 
     m.add_function(wrap_pyfunction!(eye, m)?)?;
     m.add_function(wrap_pyfunction!(diagflat, m)?)?;
+    m.add_function(wrap_pyfunction!(sum, m)?)?;
 
     Ok(())
 }

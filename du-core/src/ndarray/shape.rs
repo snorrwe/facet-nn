@@ -16,7 +16,7 @@ impl Shape {
             Shape::Scalar(_) => None,
             Shape::Matrix([_, n]) => Some(*n),
             Shape::Vector(n) => Some(n[0]),
-            Shape::Tensor(ref s) => s.last().cloned(),
+            Shape::Tensor(s) => s.last().cloned(),
         }
     }
 
@@ -26,7 +26,7 @@ impl Shape {
         match self {
             Shape::Scalar(_) => None,
             Shape::Vector(_) => None,
-            Shape::Matrix([n, m]) => Some([*n, *m]),
+            Shape::Matrix(s) => Some(s.clone()),
             Shape::Tensor(shp) => {
                 let len = shp.len();
                 debug_assert!(len >= 3);
@@ -122,7 +122,8 @@ impl From<[u32; 2]> for Shape {
 impl<'a> From<&'a [u32]> for Shape {
     fn from(shape: &'a [u32]) -> Self {
         match shape.len() {
-            0 | 1 if shape[0] == 0 => Shape::Scalar([0]),
+            0 => Shape::Scalar([0]),
+            1 if shape.get(0).unwrap() == &0 => Shape::Scalar([0]),
             1 => Shape::Vector([shape[0]]),
             2 => Shape::Matrix([shape[0], shape[1]]),
             _ => Shape::Tensor(shape.into()),

@@ -7,7 +7,9 @@ use super::{
     column_iter::ColumnIter, column_iter::ColumnIterMut, shape::Shape, NdArray, NdArrayError,
 };
 
-fn matmul_impl<'a, T>(
+/// Raw matrix multiplication method
+// this really should be optimized further...
+pub fn matmul_impl<'a, T>(
     [n, m]: [u32; 2],
     values0: &'a [T],
     [m1, p]: [u32; 2],

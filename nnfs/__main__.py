@@ -2,20 +2,17 @@ from nnfs import *
 import pydu
 
 
-layer1 = DenseLayer(3, 3, activation=pydu.relu, dactifn=pydu.drelu_dz)
+boi = Activation_Softmax_Loss_CategoricalCrossentropy()
 
-inp = pydu.array([[1, 1, 1]] * 9)
 
-out = layer1.forward(inp)
+x = pydu.array([[1, 2, 8] * 8])
+y = pydu.array([[1, 0, 0] * 8])
 
-print("out", repr(out))
+res = boi.forward(x, y)
 
-layer1.backward(out)
 
-res = cce_backward(out, inp)
+print(res)
 
-print("back", res)
+res = boi.backward(boi.output, y)
 
-# softmax test
-
-softmax_out = pydu.array([0.7, 0.1, 0.2])
+print(boi.dinputs)
