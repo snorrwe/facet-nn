@@ -4,7 +4,7 @@
 use std::ops::{Add, AddAssign, Mul};
 
 use super::{
-    column_iter::ColumnIter, column_iter::ColumnIterMut, shape::Shape, NdArray, NdArrayError,
+    column_iter::ColumnIter, column_iter::ColumnIterMut, shape::Shape, Data, NdArray, NdArrayError,
 };
 
 /// Raw matrix multiplication method
@@ -63,23 +63,23 @@ where
     /// The output is 2(!) 2 by 2 matrices.
     ///
     /// ```
-    /// use du_core::ndarray::NdArray;
+    /// use du_core::ndarray::{NdArray, Data};
     /// use du_core::ndarray::shape::Shape;
     ///
     /// // 2 by 3 matrix
-    /// let a = NdArray::new_with_values([2, 3], [1, 2, -1, 2, 0, 1]).unwrap();
+    /// let a = NdArray::new_with_values([2, 3], Data::from_slice(&[1, 2, -1, 2, 0, 1])).unwrap();
     ///
     /// // the same 3 by 2 matrix twice
     /// let b = NdArray::new_with_values(
     ///     &[2, 3, 2][..],
-    ///     [3, 1, 0, -1, -2, 3, /*|*/ 3, 1, 0, -1, -2, 3],
+    ///     Data::from_slice(&[3, 1, 0, -1, -2, 3, /*|*/ 3, 1, 0, -1, -2, 3]),
     /// )
     /// .unwrap();
     ///
     /// let c = a.matmul(&b).expect("matmul");
     ///
     /// // output 2 2 by 2 matrices
-    /// assert_eq!(c.shape(), &Shape::Tensor([2, 2, 2].into()));
+    /// assert_eq!(c.shape(), &Shape::Tensor((&[2, 2, 2][..]).into()));
     /// assert_eq!(c.as_slice(), &[5, -4, 4, 5, /*|*/ 5, -4, 4, 5]);
     /// ```
     pub fn matmul(&'a self, other: &'a Self) -> Result<Self, NdArrayError> {
@@ -102,7 +102,7 @@ where
                     expected: *a as usize,
                     actual: *b as usize,
                 })?;
-                Self::new_with_values(&[][..], [res])
+                Self::new_with_values(&[][..], Data::from_slice(&[res][..]))
             }
 
             (Shape::Vector([l]), Shape::Matrix([n, m])) => {

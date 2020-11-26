@@ -1,4 +1,4 @@
-use du_core::ndarray::NdArray;
+use du_core::ndarray::{Data, NdArray};
 pub use ndarraydimpl::*;
 
 use crate::impl_ndarray;
@@ -41,6 +41,10 @@ impl<T> PyNumberProtocol for NdArrayD {
 
     fn __truediv__(lhs: PyRef<'p, Self>, rhs: PyRef<'p, Self>) -> PyResult<Self> {
         <Self as AsNumArray>::truediv(lhs, rhs).map(|inner| Self { inner })
+    }
+
+    fn __pow__(lhs: PyRef<'p, Self>, rhs: PyRef<'p, Self>, _modulo: Option<f64>) -> PyResult<Self> {
+        <Self as AsNumArray>::pow(lhs, rhs).map(|inner| Self { inner })
     }
 }
 
@@ -128,7 +132,7 @@ impl NdArrayD {
     /// Collapses the last columns into an array of indices, where each index is the index of the
     /// largest value of the given column
     pub fn argmax(&self) -> PyResult<NdArrayI> {
-        let mut res = Vec::with_capacity(self.inner.shape().col_span());
+        let mut res = Data::with_capacity(self.inner.shape().col_span());
         for col in self.inner.iter_cols() {
             let ind = col
                 .iter()
@@ -144,7 +148,7 @@ impl NdArrayD {
     /// Collapses the last columns into an array of indices, where each index is the index of the
     /// smallest value of the given column
     pub fn argmin(&self) -> PyResult<NdArrayI> {
-        let mut res = Vec::with_capacity(self.inner.shape().col_span());
+        let mut res = Data::with_capacity(self.inner.shape().col_span());
         for col in self.inner.iter_cols() {
             let ind = col
                 .iter()

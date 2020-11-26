@@ -140,7 +140,7 @@ macro_rules! impl_ndarray {
                 pub fn new(shape: &PyAny, values: Option<Vec<$ty>>) -> PyResult<Self> {
                     let shape = PyNdIndex::new(shape)?;
                     let inner = match values {
-                        Some(v) => NdArray::new_with_values(shape.inner, v.into_boxed_slice())
+                        Some(v) => NdArray::new_with_values(shape.inner, v.into())
                             .map_err(|err| {
                                 PyValueError::new_err::<String>(format!("{}", err).into())
                             })?,
@@ -199,7 +199,7 @@ macro_rules! impl_ndarray {
                 /// The values must have a length equal to the product of the dimensions!
                 pub fn set_values(&mut self, values: Vec<$ty>) -> PyResult<()> {
                     self.inner
-                        .set_slice(values.into_boxed_slice())
+                        .set_slice(values.into())
                         .map(|_| ())
                         .map_err(|err| PyValueError::new_err::<String>(format!("{}", err).into()))
                 }

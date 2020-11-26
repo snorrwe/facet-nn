@@ -6,6 +6,7 @@ mod arithmetic;
 mod scalar;
 use column_iter::{ColumnIter, ColumnIterMut};
 pub use scalar::*;
+use smallvec::SmallVec;
 
 #[cfg(test)]
 mod tests;
@@ -29,12 +30,17 @@ pub enum NdArrayError {
     ConversionError(String),
 }
 
+pub type Data<T> = SmallVec<[T; 16]>;
+pub type Stride = SmallVec<[usize; 4]>;
+
 #[derive(Debug, Eq, PartialEq)]
 pub struct NdArray<T> {
     shape: Shape,
-    stride: Box<[usize]>,
-    values: Box<[T]>,
+    stride: Stride,
+    values: Data<T>,
 }
+
+impl<T> NdArray<T> {}
 
 impl<T> Clone for NdArray<T>
 where
@@ -175,7 +181,7 @@ where
         let len: usize = shape.span();
         let values = (0..len)
             .map(|_| unsafe { MaybeUninit::uninit().assume_init() })
-            .collect::<Vec<_>>();
+            .collect();
 
         Self::new_with_values(shape, values).unwrap()
     }
@@ -203,7 +209,7 @@ where
                 // 2 million iq move: copy the first slice then use the first slice as the tmp
                 //   array
 
-                let mut values = Vec::with_capacity(shape.span());
+                let mut values = Data::with_capacity(shape.span());
                 for submat in ColumnIter::new(&self.values, n * m) {
                     matrix::transpose_mat([n, m], submat, &mut tmp);
                     values.extend_from_slice(&tmp);
@@ -213,19 +219,18 @@ where
                 shape[shape_len - 1] = n as u32;
                 shape[shape_len - 2] = m as u32;
 
-                Self::new_with_values(shape, values.into_boxed_slice()).unwrap()
+                Self::new_with_values(shape, values).unwrap()
             }
         }
     }
 }
 
 impl<T> NdArray<T> {
-    pub fn new_with_values<S: Into<Shape>, V: Into<Box<[T]>>>(
+    pub fn new_with_values<S: Into<Shape>>(
         shape: S,
-        values: V,
+        values: Data<T>,
     ) -> Result<Self, NdArrayError> {
         let shape = shape.into();
-        let values = values.into();
 
         let len: usize = shape.span();
         if len != 0 && values.len() != len {
@@ -236,7 +241,7 @@ impl<T> NdArray<T> {
         }
 
         let res = Self {
-            stride: shape::stride_vec(1, shape.as_slice()).into_boxed_slice(),
+            stride: shape::stride_vec(1, shape.as_slice()),
             shape,
             values,
         };
@@ -244,7 +249,7 @@ impl<T> NdArray<T> {
     }
 
     /// Construct a new 'vector' type (1D) array
-    pub fn new_vector(values: impl Into<Box<[T]>>) -> Self {
+    pub fn new_vector(values: impl Into<Data<T>>) -> Self {
         let values = values.into();
         Self::new_with_values(values.len() as u32, values).unwrap()
     }
@@ -257,10 +262,10 @@ where
     pub fn new_default<S: Into<Shape>>(shape: S) -> Self {
         let shape: Shape = shape.into();
         let len: usize = shape.span().max(1);
-        let values = (0..len).map(|_| Default::default()).collect::<Vec<_>>();
+        let values = (0..len).map(|_| Default::default()).collect::<Data<T>>();
 
         let shape = Shape::from(shape);
-        Self::new_with_values(shape, values.into_boxed_slice()).unwrap()
+        Self::new_with_values(shape, values).unwrap()
     }
 
     /// Returns a Diagonal matrix where the values are the given default value and the rest of the
@@ -281,7 +286,7 @@ where
 // Generic methods
 impl<T> NdArray<T> {
     /// If invalid returns false and leaves this instance unchanged
-    pub fn set_slice(&mut self, values: Box<[T]>) -> Result<&mut Self, NdArrayError> {
+    pub fn set_slice(&mut self, values: Data<T>) -> Result<&mut Self, NdArrayError> {
         if values.len() != self.values.len() {
             return Err(NdArrayError::DimensionMismatch {
                 expected: self.values.len(),
@@ -454,15 +459,17 @@ fn get_index(shape: &[u32], stride: &[usize], index: &[u32]) -> Option<usize> {
     Some(res)
 }
 
-impl<T> From<T> for NdArray<T> {
+impl<T> From<T> for NdArray<T> 
+where T: Copy
+{
     fn from(val: T) -> Self {
-        NdArray::new_with_values(0, [val]).unwrap()
+        NdArray::new_with_values(0, Data::from_slice(&[val][..])).unwrap()
     }
 }
 
 impl<'a, T> FromIterator<T> for NdArray<T> {
     fn from_iter<It: IntoIterator<Item = T>>(iter: It) -> Self {
-        let values = iter.into_iter().collect::<Vec<T>>();
+        let values: Data<T> = iter.into_iter().collect();
         Self::new_with_values(values.len() as u32, values).unwrap()
     }
 }

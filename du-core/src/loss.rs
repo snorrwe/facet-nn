@@ -1,6 +1,6 @@
 use std::f64::consts::E;
 
-use crate::{ndarray::NdArray, DuError, DuResult};
+use crate::{ndarray::Data, ndarray::NdArray, DuError, DuResult};
 
 /// The author recommends running `softmax` on the output before calling this function
 ///
@@ -16,7 +16,7 @@ pub fn categorical_cross_entropy(
         ));
     }
 
-    let mut out = Vec::with_capacity(
+    let mut out = Data::with_capacity(
         predictions.shape().span() / predictions.shape().last().unwrap_or(1) as usize,
     );
     for (x, y) in predictions.iter_cols().zip(targets.iter_cols()) {
@@ -38,6 +38,6 @@ pub fn categorical_cross_entropy(
         out.push(-loss);
     }
 
-    let res = NdArray::new_with_values(out.len() as u32, out.into_boxed_slice())?;
+    let res = NdArray::new_with_values(out.len() as u32, out)?;
     Ok(res)
 }

@@ -7,6 +7,7 @@ use std::{
     ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Sub, SubAssign},
 };
 
+use super::Data;
 use super::{column_iter::ColumnIterMut, shape::Shape, NdArray, NdArrayError};
 
 macro_rules! arithimpl {
@@ -14,7 +15,7 @@ macro_rules! arithimpl {
         match (&$lhs.shape, &$rhs.shape) {
             (Shape::Scalar(_), Shape::Scalar(_)) => Ok(NdArray::<T>::new_with_values(
                     0,
-                [$lhs.values[0] $op $rhs.values[0]],
+                    (0..1).map(|_| $lhs.values[0] $op $rhs.values[0]).collect::<Data<T>>(),
             ).unwrap()),
             // add the scalar to all elements
             (Shape::Scalar(_), Shape::Vector(_))
@@ -44,7 +45,7 @@ macro_rules! arithimpl {
                         actual: b.clone(),
                     });
                 }
-                let values: Vec<_> = $lhs
+                let values: Data<_> = $lhs
                     .values
                     .iter()
                     .zip($rhs.values.iter())
@@ -52,7 +53,7 @@ macro_rules! arithimpl {
                     .collect();
                 let res = NdArray::<T> ::new_with_values(
                     $lhs.shape.clone(),
-                    values.into_boxed_slice(),
+                    values,
                 ).unwrap();
                 Ok(res)
             }
@@ -174,11 +175,11 @@ where
 impl<T> NdArray<T> {
     /// Maps the current array to another array with the same shape
     pub fn map<U>(&self, f: impl FnMut(&T) -> U) -> NdArray<U> {
-        let res: Vec<_> = self.values.iter().map(f).collect();
+        let res: Data<_> = self.values.iter().map(f).collect();
         NdArray::new_with_values(self.shape.clone(), res).unwrap()
     }
     pub fn try_map<U, E>(&self, mut f: impl FnMut(&T) -> Result<U, E>) -> Result<NdArray<U>, E> {
-        let mut res = Vec::with_capacity(self.values.len());
+        let mut res = Data::with_capacity(self.values.len());
         for v in self.values.iter() {
             res.push(f(v)?);
         }
@@ -197,14 +198,14 @@ where
             Shape::Scalar(_) => Ok(self.clone()),
             Shape::Vector([n]) => {
                 let s: T = self.values.iter().cloned().sum();
-                Ok(Self::new_with_values(
-                    0,
-                    [s / T::try_from(
-                        u32::try_from(n)
-                            .map_err(|_| NdArrayError::ConversionError(format!("{:?}", n)))?,
-                    )
-                    .map_err(|_| NdArrayError::ConversionError(format!("{:?}", n)))?],
-                )?)
+                let res = s / T::try_from(
+                    u32::try_from(n)
+                        .map_err(|_| NdArrayError::ConversionError(format!("{:?}", n)))?,
+                )
+                .map_err(|_| NdArrayError::ConversionError(format!("{:?}", n)))?;
+                let mut values = Data::new();
+                values.push(res);
+                Ok(Self::new_with_values(0, values)?)
             }
             Shape::Tensor(_) | Shape::Matrix([_, _]) => {
                 let mut values = Vec::with_capacity(self.shape.col_span());
@@ -233,7 +234,7 @@ mod tests {
     fn test_map() {
         let a = NdArray::<i32>::new_with_values(
             &[2, 4, 2][..],
-            [0, 69, 0, 69, 0, 69, 0, 0, 0, 0, 69, 0, 69, 0, 69, 0],
+            Data::from_slice(&[0, 69, 0, 69, 0, 69, 0, 0, 0, 0, 69, 0, 69, 0, 69, 0][..]),
         )
         .unwrap();
 

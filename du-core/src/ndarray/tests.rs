@@ -23,7 +23,7 @@ fn get_column() {
 fn test_slice_frees_correctly() {
     let mut arr = NdArray::new([5, 5]);
 
-    arr.set_slice(vec![69u32; 25].into_boxed_slice()).unwrap();
+    arr.set_slice(vec![69u32; 25].into()).unwrap();
 
     for val in arr.as_slice() {
         assert_eq!(*val, 69);
@@ -33,8 +33,7 @@ fn test_slice_frees_correctly() {
 #[test]
 fn test_iter_cols() {
     let mut arr = NdArray::new([5, 8]);
-    arr.set_slice((0..40).collect::<Vec<_>>().into_boxed_slice())
-        .unwrap();
+    arr.set_slice((0..40).collect::<Data<_>>()).unwrap();
 
     let mut count = 0;
     for (i, col) in arr.iter_cols().enumerate() {
@@ -91,14 +90,14 @@ fn test_nd_nd_inner() {
 fn test_vector_matrix_mul() {
     // transpose matrix, displacing the 3d homogeneous vector by 5,5,5
     #[rustfmt::skip]
-    fn mat() -> Box<[i32]> {
+    fn mat() -> Data<i32> {
         [1, 0, 0, 0,
          0, 1, 0, 0,
          0, 0, 1, 0,
          5, 5, 5, 1].into()
     }
 
-    let a = NdArray::new_with_values(&[4][..], [1, 2, 3, 1]).unwrap();
+    let a = NdArray::new_with_values(&[4][..], Data::from_slice(&[1, 2, 3, 1][..])).unwrap();
     let b = NdArray::new_with_values(&[4, 4][..], mat()).unwrap();
 
     let c = a.matmul(&b).expect("matmul");
@@ -119,10 +118,12 @@ fn test_vector_matrix_mul_w_broadcasting() {
     }
     let mat = mat();
 
-    let a = NdArray::new_with_values(&[4][..], [1, 2, 3, 1]).unwrap();
+    let a = NdArray::new_with_values(&[4][..], Data::from_slice(&[1, 2, 3, 1])).unwrap();
     let b = NdArray::new_with_values(
         &[4, 4, 4][..],
-        (0..4).flat_map(|_| mat.iter().cloned()).collect::<Vec<_>>(),
+        (0..4)
+            .flat_map(|_| mat.iter().cloned())
+            .collect::<Data<_>>(),
     )
     .unwrap();
 
@@ -139,7 +140,7 @@ fn test_vector_matrix_mul_w_broadcasting() {
 fn test_matrix_vector_mul() {
     // transpose matrix, displacing the 3d homogeneous vector by 5,5,5
     #[rustfmt::skip]
-    fn mat() -> Box<[i32]> {
+    fn mat() -> Data<i32> {
         [1, 0, 0, 5,
          0, 1, 0, 5,
          0, 0, 1, 5,
@@ -147,7 +148,7 @@ fn test_matrix_vector_mul() {
     }
 
     let a = NdArray::new_with_values(&[4, 4][..], mat()).unwrap();
-    let b = NdArray::new_with_values(4u32, [1, 2, 3, 1]).unwrap();
+    let b = NdArray::new_with_values(4u32, Data::from_slice(&[1, 2, 3, 1])).unwrap();
 
     let c = a.matmul(&b).expect("matmul");
 
@@ -157,8 +158,8 @@ fn test_matrix_vector_mul() {
 
 #[test]
 fn test_mat_mat_mul() {
-    let a = NdArray::new_with_values([2, 3], [1, 2, -1, 2, 0, 1]).unwrap();
-    let b = NdArray::new_with_values([3, 2], [3, 1, 0, -1, -2, 3]).unwrap();
+    let a = NdArray::new_with_values([2, 3], Data::from_slice(&[1, 2, -1, 2, 0, 1])).unwrap();
+    let b = NdArray::new_with_values([3, 2], Data::from_slice(&[3, 1, 0, -1, -2, 3])).unwrap();
 
     let c = a.matmul(&b).expect("matmul");
 
@@ -168,21 +169,24 @@ fn test_mat_mat_mul() {
 
 #[test]
 fn test_mat_mat_mul_many() {
-    let a = NdArray::new_with_values([2, 3], [1, 2, -1, 2, 0, 1]).unwrap();
+    let a = NdArray::new_with_values([2, 3], Data::from_slice(&[1, 2, -1, 2, 0, 1])).unwrap();
 
     // 2 times the matrix from above
-    let b =
-        NdArray::new_with_values(&[2, 3, 2][..], [3, 1, 0, -1, -2, 3, 3, 1, 0, -1, -2, 3]).unwrap();
+    let b = NdArray::new_with_values(
+        &[2, 3, 2][..],
+        Data::from_slice(&[3, 1, 0, -1, -2, 3, 3, 1, 0, -1, -2, 3]),
+    )
+    .unwrap();
 
     let c = a.matmul(&b).expect("matmul");
 
-    assert_eq!(c.shape, Shape::Tensor([2, 2, 2].into()));
+    assert_eq!(c.shape, Shape::Tensor(SmallVec::from_slice(&[2, 2, 2])));
     assert_eq!(c.as_slice(), &[5, -4, 4, 5, 5, -4, 4, 5]);
 }
 
 #[test]
 fn test_mat_transpose() {
-    let a = NdArray::new_with_values(&[2, 3][..], [1, 2, 3, 4, 5, 6]).unwrap();
+    let a = NdArray::new_with_values(&[2, 3][..], Data::from_slice(&[1, 2, 3, 4, 5, 6])).unwrap();
 
     println!("{}", a.to_string());
     let b = a.transpose();
@@ -195,16 +199,14 @@ fn test_mat_transpose() {
 fn test_tensor_transpose() {
     let a = NdArray::new_with_values(
         &[4, 2, 3][..],
-        [
-            1, 2, 3, 4, 5, 6, 1, 2, 3, 4, 5, 6, 1, 2, 3, 4, 5, 6, 1, 2, 3, 4, 5, 6,
-        ],
+        smallvec::smallvec![1, 2, 3, 4, 5, 6, 1, 2, 3, 4, 5, 6, 1, 2, 3, 4, 5, 6, 1, 2, 3, 4, 5, 6,],
     )
     .unwrap();
 
     println!("{}", a.to_string());
     let b = a.transpose();
 
-    assert_eq!(b.shape, Shape::Tensor([4, 3, 2].into()));
+    assert_eq!(b.shape, Shape::Tensor(SmallVec::from_slice(&[4, 3, 2])));
     assert_eq!(
         b.as_slice(),
         &[1, 4, 2, 5, 3, 6, 1, 4, 2, 5, 3, 6, 1, 4, 2, 5, 3, 6, 1, 4, 2, 5, 3, 6],

@@ -1,5 +1,5 @@
 use crate::pyndarray::NdArrayD;
-use du_core::ndarray::NdArray;
+use du_core::ndarray::{Data, NdArray};
 use pyo3::{exceptions::PyValueError, prelude::*, types::PyDict, wrap_pyfunction};
 
 use std::{
@@ -27,7 +27,7 @@ pub fn load_csv<'a, 'py>(
     let mut column_indices: HashMap<String, usize> = HashMap::new();
     let mut label_columns = Vec::new();
     let mut columns: Vec<String> = Vec::new();
-    let mut data = Vec::new();
+    let mut data = Data::new();
 
     let f = std::fs::OpenOptions::new()
         .read(true)

@@ -28,7 +28,7 @@ impl NdArrayB {
 
     /// Convert self into float representation, where True becomes 1.0 and False becomes 0.0
     pub fn as_f64(&self) -> NdArrayD {
-        let values: Vec<f64> = self
+        let values = self
             .inner
             .as_slice()
             .iter()

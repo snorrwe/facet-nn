@@ -1,5 +1,7 @@
 use std::ops::{Index, IndexMut};
 
+use smallvec::SmallVec;
+
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub enum Shape {
     /// this value is meaningless, just helps us convert into slice
@@ -7,7 +9,7 @@ pub enum Shape {
     Vector([u32; 1]),
     Matrix([u32; 2]),
     /// Over 3 dimensions
-    Tensor(Box<[u32]>),
+    Tensor(SmallVec<[u32; 4]>),
 }
 
 impl Shape {
@@ -134,14 +136,14 @@ impl<'a> From<&'a [u32]> for Shape {
 /// Vector with the stride of each element of each dimension
 ///
 /// 0 long shapes will return [1], they span a single item
-pub fn stride_vec(width: usize, shp: &[u32]) -> Vec<usize> {
+pub fn stride_vec(width: usize, shp: &[u32]) -> SmallVec<[usize; 4]> {
     let len = shp.len();
 
     if len == 0 {
-        return vec![1];
+        return (1..=1).collect();
     }
 
-    let mut res = Vec::with_capacity(len);
+    let mut res = SmallVec::with_capacity(len);
     for i in 0..len - 1 {
         res.push(shp[i + 1..].iter().map(|x| *x as usize * width).product());
     }

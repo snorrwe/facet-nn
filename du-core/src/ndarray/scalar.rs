@@ -1,6 +1,6 @@
 use std::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Sub, SubAssign};
 
-use super::NdArray;
+use super::{Data, NdArray};
 
 impl<T> Add<T> for NdArray<T>
 where
@@ -9,7 +9,7 @@ where
     type Output = Self;
 
     fn add(self, b: T) -> Self::Output {
-        let values: Vec<T> = self.values.iter().map(move |a| *a + b).collect();
+        let values: Data<T> = self.values.iter().map(move |a| *a + b).collect();
         Self::new_with_values(self.shape.clone(), values).unwrap()
     }
 }
@@ -32,7 +32,7 @@ where
     type Output = Self;
 
     fn sub(self, b: T) -> Self::Output {
-        let values: Vec<T> = self.values.iter().map(move |a| *a - b).collect();
+        let values: Data<T> = self.values.iter().map(move |a| *a - b).collect();
         Self::new_with_values(self.shape.clone(), values).unwrap()
     }
 }
@@ -55,7 +55,7 @@ where
     type Output = Self;
 
     fn mul(self, b: T) -> Self::Output {
-        let values: Vec<T> = self.values.iter().map(move |a| *a * b).collect();
+        let values: Data<T> = self.values.iter().map(move |a| *a * b).collect();
         Self::new_with_values(self.shape.clone(), values).unwrap()
     }
 }
@@ -78,7 +78,7 @@ where
     type Output = Self;
 
     fn div(self, b: T) -> Self::Output {
-        let values: Vec<T> = self.values.iter().map(move |a| *a / b).collect();
+        let values: Data<T> = self.values.iter().map(move |a| *a / b).collect();
         Self::new_with_values(self.shape.clone(), values).unwrap()
     }
 }

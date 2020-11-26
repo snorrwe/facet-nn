@@ -18,7 +18,7 @@ pub fn relu(inp: &NdArray<f64>) -> NdArray<f64> {
 pub fn softmax(inp: &NdArray<f64>) -> DuResult<NdArray<f64>> {
     // softmax of a scalar value is always 1.
     if matches!(inp.shape(), Shape::Scalar(_)) {
-        return Ok(NdArray::new_with_values(0, [1.0])?);
+        return Ok(NdArray::new_with_values(0, [1.0][..].into())?);
     }
     // else treat the input as a collection of vectors
     let mut it = inp.as_slice().iter().cloned();

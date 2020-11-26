@@ -3,7 +3,7 @@ pub mod io;
 pub mod loss;
 pub mod pyndarray;
 
-use du_core::ndarray::{shape::Shape, NdArray};
+use du_core::ndarray::{shape::Shape, Data, NdArray};
 use pyndarray::{NdArrayD, PyNdIndex};
 use pyo3::{exceptions::PyValueError, prelude::*, wrap_pyfunction};
 
@@ -65,7 +65,7 @@ pub fn sum(py: Python, inp: PyObject) -> PyResult<NdArrayD> {
         .inner
         .iter_cols()
         .map(|x| x.iter().sum())
-        .collect::<Vec<_>>();
+        .collect::<Data<_>>();
 
     let shape = inp.shape();
     let shape = shape.as_slice();
@@ -78,11 +78,18 @@ pub fn sum(py: Python, inp: PyObject) -> PyResult<NdArrayD> {
     Ok(NdArrayD { inner: res })
 }
 
+pub fn object2ndarrayd(py: Python, inp: PyObject) -> PyResult<Py<NdArrayD>> {
+    let inp: Py<NdArrayD> = inp
+        .extract(py)
+        .or_else(|_| pyndarray::array(py, inp.extract(py)?)?.extract(py))?;
+    Ok(inp)
+}
+
 /// Scrate a single-value nd-array
 #[pyfunction]
 pub fn scalar(s: f64) -> NdArrayD {
     NdArrayD {
-        inner: NdArray::new_with_values(0, [s]).unwrap(),
+        inner: NdArray::new_with_values(0, (0..1).map(|_|s).collect()).unwrap(),
     }
 }
 
