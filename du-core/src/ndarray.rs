@@ -32,8 +32,8 @@ pub enum NdArrayError {
 #[derive(Debug, Eq, PartialEq)]
 pub struct NdArray<T> {
     shape: Shape,
-    values: Box<[T]>,
     stride: Box<[usize]>,
+    values: Box<[T]>,
 }
 
 impl<T> Clone for NdArray<T>

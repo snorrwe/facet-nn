@@ -3,8 +3,8 @@ pub mod io;
 pub mod loss;
 pub mod pyndarray;
 
-use du_core::ndarray::NdArray;
-use pyndarray::NdArrayD;
+use du_core::ndarray::{shape::Shape, NdArray};
+use pyndarray::{NdArrayD, PyNdIndex};
 use pyo3::{exceptions::PyValueError, prelude::*, wrap_pyfunction};
 
 use std::convert::TryFrom;
@@ -15,6 +15,19 @@ pub fn eye(dims: u32) -> NdArrayD {
     NdArrayD {
         inner: NdArray::diagonal(dims, 1.0),
     }
+}
+
+#[pyfunction]
+pub fn zeros(py: Python, inp: PyObject) -> PyResult<NdArrayD> {
+    let inp: PyNdIndex = inp
+        .extract(py)
+        .or_else(|_| PyNdIndex::new(inp.extract(py)?))?;
+
+    let shape = Shape::from(inp.inner);
+
+    let res = NdArray::new_default(shape);
+
+    Ok(NdArrayD { inner: res })
 }
 
 /// Creates a square matrix where the diagonal holds the values of the input vector and the other
@@ -44,8 +57,7 @@ pub fn diagflat(py: Python, inp: PyObject) -> PyResult<NdArrayD> {
 pub fn sum(py: Python, inp: PyObject) -> PyResult<NdArrayD> {
     let inp: Py<NdArrayD> = inp
         .extract(py)
-        .or_else(|_| pyndarray::array(py, inp.extract(py)?)
-            ?.extract(py))?;
+        .or_else(|_| pyndarray::array(py, inp.extract(py)?)?.extract(py))?;
 
     let inp: &PyCell<NdArrayD> = inp.into_ref(py);
     let inp = inp.borrow();
@@ -85,6 +97,7 @@ fn pydu(py: Python, m: &PyModule) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(diagflat, m)?)?;
     m.add_function(wrap_pyfunction!(sum, m)?)?;
     m.add_function(wrap_pyfunction!(scalar, m)?)?;
+    m.add_function(wrap_pyfunction!(zeros, m)?)?;
 
     Ok(())
 }

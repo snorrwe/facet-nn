@@ -27,7 +27,7 @@ pub struct PyNdIndex {
 #[pymethods]
 impl PyNdIndex {
     #[new]
-    fn new(inp: &PyAny) -> PyResult<Self> {
+    pub fn new(inp: &PyAny) -> PyResult<Self> {
         let shape = if let Ok(lst) = inp.extract::<Vec<u32>>() {
             lst.into()
         } else if let Ok(n) = inp.extract::<u32>() {

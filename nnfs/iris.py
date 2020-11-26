@@ -23,7 +23,7 @@ acti1 = Activation(pydu.relu, pydu.drelu_dz)
 dense2 = DenseLayer(INNER, n_classes, name="dense2")
 loss_acti = Activation_Softmax_Loss_CategoricalCrossentropy()
 
-optim = Optimizer_SGD(0.01)
+optim = Optimizer_SGD(learning_rate=0.01, decay=0.0001, momentum=0.5)
 
 y = labels_to_y(dataset["labels"])
 print("Lets fucking go")
@@ -35,10 +35,13 @@ for epoch in progressbar.progressbar(range(10000 + 1), redirect_stdout=True):
     loss = loss_acti.forward(dense2.output, y)[0]
     acc = accuracy(loss_acti.output, y)[0]
 
-    if epoch % 100 == 0:
+    if epoch % 1000 == 0:
         assert loss != last, "somethings wrong i can feel it"
         last = loss
-        print(f"epoch {epoch:05} Loss: {loss:.16f} Accuracy: {acc:.16f}")
+        lr = optim.lr[0]
+        print(
+            f"epoch {epoch:05} Loss: {loss:.16f} Accuracy: {acc:.16f} Learning Rate: {lr:.16f}"
+        )
 
     # backward pass
     loss_acti.backward(loss_acti.output, y)
@@ -49,3 +52,5 @@ for epoch in progressbar.progressbar(range(10000 + 1), redirect_stdout=True):
     # update weights & biases
     optim.update_params(dense1)
     optim.update_params(dense2)
+
+print(f"Final:\nepoch {epoch:05} Loss: {loss:.16f} Accuracy: {acc:.16f}")
