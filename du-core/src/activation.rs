@@ -30,7 +30,12 @@ pub fn softmax(inp: &NdArray<f64>) -> DuResult<NdArray<f64>> {
         .expect("Failed to sub max from the input")
         .map(|v: &f64| {
             let res = E.powf(*v);
-            res.max(1e-8) // make sure res is > 0
+            if res.is_nan() || res == 0.0 {
+                // very large V's will produce an output of 0 which will be bad down the line
+                1e-12
+            } else {
+                res
+            }
         });
 
     let mut norm_base: NdArray<f64> = expvalues

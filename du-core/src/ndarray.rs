@@ -476,7 +476,7 @@ where
     pub fn to_string(&self) -> String {
         let depth = match self.shape() {
             Shape::Scalar(_) => {
-                return format!("Scalar(_): {:?}", self.get(&[]));
+                return format!("{:?}", self.get(&[]).unwrap());
             }
             Shape::Vector(_) => 1,
             Shape::Matrix(_) => 2,
