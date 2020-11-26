@@ -28,7 +28,7 @@ optim = Optimizer_Adam(learning_rate=1e-3, decay=1e-4)
 y = labels_to_y(dataset["labels"])
 print("Lets fucking go")
 last = pydu.scalar(0)
-for epoch in progressbar.progressbar(range(10000 + 1), redirect_stdout=True):
+for epoch in progressbar.progressbar(range(2500 + 1), redirect_stdout=True):
     dense1.forward(dataset["data"])
     acti1.forward(dense1.output)
     dense2.forward(acti1.output)
