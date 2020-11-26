@@ -47,7 +47,10 @@ trait AsNumArray: PyClass {
         Ok(NdArrayB { inner: res })
     }
 
-    fn matmul<'p>(lhs: PyRef<'p, Self>, rhs: PyRef<'p, Self>) -> PyResult<NdArray<Self::T>> {
+    fn matmul<'p>(lhs: PyRef<'p, Self>, rhs: PyRef<'p, Self>) -> PyResult<NdArray<Self::T>>
+    where
+        Self::T: Send + Sync,
+    {
         NdArray::<Self::T>::matmul(lhs.cast(), rhs.cast())
             .map_err(|err| PyValueError::new_err::<String>(format!("{}", err).into()))
     }
@@ -140,10 +143,11 @@ macro_rules! impl_ndarray {
                 pub fn new(shape: &PyAny, values: Option<Vec<$ty>>) -> PyResult<Self> {
                     let shape = PyNdIndex::new(shape)?;
                     let inner = match values {
-                        Some(v) => NdArray::new_with_values(shape.inner, v.into())
-                            .map_err(|err| {
+                        Some(v) => {
+                            NdArray::new_with_values(shape.inner, v.into()).map_err(|err| {
                                 PyValueError::new_err::<String>(format!("{}", err).into())
-                            })?,
+                            })?
+                        }
                         None => NdArray::new(shape.inner),
                     };
                     Ok(Self { inner })

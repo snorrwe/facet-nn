@@ -18,6 +18,9 @@ use std::{
 
 use shape::Shape;
 
+#[cfg(feature = "rayon")]
+use rayon::prelude::*;
+
 #[derive(thiserror::Error, Debug)]
 pub enum NdArrayError {
     #[error("DimensionMismatch error, expected: {expected}, actual: {actual}")]
@@ -188,7 +191,9 @@ where
 
     /// In the case of Tensors transpose the inner matrices
     /// e.g. Shape `[3, 4, 5]` becomes `[3, 5, 4]`
-    pub fn transpose(self) -> Self {
+    pub fn transpose(self) -> Self 
+        where T: Send + Sync
+    {
         match &self.shape {
             Shape::Scalar(_) => self,
             Shape::Vector([n]) => Self::new_with_values([*n, 1], self.values).unwrap(),
@@ -425,11 +430,31 @@ impl<T> NdArray<T> {
     }
 
     pub fn iter_cols(&self) -> impl Iterator<Item = &[T]> {
-        ColumnIter::new(&self.values, self.shape.last().unwrap_or(0) as usize)
+        ColumnIter::new(&self.values, self.shape.last().unwrap_or(1) as usize)
     }
 
     pub fn iter_cols_mut(&mut self) -> impl Iterator<Item = &mut [T]> {
-        ColumnIterMut::new(&mut self.values, self.shape.last().unwrap_or(0) as usize)
+        ColumnIterMut::new(&mut self.values, self.shape.last().unwrap_or(1) as usize)
+    }
+
+    #[cfg(feature = "rayon")]
+    pub fn par_iter_cols(&self) -> impl rayon::prelude::ParallelIterator<Item = &[T]> + '_
+    where
+        T: Sync,
+    {
+        let cols = self.shape.last().unwrap_or(1) as usize;
+        self.values.as_slice().par_chunks(cols)
+    }
+
+    #[cfg(feature = "rayon")]
+    pub fn par_iter_cols_mut(
+        &mut self,
+    ) -> impl rayon::prelude::ParallelIterator<Item = &mut [T]> + '_
+    where
+        T: Sync + Send,
+    {
+        let cols = self.shape.last().unwrap_or(1) as usize;
+        self.values.as_mut_slice().par_chunks_mut(cols)
     }
 
     pub fn len(&self) -> usize {
@@ -459,8 +484,9 @@ fn get_index(shape: &[u32], stride: &[usize], index: &[u32]) -> Option<usize> {
     Some(res)
 }
 
-impl<T> From<T> for NdArray<T> 
-where T: Copy
+impl<T> From<T> for NdArray<T>
+where
+    T: Copy,
 {
     fn from(val: T) -> Self {
         NdArray::new_with_values(0, Data::from_slice(&[val][..])).unwrap()

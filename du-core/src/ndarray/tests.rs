@@ -190,6 +190,7 @@ fn test_mat_transpose() {
 
     println!("{}", a.to_string());
     let b = a.transpose();
+    println!("{}", b.to_string());
 
     assert_eq!(b.shape, Shape::Matrix([3, 2]));
     assert_eq!(b.as_slice(), &[1, 4, 2, 5, 3, 6], "{}", b.to_string());

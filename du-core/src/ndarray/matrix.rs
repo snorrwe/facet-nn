@@ -6,6 +6,8 @@ use std::ops::{Add, AddAssign, Mul};
 use super::{
     column_iter::ColumnIter, column_iter::ColumnIterMut, shape::Shape, Data, NdArray, NdArrayError,
 };
+#[cfg(feature = "rayon")]
+use rayon::prelude::*;
 
 /// Raw matrix multiplication method
 // this really should be optimized further...
@@ -17,7 +19,7 @@ pub fn matmul_impl<'a, T>(
     out: &mut [T],
 ) -> Result<(), NdArrayError>
 where
-    T: AddAssign + Add<Output = T> + Mul<Output = T> + Default + 'a + Copy,
+    T: AddAssign + Add<Output = T> + Mul<Output = T> + Default + 'a + Copy + Send + Sync,
 {
     if m != m1 {
         return Err(NdArrayError::DimensionMismatch {
@@ -29,6 +31,23 @@ where
     debug_assert_eq!((p as usize * m as usize), values1.len());
     debug_assert_eq!(out.len(), n as usize * p as usize);
 
+    #[cfg(feature = "rayon")]
+    {
+        let m = m as usize;
+        let p = p as usize;
+        // iterate over the result's columns
+        out.par_chunks_mut(p).enumerate().for_each(|(i, out)| {
+            for j in 0usize..p {
+                for k in 0usize..m {
+                    let val0 = &values0[i * m + k];
+                    let val1 = &values1[k * p + j];
+                    out[j] += *val0 * *val1
+                }
+            }
+        });
+    }
+
+    #[cfg(not(feature = "rayon"))]
     for i in 0..n {
         for j in 0..p {
             for k in 0..m {
@@ -50,10 +69,7 @@ pub fn transpose_mat<T: Clone>([n, m]: [usize; 2], inp: &[T], out: &mut [T]) {
     }
 }
 
-impl<'a, T> NdArray<T>
-where
-    T: AddAssign + Add<Output = T> + Mul<Output = T> + Default + 'a + Copy,
-{
+impl<'a, T> NdArray<T> {
     /// - Scalars not allowed.
     /// - Tensor arrays are treated as a colection of matrices and are broadcast accordingly
     ///
@@ -82,7 +98,10 @@ where
     /// assert_eq!(c.shape(), &Shape::Tensor((&[2, 2, 2][..]).into()));
     /// assert_eq!(c.as_slice(), &[5, -4, 4, 5, /*|*/ 5, -4, 4, 5]);
     /// ```
-    pub fn matmul(&'a self, other: &'a Self) -> Result<Self, NdArrayError> {
+    pub fn matmul(&'a self, other: &'a Self) -> Result<Self, NdArrayError>
+    where
+        T: AddAssign + Add<Output = T> + Mul<Output = T> + Default + 'a + Copy + Sync + Send,
+    {
         match (&self.shape, &other.shape) {
             shapes @ (Shape::Scalar(_), Shape::Scalar(_))
             | shapes @ (Shape::Scalar(_), Shape::Vector(_))
@@ -208,15 +227,29 @@ where
                     });
                 }
 
-                let it_0 = ColumnIter::new(&self.values, a as usize * b as usize);
-                let it_1 = ColumnIter::new(&other.values, c as usize * d as usize);
-
                 let mut out = Self::new_default(vec![nmatrices as u32, a, d]);
 
-                for (out, (lhs, rhs)) in
-                    ColumnIterMut::new(&mut out.values, a as usize * d as usize).zip(it_0.zip(it_1))
+                #[cfg(not(feature = "rayon"))]
                 {
-                    matmul_impl([a, b], lhs, [c, d], rhs, out)?;
+                    for (out, (lhs, rhs)) in
+                        ColumnIterMut::new(&mut out.values, a as usize * d as usize)
+                            .zip(it_0.zip(it_1))
+                    {
+                        matmul_impl([a, b], lhs, [c, d], rhs, out)?;
+                    }
+                }
+                #[cfg(feature = "rayon")]
+                {
+                    let it_0 = self.values.as_slice().par_chunks(a as usize * b as usize);
+                    let it_1 = other.values.as_slice().par_chunks(a as usize * b as usize);
+
+                    out.values
+                        .as_mut_slice()
+                        .par_chunks_mut(a as usize * d as usize)
+                        .zip(it_0.zip(it_1))
+                        .try_for_each(|(out, (lhs, rhs))| {
+                            matmul_impl([a, b], lhs, [c, d], rhs, out)
+                        })?;
                 }
 
                 Ok(out)
