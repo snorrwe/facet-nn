@@ -1,4 +1,4 @@
-use du_core::ndarray::{Data, NdArray};
+use du_core::ndarray::NdArray;
 pub use ndarraydimpl::*;
 
 use crate::impl_ndarray;
@@ -10,8 +10,8 @@ use pyo3::{
     PyNumberProtocol, PyObjectProtocol,
 };
 
+use super::AsNumArray;
 use super::NdArrayB;
-use super::{AsNumArray, NdArrayI};
 
 impl_ndarray!(
     f64,
@@ -127,37 +127,5 @@ impl NdArrayD {
             .for_each(|v| *v = v.max(min).min(max));
 
         Ok(this)
-    }
-
-    /// Collapses the last columns into an array of indices, where each index is the index of the
-    /// largest value of the given column
-    pub fn argmax(&self) -> PyResult<NdArrayI> {
-        let mut res = Data::with_capacity(self.inner.shape().col_span());
-        for col in self.inner.iter_cols() {
-            let ind = col
-                .iter()
-                .enumerate()
-                .fold(0, |i, (j, v)| if col[i] < *v { j } else { i });
-            res.push(ind as i64);
-        }
-        let shape = self.inner.shape().as_slice();
-        let res = NdArray::new_with_values(&shape[..shape.len() - 1], res).unwrap();
-        Ok(NdArrayI { inner: res })
-    }
-
-    /// Collapses the last columns into an array of indices, where each index is the index of the
-    /// smallest value of the given column
-    pub fn argmin(&self) -> PyResult<NdArrayI> {
-        let mut res = Data::with_capacity(self.inner.shape().col_span());
-        for col in self.inner.iter_cols() {
-            let ind = col
-                .iter()
-                .enumerate()
-                .fold(0, |i, (j, v)| if col[i] > *v { j } else { i });
-            res.push(ind as i64);
-        }
-        let shape = self.inner.shape().as_slice();
-        let res = NdArray::new_with_values(&shape[..shape.len() - 1], res).unwrap();
-        Ok(NdArrayI { inner: res })
     }
 }

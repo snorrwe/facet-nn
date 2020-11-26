@@ -119,8 +119,8 @@ def accuracy(pred, target):
     """
     # collapse dense data into sparse data
     if len(target.shape) == 2:
-        target = target.argmax()
-    pred = pred.argmax()
+        target = pydu.argmax(target)
+    pred = pydu.argmax(pred)
     diff = pred == target
     return diff.as_f64().mean()
 

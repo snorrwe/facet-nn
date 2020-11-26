@@ -137,7 +137,7 @@ def test_adding_matrix_to_tensor():
 def test_argmax():
     a = array([[1, 2, 3], [4, 2, 3], [1, 5, 3]])
 
-    res = a.argmax()
+    res = pydu.argmax(a)
 
     assert res.shape == [3]
     assert (res == NdArrayI([3], [2, 0, 1])).all()

@@ -46,6 +46,34 @@ pub fn argmax(py: Python, inp: PyObject) -> PyResult<NdArrayI> {
     Ok(NdArrayI { inner: res })
 }
 
+/// Collapses the last colun into a single index. The index of the largest item
+#[pyfunction]
+pub fn argmin(py: Python, inp: PyObject) -> PyResult<NdArrayI> {
+    let inp: Py<NdArrayD> = inp
+        .extract(py)
+        .or_else(|_| pyndarray::array(py, inp.extract(py)?)?.extract(py))?;
+    let inp: &PyCell<NdArrayD> = inp.into_ref(py);
+    let inp = inp.borrow();
+
+    let res: Vec<i64> = inp
+        .inner
+        .par_iter_cols()
+        .map(|col| {
+            col.iter()
+                .enumerate()
+                .fold(0, |mi, (i, x)| if &col[mi] > x { i } else { mi }) as i64
+        })
+        .collect();
+
+    let shape = inp.inner.shape();
+
+    let mut res = NdArray::new_vector(res);
+    res.reshape(&shape.as_slice()[..shape.as_slice().len() - 1])
+        .unwrap();
+
+    Ok(NdArrayI { inner: res })
+}
+
 #[pyfunction]
 pub fn zeros(py: Python, inp: PyObject) -> PyResult<NdArrayD> {
     let inp: PyNdIndex = inp
@@ -155,6 +183,7 @@ fn pydu(py: Python, m: &PyModule) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(zeros, m)?)?;
     m.add_function(wrap_pyfunction!(sqrt, m)?)?;
     m.add_function(wrap_pyfunction!(argmax, m)?)?;
+    m.add_function(wrap_pyfunction!(argmin, m)?)?;
 
     Ok(())
 }
