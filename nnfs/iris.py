@@ -50,6 +50,7 @@ for epoch in progressbar.progressbar(range(10000 + 1), redirect_stdout=True):
     dense1.backward(acti1.dinputs)
 
     # update weights & biases
+    optim.pre_update()
     optim.update_params(dense1)
     optim.update_params(dense2)
 

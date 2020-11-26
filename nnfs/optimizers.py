@@ -12,11 +12,11 @@ class Optimizer_SGD:
         else:
             self.momentum = momentum
 
-    def update_params(self, layer):
-        # bookkeeping
+    def pre_update(self):
         self.lr = pydu.scalar(self.initial_lr * (1.0 / (1 + self.decay * self.iters)))
         self.iters += 1
 
+    def update_params(self, layer):
         # calculate deltas
         if self.momentum is not None:
             # SGD with momentum
@@ -50,7 +50,9 @@ class Optimizer_Adam:
         self.beta_1 = beta_1
         self.beta_2 = beta_2
 
-    def update_params(self, layer):
-        # bookkeeping
+    def pre_update(self):
         self.lr = pydu.scalar(self.initial_lr * (1.0 / (1 + self.decay * self.iters)))
         self.iters += 1
+
+    def update_params(self, layer):
+        pass
