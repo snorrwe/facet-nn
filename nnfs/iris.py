@@ -32,13 +32,13 @@ for epoch in progressbar.progressbar(range(10000 + 1), redirect_stdout=True):
     dense1.forward(dataset["data"])
     acti1.forward(dense1.output)
     dense2.forward(acti1.output)
-    loss = loss_acti.forward(dense2.output, y)
-    acc = accuracy(loss_acti.output, y)
+    loss = loss_acti.forward(dense2.output, y)[0]
+    acc = accuracy(loss_acti.output, y)[0]
 
     if epoch % 100 == 0:
-        assert (loss != last).all(), "somethings wrong i can feel it"
+        assert loss != last, "somethings wrong i can feel it"
         last = loss
-        print(f"epoch {epoch} Loss: {loss} Accuracy: {acc}")
+        print(f"epoch {epoch:05} Loss: {loss:.16f} Accuracy: {acc:.16f}")
 
     # backward pass
     loss_acti.backward(loss_acti.output, y)
