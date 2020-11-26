@@ -88,7 +88,7 @@ trait AsNumArray: PyClass {
 
 #[macro_export(internal_macros)]
 macro_rules! impl_ndarray {
-    ($ty: ty, $name: ident, $inner: ident, $itname: ident, $mod: ident) => {
+    ($ty: ty, $name: ident, $inner: ident, $colit: ident, $itemit: ident, $mod: ident) => {
         mod $mod {
             use super::$name;
             use crate::pyndarray::PyNdIndex;
@@ -106,14 +106,21 @@ macro_rules! impl_ndarray {
             }
 
             #[pyclass]
-            pub struct $itname {
+            pub struct $colit {
                 iter: ColumnIter<'static, $ty>,
                 /// hold a reference to the original array to prevent the GC from collecting it
                 arr: Option<Py<$name>>,
             }
 
+            #[pyclass]
+            pub struct $itemit {
+                iter: Box<dyn Iterator<Item = $ty> + Send + 'static>,
+                /// hold a reference to the original array to prevent the GC from collecting it
+                arr: Option<Py<$name>>,
+            }
+
             #[pyproto]
-            impl PyGCProtocol for $itname {
+            impl PyGCProtocol for $colit {
                 fn __traverse__(
                     &'p self,
                     visit: pyo3::PyVisit,
@@ -127,13 +134,54 @@ macro_rules! impl_ndarray {
             }
 
             #[pyproto]
-            impl PyIterProtocol for $itname {
-                fn __iter__(slf: PyRef<Self>) -> PyRef<Self> {
-                    slf
+            impl PyIterProtocol for $colit {
+                fn __iter__(this: PyRef<Self>) -> PyRef<Self> {
+                    this
                 }
 
-                fn __next__(mut slf: PyRefMut<Self>) -> Option<Vec<$ty>> {
-                    slf.iter.next().map(|col| col.into())
+                fn __next__(mut this: PyRefMut<Self>) -> Option<Vec<$ty>> {
+                    this.iter.next().map(|col| col.into())
+                }
+            }
+
+            #[pyproto]
+            impl PyGCProtocol for $itemit {
+                fn __traverse__(
+                    &'p self,
+                    visit: pyo3::PyVisit,
+                ) -> Result<(), pyo3::PyTraverseError> {
+                    visit.call(&self.arr)
+                }
+
+                fn __clear__(&'p mut self) {
+                    self.arr = None
+                }
+            }
+
+            #[pyproto]
+            impl PyIterProtocol for $itemit {
+                fn __iter__(this: PyRef<Self>) -> PyRef<Self> {
+                    this
+                }
+
+                fn __next__(mut this: PyRefMut<Self>) -> Option<$ty> {
+                    this.iter.next()
+                }
+            }
+            #[pyproto]
+            impl PyIterProtocol for $name {
+                fn __iter__(this: PyRef<Self>) -> PyResult<$itemit> {
+                    let iter: Box<dyn Iterator<Item = _> + Send> =
+                        Box::new(this.inner.iter().map(|x| *x));
+                    // transmute the lifetime, we know this is safe because the iterator will hold
+                    // a reference to this array, and Python is single threaded, so no mutations
+                    // _should_ occur during iteration
+                    let iter = unsafe { std::mem::transmute(iter) };
+                    let iter = $itemit {
+                        iter,
+                        arr: Some(this.into()),
+                    };
+                    Ok(iter)
                 }
             }
 
@@ -189,13 +237,16 @@ macro_rules! impl_ndarray {
                     }
                 }
 
-                pub fn iter_cols<'py>(slf: Py<Self>, py: Python<'py>) -> PyResult<Py<$itname>> {
-                    let s = slf.borrow(py);
+                pub fn iter_cols<'py>(this: Py<Self>, py: Python<'py>) -> PyResult<Py<$colit>> {
+                    let s = this.borrow(py);
                     let it = s.inner.iter_cols();
+                    // transmute the lifetime, we know this is safe because the iterator will hold
+                    // a reference to this array, and Python is single threaded, so no mutations
+                    // _should_ occur during iteration
                     let it = unsafe { std::mem::transmute(it) };
-                    let it = $itname {
+                    let it = $colit {
                         iter: it,
-                        arr: Some(slf.clone()),
+                        arr: Some(this.clone()),
                     };
                     Py::new(py, it)
                 }

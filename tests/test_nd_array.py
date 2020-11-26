@@ -157,3 +157,10 @@ def test_argmax_3():
     assert res[0] == 2, res
     assert res[1] == 2, res
     assert res[2] == 2, res
+
+
+def test_iter():
+    arr = pydu.array([[[1, 2, 3, 4]] * 4] * 4)
+    assert arr.shape == [4, 4, 4]
+    flat = list(arr)
+    assert flat == [1, 2, 3, 4] * 16

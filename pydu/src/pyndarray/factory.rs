@@ -22,12 +22,11 @@ pub fn array_bool(py: Python, dims: Vec<u32>, inp: &PyList) -> PyResult<PyObject
     let shape = Shape::from(dims);
     let mut values: Vec<bool> = Vec::with_capacity(shape.span());
     flatten(inp, &mut values)?;
-    let arr =
-        NdArray::<bool>::new_with_values(shape, values.into()).map_err(|err| {
-            PyValueError::new_err::<String>(
-                format!("Failed to create nd-array of bool: {}", err).into(),
-            )
-        })?;
+    let arr = NdArray::<bool>::new_with_values(shape, values.into()).map_err(|err| {
+        PyValueError::new_err::<String>(
+            format!("Failed to create nd-array of bool: {}", err).into(),
+        )
+    })?;
     let res = NdArrayB { inner: arr };
     let res = Py::new(py, res)?;
 

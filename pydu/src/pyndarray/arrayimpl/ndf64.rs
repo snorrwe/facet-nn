@@ -13,7 +13,14 @@ use pyo3::{
 use super::NdArrayB;
 use super::{AsNumArray, NdArrayI};
 
-impl_ndarray!(f64, NdArrayD, inner, NdArrayDColIter, ndarraydimpl);
+impl_ndarray!(
+    f64,
+    NdArrayD,
+    inner,
+    NdArrayDColIter,
+    NdArrayDIter,
+    ndarraydimpl
+);
 
 #[pyclass]
 #[derive(Debug, Clone)]

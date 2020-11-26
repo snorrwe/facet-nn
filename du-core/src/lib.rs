@@ -6,8 +6,7 @@ pub mod ndarray;
 
 pub type DuResult<T> = Result<T, DuError>;
 
-
-#[cfg(feature="rayon")]
+#[cfg(feature = "rayon")]
 pub use rayon;
 
 #[derive(Debug, thiserror::Error)]

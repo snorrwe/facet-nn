@@ -191,8 +191,9 @@ where
 
     /// In the case of Tensors transpose the inner matrices
     /// e.g. Shape `[3, 4, 5]` becomes `[3, 5, 4]`
-    pub fn transpose(self) -> Self 
-        where T: Send + Sync
+    pub fn transpose(self) -> Self
+    where
+        T: Send + Sync,
     {
         match &self.shape {
             Shape::Scalar(_) => self,
@@ -427,6 +428,10 @@ impl<T> NdArray<T> {
                 Some(&mut self.as_mut_slice()[i..i + w])
             }
         }
+    }
+
+    pub fn iter(&self) -> impl Iterator<Item = &T> {
+        self.values.iter()
     }
 
     pub fn iter_cols(&self) -> impl Iterator<Item = &[T]> {

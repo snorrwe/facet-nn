@@ -9,7 +9,14 @@ use pyo3::{
 
 use super::{AsNumArray, NdArrayB, NdArrayD};
 
-impl_ndarray!(i64, NdArrayI, inner, NdArrayIColIter, ndarraydimpl);
+impl_ndarray!(
+    i64,
+    NdArrayI,
+    inner,
+    NdArrayIColIter,
+    NdArrayIIter,
+    ndarraydimpl
+);
 
 /// Index array
 #[pyclass]

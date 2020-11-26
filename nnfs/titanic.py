@@ -107,8 +107,7 @@ finalacti.forward(dense3.output)
 
 predi = pydu.argmax(finalacti.output)
 
-# next(iter_cols) is a list of the items in the cols == the items in the array
-output = zip(meta, next(predi.iter_cols()))
+output = zip(meta, iter(predi))
 with open("submission.csv", "w") as f:
     writer = csv.DictWriter(f, ["PassengerId", "Survived"])
     writer.writeheader()

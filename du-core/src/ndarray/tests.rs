@@ -200,7 +200,9 @@ fn test_mat_transpose() {
 fn test_tensor_transpose() {
     let a = NdArray::new_with_values(
         &[4, 2, 3][..],
-        smallvec::smallvec![1, 2, 3, 4, 5, 6, 1, 2, 3, 4, 5, 6, 1, 2, 3, 4, 5, 6, 1, 2, 3, 4, 5, 6,],
+        smallvec::smallvec![
+            1, 2, 3, 4, 5, 6, 1, 2, 3, 4, 5, 6, 1, 2, 3, 4, 5, 6, 1, 2, 3, 4, 5, 6,
+        ],
     )
     .unwrap();
 

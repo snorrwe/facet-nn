@@ -6,7 +6,14 @@ use crate::pyndarray::NdArrayD;
 
 use pyo3::{basic::CompareOp, exceptions::PyNotImplementedError, prelude::*, PyObjectProtocol};
 
-impl_ndarray!(bool, NdArrayB, inner, NdArrayBColIter, ndarraybimpl);
+impl_ndarray!(
+    bool,
+    NdArrayB,
+    inner,
+    NdArrayBColIter,
+    NdArrayBIter,
+    ndarraybimpl
+);
 
 #[pyclass]
 #[derive(Debug)]
