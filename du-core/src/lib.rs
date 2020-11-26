@@ -6,6 +6,10 @@ pub mod ndarray;
 
 pub type DuResult<T> = Result<T, DuError>;
 
+
+#[cfg(feature="rayon")]
+pub use rayon;
+
 #[derive(Debug, thiserror::Error)]
 pub enum DuError {
     #[error("Error in an NdArray: {0}")]

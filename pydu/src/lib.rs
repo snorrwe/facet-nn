@@ -2,9 +2,10 @@ pub mod activation;
 pub mod io;
 pub mod loss;
 pub mod pyndarray;
+use du_core::rayon::iter::ParallelIterator;
 
 use du_core::ndarray::{shape::Shape, Data, NdArray};
-use pyndarray::{NdArrayD, PyNdIndex};
+use pyndarray::{NdArrayD, NdArrayI, PyNdIndex};
 use pyo3::{exceptions::PyValueError, prelude::*, wrap_pyfunction};
 
 use std::convert::TryFrom;
@@ -15,6 +16,34 @@ pub fn eye(dims: u32) -> NdArrayD {
     NdArrayD {
         inner: NdArray::diagonal(dims, 1.0),
     }
+}
+
+/// Collapses the last colun into a single index. The index of the largest item
+#[pyfunction]
+pub fn argmax(py: Python, inp: PyObject) -> PyResult<NdArrayI> {
+    let inp: Py<NdArrayD> = inp
+        .extract(py)
+        .or_else(|_| pyndarray::array(py, inp.extract(py)?)?.extract(py))?;
+    let inp: &PyCell<NdArrayD> = inp.into_ref(py);
+    let inp = inp.borrow();
+
+    let res: Vec<i64> = inp
+        .inner
+        .par_iter_cols()
+        .map(|col| {
+            col.iter()
+                .enumerate()
+                .fold(0, |mi, (i, x)| if &col[mi] < x { i } else { mi }) as i64
+        })
+        .collect();
+
+    let shape = inp.inner.shape();
+
+    let mut res = NdArray::new_vector(res);
+    res.reshape(&shape.as_slice()[..shape.as_slice().len() - 1])
+        .unwrap();
+
+    Ok(NdArrayI { inner: res })
 }
 
 #[pyfunction]
@@ -125,6 +154,7 @@ fn pydu(py: Python, m: &PyModule) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(scalar, m)?)?;
     m.add_function(wrap_pyfunction!(zeros, m)?)?;
     m.add_function(wrap_pyfunction!(sqrt, m)?)?;
+    m.add_function(wrap_pyfunction!(argmax, m)?)?;
 
     Ok(())
 }

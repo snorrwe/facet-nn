@@ -141,3 +141,19 @@ def test_argmax():
 
     assert res.shape == [3]
     assert (res == NdArrayI([3], [2, 0, 1])).all()
+
+
+def test_argmax_2():
+    values = [1, 5, 3, 4]
+    res = pydu.argmax(values)
+    assert res.shape == []
+    assert res[0] == 1, res
+
+
+def test_argmax_3():
+    values = [[1, 0, 5, 4]] * 3
+    res = pydu.argmax(values)
+    assert res.shape == [3]
+    assert res[0] == 2, res
+    assert res[1] == 2, res
+    assert res[2] == 2, res

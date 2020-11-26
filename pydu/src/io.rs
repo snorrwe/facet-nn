@@ -9,6 +9,8 @@ use std::{
 
 /// The column names in `labels` will be treated as row labels instead of data points.
 ///
+/// Column anmes in `meta` will be treated as metadata and ignored.
+///
 /// Returns a dict with the loaded data.
 ///
 /// Data and labels are loaded separately, but corresponding rows maintain their indices.
@@ -18,14 +20,17 @@ use std::{
 /// for label, row in zip(dataset["labels"], dataset["data"].iter_cols()):
 ///     print(label, row)
 /// ```
-#[pyfunction(labels = "[].to_vec()")]
+#[pyfunction(labels = "[].to_vec()", meta = "[].to_vec()", ignore_error = "false")]
 pub fn load_csv<'a, 'py>(
     py: Python<'py>,
     fname: &'a str,
     labels: Vec<&'a str>,
+    meta: Vec<&'a str>,
+    ignore_error: bool,
 ) -> PyResult<&'py PyDict> {
     let mut column_indices: HashMap<String, usize> = HashMap::new();
     let mut label_columns = Vec::new();
+    let mut meta_columns = Vec::new();
     let mut columns: Vec<String> = Vec::new();
     let mut data = Data::new();
 
@@ -51,6 +56,9 @@ pub fn load_csv<'a, 'py>(
                 if labels.iter().find(|l| **l == item).is_some() {
                     label_columns.push(i);
                 }
+                if meta.iter().find(|l| **l == item).is_some() {
+                    meta_columns.push(i);
+                }
             }
         }
         _ => {
@@ -70,12 +78,16 @@ pub fn load_csv<'a, 'py>(
                 skipind = skipit.next();
                 rowlabels.push(item.to_string());
             } else {
-                data.push(item.parse().map_err(|err| {
-                    PyValueError::new_err(format!(
-                        "Failed to parse data point in row: {}, col: {} item: {} error: {}",
-                        rows, i, item, err
-                    ))
-                })?);
+                match item.parse() {
+                    Ok(d) => data.push(d),
+                    Err(err) if !ignore_error => {
+                        return Err(PyValueError::new_err(format!(
+                            "Failed to parse data point in row: {}, col: {} item: {} error: {}",
+                            rows, i, item, err
+                        )))?;
+                    }
+                    _ => data.push(f64::NAN),
+                }
             }
         }
         labels.push(rowlabels)
