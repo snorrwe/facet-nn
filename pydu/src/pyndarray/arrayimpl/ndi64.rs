@@ -9,8 +9,6 @@ use pyo3::{
 
 use super::{AsNumArray, NdArrayB, NdArrayD};
 
-use std::convert::TryInto;
-
 impl_ndarray!(i64, NdArrayI, inner, NdArrayIColIter, ndarraydimpl);
 
 /// Index array
@@ -85,19 +83,9 @@ impl AsNumArray for NdArrayI {
         &self.inner
     }
 
-    fn pow<'p>(lhs: PyRef<'p, Self>, rhs: PyRef<'p, Self>) -> PyResult<NdArray<Self::T>> {
+    fn pow<'p>(lhs: PyRef<'p, Self>, rhs: Self::T) -> PyResult<NdArray<Self::T>> {
         let lhs: &NdArray<Self::T> = lhs.cast();
-        let rhs: &NdArray<Self::T> = rhs.cast();
-        if rhs.shape().span() > 1 {
-            return Err(PyNotImplementedError::new_err(format!(
-                "Currently only scalars can be used in pow!"
-            )));
-        }
-        let val = rhs.as_slice()[0];
-        let res = lhs.map(|x| match val.try_into() {
-            Ok(val) => x.pow(val),
-            Err(_) => 0,
-        });
+        let res = lhs.map(|x| x.pow(rhs as u32));
         Ok(res)
     }
 }

@@ -80,7 +80,7 @@ trait AsNumArray: PyClass {
             .map_err(|err| PyValueError::new_err::<String>(format!("{}", err).into()))
     }
 
-    fn pow<'p>(lhs: PyRef<'p, Self>, rhs: PyRef<'p, Self>) -> PyResult<NdArray<Self::T>>;
+    fn pow<'p>(lhs: PyRef<'p, Self>, rhs: Self::T) -> PyResult<NdArray<Self::T>>;
 }
 
 #[macro_export(internal_macros)]

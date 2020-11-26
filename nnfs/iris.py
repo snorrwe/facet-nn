@@ -23,7 +23,7 @@ acti1 = Activation(pydu.relu, pydu.drelu_dz)
 dense2 = DenseLayer(INNER, n_classes, name="dense2")
 loss_acti = Activation_Softmax_Loss_CategoricalCrossentropy()
 
-optim = Optimizer_SGD(learning_rate=0.01, decay=0.0001, momentum=0.5)
+optim = Optimizer_Adam(learning_rate=1e-3, decay=1e-4)
 
 y = labels_to_y(dataset["labels"])
 print("Lets fucking go")

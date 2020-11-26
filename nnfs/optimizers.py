@@ -46,7 +46,7 @@ class Optimizer_Adam:
         self.lr = pydu.scalar(learning_rate)
         self.decay = decay
         self.iters = 0
-        self.epsilon = epsilon
+        self.epsilon = pydu.scalar(epsilon)
         self.beta_1 = beta_1
         self.beta_2 = beta_2
 
@@ -55,4 +55,47 @@ class Optimizer_Adam:
         self.iters += 1
 
     def update_params(self, layer):
-        pass
+        if not hasattr(layer, "weight_cache"):
+            layer.weight_cache = pydu.zeros(layer.weights.shape)
+            layer.bias_cache = pydu.zeros(layer.biases.shape)
+            layer.weight_momentums = pydu.zeros(layer.weights.shape)
+            layer.bias_momentums = pydu.zeros(layer.biases.shape)
+
+        layer.weight_momentums = (pydu.scalar(self.beta_1) * layer.weight_momentums) + (
+            pydu.scalar(1.0 - self.beta_1) * layer.dweights
+        )
+        layer.bias_momentums = (pydu.scalar(self.beta_1) * layer.bias_momentums) + (
+            pydu.scalar(1.0 - self.beta_1) * layer.dbiases
+        )
+
+        weight_momentum_corrected = layer.weight_momentums / pydu.scalar(
+            1 - (self.beta_1 ** self.iters)
+        )
+        bias_momentum_corrected = layer.bias_momentums / pydu.scalar(
+            1 - (self.beta_1 ** self.iters)
+        )
+
+        layer.weight_cache = pydu.scalar(
+            self.beta_2
+        ) * layer.weight_cache + pydu.scalar(1 - self.beta_2) * (layer.dweights ** 2)
+        layer.bias_cache = pydu.scalar(self.beta_2) * layer.bias_cache + pydu.scalar(
+            1 - self.beta_2
+        ) * (layer.dbiases ** 2)
+
+        weight_cache_corrected = layer.weight_cache / pydu.scalar(
+            1 - self.beta_2 ** self.iters
+        )
+        bias_cache_corrected = layer.bias_cache / pydu.scalar(
+            1 - self.beta_2 ** self.iters
+        )
+
+        layer.weights -= (
+            self.lr
+            * weight_momentum_corrected
+            / (pydu.sqrt(weight_cache_corrected) + self.epsilon)
+        )
+        layer.biases -= (
+            self.lr
+            * bias_momentum_corrected
+            / (pydu.sqrt(bias_cache_corrected) + self.epsilon)
+        )

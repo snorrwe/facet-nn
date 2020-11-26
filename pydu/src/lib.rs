@@ -89,8 +89,27 @@ pub fn object2ndarrayd(py: Python, inp: PyObject) -> PyResult<Py<NdArrayD>> {
 #[pyfunction]
 pub fn scalar(s: f64) -> NdArrayD {
     NdArrayD {
-        inner: NdArray::new_with_values(0, (0..1).map(|_|s).collect()).unwrap(),
+        inner: NdArray::new_with_values(0, (0..1).map(|_| s).collect()).unwrap(),
     }
+}
+
+#[pyfunction]
+pub fn sqrt(py: Python, inp: PyObject) -> PyResult<NdArrayD> {
+    let inp: Py<NdArrayD> = inp
+        .extract(py)
+        .or_else(|_| pyndarray::array(py, inp.extract(py)?)?.extract(py))?;
+    let inp: &PyCell<NdArrayD> = inp.into_ref(py);
+
+    let inp = inp.borrow();
+
+    let mut res = inp.clone();
+
+    res.inner
+        .as_mut_slice()
+        .iter_mut()
+        .for_each(|v| *v = v.sqrt());
+
+    Ok(res)
 }
 
 #[pymodule]
@@ -105,6 +124,7 @@ fn pydu(py: Python, m: &PyModule) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(sum, m)?)?;
     m.add_function(wrap_pyfunction!(scalar, m)?)?;
     m.add_function(wrap_pyfunction!(zeros, m)?)?;
+    m.add_function(wrap_pyfunction!(sqrt, m)?)?;
 
     Ok(())
 }
