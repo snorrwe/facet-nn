@@ -309,18 +309,16 @@ impl<T> NdArray<T> {
         &self.shape
     }
 
-    pub fn reshape(&mut self, new_shape: impl Into<Shape>) -> Result<&mut Self, NdArrayError> {
+    /// Smaller shape span will result in the last items being 'cut'
+    pub fn reshape(&mut self, new_shape: impl Into<Shape>) -> &mut Self
+    where
+        T: Default,
+    {
         let new_shape = new_shape.into();
-        let len = self.len();
         let new_len = new_shape.span();
-        if len != new_len {
-            return Err(NdArrayError::DimensionMismatch {
-                expected: len,
-                actual: new_len,
-            });
-        }
+        self.values.resize_with(new_len, Default::default);
         self.shape = new_shape;
-        Ok(self)
+        self
     }
 
     pub fn as_slice(&self) -> &[T] {

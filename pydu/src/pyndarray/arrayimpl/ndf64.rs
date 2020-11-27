@@ -30,10 +30,6 @@ pub struct NdArrayD {
 
 #[pyproto]
 impl<T> PyNumberProtocol for NdArrayD {
-    fn __matmul__(lhs: PyRef<'p, Self>, rhs: PyRef<'p, Self>) -> PyResult<Self> {
-        lhs.matmul(&*rhs)
-    }
-
     fn __add__(lhs: PyRef<'p, Self>, rhs: PyRef<'p, Self>) -> PyResult<Self> {
         <Self as AsNumArray>::add(lhs, rhs).map(|inner| Self { inner })
     }
@@ -106,11 +102,23 @@ impl AsNumArray for NdArrayD {
 
 #[pymethods]
 impl NdArrayD {
-    pub fn matmul(&self, other: &Self) -> PyResult<Self> {
-        self.inner
-            .matmul(&other.inner)
-            .map(|inner| Self { inner })
-            .map_err(|err| PyValueError::new_err::<String>(format!("{}", err).into()))
+    pub fn matmul(
+        this: PyRef<Self>,
+        other: &Self,
+        mut out: Option<PyRefMut<Self>>,
+    ) -> PyResult<PyObject> {
+        let mut _out = NdArray::new(0);
+        let outref = out.as_mut().map(|m| &mut m.inner).unwrap_or(&mut _out);
+        this.inner
+            .matmul(&other.inner, outref)
+            .map_err(|err| PyValueError::new_err::<String>(format!("{}", err).into()))?;
+        let py = this.py();
+        let out = out.map(|m| m.into_py(py)).unwrap_or_else(|| {
+            let res = NdArrayD { inner: _out };
+            let res = Py::new(py, res).unwrap();
+            res.into_py(py)
+        });
+        Ok(out)
     }
 
     pub fn mean(&self) -> PyResult<Self> {

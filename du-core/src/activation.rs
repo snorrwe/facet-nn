@@ -43,9 +43,7 @@ pub fn softmax(inp: &NdArray<f64>) -> DuResult<NdArray<f64>> {
         .map(|col| col.iter().cloned().sum())
         .collect();
 
-    norm_base
-        .reshape([norm_base.shape().span() as u32, 1])
-        .unwrap();
+    norm_base.reshape([norm_base.shape().span() as u32, 1]);
 
     let mut res = expvalues;
     for (norm, col) in norm_base.iter_cols().zip(res.iter_cols_mut()) {

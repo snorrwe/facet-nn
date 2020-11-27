@@ -100,7 +100,8 @@ fn test_vector_matrix_mul() {
     let a = NdArray::new_with_values(&[4][..], Data::from_slice(&[1, 2, 3, 1][..])).unwrap();
     let b = NdArray::new_with_values(&[4, 4][..], mat()).unwrap();
 
-    let c = a.matmul(&b).expect("matmul");
+    let mut c = NdArray::new(0);
+    a.matmul(&b, &mut c).expect("matmul");
 
     assert_eq!(c.shape, Shape::Vector([4]));
     assert_eq!(c.as_slice(), &[6, 7, 8, 1]);
@@ -127,7 +128,8 @@ fn test_vector_matrix_mul_w_broadcasting() {
     )
     .unwrap();
 
-    let c = a.matmul(&b).expect("matmul");
+    let mut c = NdArray::new(0);
+    a.matmul(&b, &mut c).expect("matmul");
 
     println!("{:?}", c);
     assert_eq!(c.shape, Shape::Matrix([4, 4]));
@@ -150,7 +152,8 @@ fn test_matrix_vector_mul() {
     let a = NdArray::new_with_values(&[4, 4][..], mat()).unwrap();
     let b = NdArray::new_with_values(4u32, Data::from_slice(&[1, 2, 3, 1])).unwrap();
 
-    let c = a.matmul(&b).expect("matmul");
+    let mut c = NdArray::new(0);
+    a.matmul(&b, &mut c).expect("matmul");
 
     assert_eq!(c.shape, Shape::Vector([4]));
     assert_eq!(c.as_slice(), &[6, 7, 8, 1]);
@@ -161,7 +164,8 @@ fn test_mat_mat_mul() {
     let a = NdArray::new_with_values([2, 3], Data::from_slice(&[1, 2, -1, 2, 0, 1])).unwrap();
     let b = NdArray::new_with_values([3, 2], Data::from_slice(&[3, 1, 0, -1, -2, 3])).unwrap();
 
-    let c = a.matmul(&b).expect("matmul");
+    let mut c = NdArray::new(0);
+    a.matmul(&b, &mut c).expect("matmul");
 
     assert_eq!(c.shape, Shape::Matrix([2, 2]));
     assert_eq!(c.as_slice(), &[5, -4, 4, 5]);
@@ -178,7 +182,8 @@ fn test_mat_mat_mul_many() {
     )
     .unwrap();
 
-    let c = a.matmul(&b).expect("matmul");
+    let mut c = NdArray::new(0);
+    a.matmul(&b, &mut c).expect("matmul");
 
     assert_eq!(c.shape, Shape::Tensor(SmallVec::from_slice(&[2, 2, 2])));
     assert_eq!(c.as_slice(), &[5, -4, 4, 5, 5, -4, 4, 5]);

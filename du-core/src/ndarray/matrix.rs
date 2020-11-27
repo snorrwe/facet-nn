@@ -37,13 +37,14 @@ where
         let p = p as usize;
         // iterate over the result's columns
         out.par_chunks_mut(p).enumerate().for_each(|(i, out)| {
-            for j in 0usize..p {
+            out.par_iter_mut().enumerate().for_each(|(j, valout)| {
+                *valout = Default::default();
                 for k in 0usize..m {
                     let val0 = &values0[i * m + k];
                     let val1 = &values1[k * p + j];
-                    out[j] += *val0 * *val1
+                    *valout += *val0 * *val1
                 }
-            }
+            });
         });
     }
 
@@ -78,6 +79,7 @@ impl<'a, T> NdArray<T> {
     /// This example will take a single 2 by 3 matrix and multiply it with 2 3 by 2 matrices.
     /// The output is 2(!) 2 by 2 matrices.
     ///
+    ///
     /// ```
     /// use du_core::ndarray::{NdArray, Data};
     /// use du_core::ndarray::shape::Shape;
@@ -92,13 +94,14 @@ impl<'a, T> NdArray<T> {
     /// )
     /// .unwrap();
     ///
-    /// let c = a.matmul(&b).expect("matmul");
+    /// let mut c = NdArray::new(0);
+    /// a.matmul(&b, &mut c).expect("matmul");
     ///
     /// // output 2 2 by 2 matrices
     /// assert_eq!(c.shape(), &Shape::Tensor((&[2, 2, 2][..]).into()));
     /// assert_eq!(c.as_slice(), &[5, -4, 4, 5, /*|*/ 5, -4, 4, 5]);
     /// ```
-    pub fn matmul(&'a self, other: &'a Self) -> Result<Self, NdArrayError>
+    pub fn matmul(&'a self, other: &'a Self, out: &mut Self) -> Result<(), NdArrayError>
     where
         T: AddAssign + Add<Output = T> + Mul<Output = T> + Default + 'a + Copy + Sync + Send,
     {
@@ -121,43 +124,44 @@ impl<'a, T> NdArray<T> {
                     expected: *a as usize,
                     actual: *b as usize,
                 })?;
-                Self::new_with_values(&[][..], Data::from_slice(&[res][..]))
+                *out = Self::new_with_values(&[][..], Data::from_slice(&[res][..]))?;
+                Ok(())
             }
 
             (Shape::Vector([l]), Shape::Matrix([n, m])) => {
-                let mut res = Self::new_default(Shape::Matrix([1, *m]));
+                out.reshape(Shape::Matrix([1, *m]));
                 matmul_impl(
                     [1, *l],
                     self.as_slice(),
                     [*n, *m],
                     other.as_slice(),
-                    res.as_mut_slice(),
+                    out.as_mut_slice(),
                 )?;
-                res.reshape(*m)?;
-                Ok(res)
+                out.reshape(*m);
+                Ok(())
             }
             (Shape::Matrix([n, m]), Shape::Vector([l])) => {
-                let mut res = Self::new_default(Shape::Matrix([*n, 1]));
+                out.reshape(Shape::Matrix([*n, 1]));
                 matmul_impl(
                     [*n, *m],
                     self.as_slice(),
                     [*l, 1],
                     other.as_slice(),
-                    res.as_mut_slice(),
+                    out.as_mut_slice(),
                 )?;
-                res.reshape(*m)?;
-                Ok(res)
+                out.reshape(*m);
+                Ok(())
             }
             (Shape::Matrix([a, b]), Shape::Matrix([c, d])) => {
-                let mut res = Self::new_default(Shape::Matrix([*a, *d]));
+                out.reshape(Shape::Matrix([*a, *d]));
                 matmul_impl(
                     [*a, *b],
                     self.as_slice(),
                     [*c, *d],
                     other.as_slice(),
-                    res.as_mut_slice(),
+                    out.as_mut_slice(),
                 )?;
-                Ok(res)
+                Ok(())
             }
 
             // broadcast matrices
@@ -165,52 +169,48 @@ impl<'a, T> NdArray<T> {
                 let [m, n] = shp.last_two().unwrap();
 
                 let it = ColumnIter::new(&other.values, n as usize * m as usize);
-                let mut out =
-                    Self::new_default([(other.len() / (n as usize * m as usize)) as u32, *l]);
+                out.reshape([(other.len() / (n as usize * m as usize)) as u32, *l]);
                 for (mat, out) in it.zip(ColumnIterMut::new(&mut out.values, *l as usize)) {
                     matmul_impl([1, *l], self.as_slice(), [n, m], mat, out)?;
                 }
-                Ok(out)
+                Ok(())
             }
             (shp @ Shape::Tensor(_), Shape::Vector([l])) => {
                 let [m, n] = shp.last_two().unwrap();
 
                 let it = ColumnIter::new(&self.values, n as usize * m as usize);
                 let l: u32 = *l;
-                let mut out =
-                    Self::new_default([(self.len() / (n as usize * m as usize)) as u32, l]);
+                out.reshape([(self.len() / (n as usize * m as usize)) as u32, l]);
                 for (mat, out) in it.zip(ColumnIterMut::new(&mut out.values, l as usize)) {
                     matmul_impl([n, m], mat, [l, 1], other.as_slice(), out)?;
                 }
-                Ok(out)
+                Ok(())
             }
             (Shape::Matrix([a, b]), shp @ Shape::Tensor(_)) => {
                 let [a, b] = [*a, *b];
                 let [c, d] = shp.last_two().unwrap();
 
                 let it = ColumnIter::new(&other.values, c as usize * d as usize);
-                let mut out =
-                    Self::new_default(vec![(other.len() / (c as usize * d as usize)) as u32, a, d]);
+                out.reshape(vec![(other.len() / (c as usize * d as usize)) as u32, a, d]);
                 for (mat, out) in
                     it.zip(ColumnIterMut::new(&mut out.values, a as usize * d as usize))
                 {
                     matmul_impl([a, b], self.as_slice(), [c, d], mat, out)?;
                 }
-                Ok(out)
+                Ok(())
             }
             (shp @ Shape::Tensor(_), Shape::Matrix([c, d])) => {
                 let [a, b] = shp.last_two().unwrap();
                 let [c, d] = [*c, *d];
 
                 let it = ColumnIter::new(&self.values, c as usize * d as usize);
-                let mut out =
-                    Self::new_default(vec![(self.len() / (c as usize * d as usize)) as u32, a, d]);
+                out.reshape(vec![(self.len() / (c as usize * d as usize)) as u32, a, d]);
                 for (mat, out) in
                     it.zip(ColumnIterMut::new(&mut out.values, a as usize * d as usize))
                 {
                     matmul_impl([a, b], self.as_slice(), [c, d], mat, out)?;
                 }
-                Ok(out)
+                Ok(())
             }
             (ab @ Shape::Tensor(_), cd @ Shape::Tensor(_)) => {
                 let [a, b] = ab.last_two().unwrap();
@@ -227,7 +227,7 @@ impl<'a, T> NdArray<T> {
                     });
                 }
 
-                let mut out = Self::new_default(vec![nmatrices as u32, a, d]);
+                *out = Self::new_default(vec![nmatrices as u32, a, d]);
 
                 #[cfg(not(feature = "rayon"))]
                 {
@@ -252,7 +252,7 @@ impl<'a, T> NdArray<T> {
                         })?;
                 }
 
-                Ok(out)
+                Ok(())
             }
         }
     }

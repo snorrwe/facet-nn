@@ -9,6 +9,8 @@ use std::{
 
 use super::Data;
 use super::{column_iter::ColumnIterMut, shape::Shape, NdArray, NdArrayError};
+#[cfg(feature = "rayon")]
+use rayon::prelude::*;
 
 macro_rules! arithimpl {
     ($opeq: tt, $op: tt, $lhs: ident, $rhs: ident) =>{
@@ -45,13 +47,27 @@ macro_rules! arithimpl {
                         actual: b.clone(),
                     });
                 }
-                let values: Data<_> = $lhs
+                let values;
+                #[cfg(feature = "rayon")]
+                {
+                    values= $lhs
+                    .values
+                    .as_slice()
+                    .par_iter()
+                    .zip($rhs.values.par_iter())
+                    .map(|(a, b)| *a $op *b)
+                    .collect::<Vec<_>>().into();
+                }
+                #[cfg(not(feature = "rayon"))]
+                {
+                    values= $lhs
                     .values
                     .iter()
                     .zip($rhs.values.iter())
                     .map(|(a, b)| *a $op *b)
                     .collect();
-                let res = NdArray::<T> ::new_with_values(
+                }
+                let res = NdArray::<T>::new_with_values(
                     $lhs.shape.clone(),
                     values,
                 ).unwrap();
@@ -68,9 +84,20 @@ macro_rules! arithimpl {
                     });
                 }
                 let mut res = $rhs.clone();
-                for col in res.iter_cols_mut() {
-                    for (a, b) in col.iter_mut().zip($lhs.values.iter()) {
-                        *a $opeq *b;
+                #[cfg(feature="rayon")]
+                {
+                    res.par_iter_cols_mut().for_each(|col|{
+                        for (a, b) in col.iter_mut().zip($lhs.values.iter()) {
+                            *a $opeq *b;
+                        }
+                    });
+                }
+                #[cfg(not(feature="rayon"))]
+                {
+                    for col in res.iter_cols_mut() {
+                        for (a, b) in col.iter_mut().zip($lhs.values.iter()) {
+                            *a $opeq *b;
+                        }
                     }
                 }
                 Ok(res)
@@ -84,9 +111,20 @@ macro_rules! arithimpl {
                     });
                 }
                 let mut res = $lhs.clone();
-                for col in res.iter_cols_mut() {
-                    for (a, b) in col.iter_mut().zip($rhs.values.iter()) {
-                        *a $opeq *b;
+                #[cfg(feautre="rayon")]
+                {
+                    res.par_iter_cols_mut().for_each(|col|{
+                        for (a, b) in col.iter_mut().zip($rhs.values.iter()) {
+                            *a $opeq *b;
+                        }
+                    });
+                }
+                #[cfg(not(feautre="rayon"))]
+                {
+                    for col in res.iter_cols_mut() {
+                        for (a, b) in col.iter_mut().zip($rhs.values.iter()) {
+                            *a $opeq *b;
+                        }
                     }
                 }
                 Ok(res)
@@ -138,7 +176,7 @@ macro_rules! arithimpl {
 
 impl<'a, T> NdArray<T>
 where
-    T: Add<T, Output = T> + AddAssign + Copy + 'a,
+    T: Add<T, Output = T> + AddAssign + Copy + 'a + Send + Sync,
 {
     pub fn add(&self, rhs: &Self) -> Result<Self, NdArrayError> {
         arithimpl!(+=, +, self, rhs)
@@ -147,7 +185,7 @@ where
 
 impl<'a, T> NdArray<T>
 where
-    T: Sub<T, Output = T> + SubAssign + Copy + 'a,
+    T: Sub<T, Output = T> + SubAssign + Copy + 'a + Send + Sync,
 {
     pub fn sub(&self, rhs: &Self) -> Result<Self, NdArrayError> {
         arithimpl!(-=, -, self, rhs)
@@ -156,7 +194,7 @@ where
 
 impl<'a, T> NdArray<T>
 where
-    T: Mul<T, Output = T> + MulAssign + Copy + 'a,
+    T: Mul<T, Output = T> + MulAssign + Copy + 'a + Send + Sync,
 {
     pub fn mul(&self, rhs: &Self) -> Result<Self, NdArrayError> {
         arithimpl!(*=, *, self, rhs)
@@ -165,7 +203,7 @@ where
 
 impl<'a, T> NdArray<T>
 where
-    T: Div<T, Output = T> + DivAssign + Copy + 'a,
+    T: Div<T, Output = T> + DivAssign + Copy + 'a + Send + Sync,
 {
     pub fn div(&self, rhs: &Self) -> Result<Self, NdArrayError> {
         arithimpl!(/=, /, self, rhs)
@@ -190,7 +228,7 @@ impl<T> NdArray<T> {
 
 impl<T> NdArray<T>
 where
-    T: Add + Div<Output = T> + Clone + TryFrom<u32> + Sum + Debug,
+    T: Add + Div<Output = T> + Clone + TryFrom<u32> + Sum + Debug + Default,
 {
     /// Collapses the last columns into a scalar
     pub fn mean(&self) -> Result<Self, NdArrayError> {
@@ -219,7 +257,7 @@ where
                 }
                 let mut res = Self::new_vector(values);
                 let shape = self.shape.as_slice();
-                res.reshape(&shape[..shape.len() - 1]).unwrap();
+                res.reshape(&shape[..shape.len() - 1]);
                 Ok(res)
             }
         }

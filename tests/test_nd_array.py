@@ -61,9 +61,15 @@ def test_mat_mul():
     b = NdArrayD([3, 2], [2, 1, 3, 2, 1, 1])
 
     exp = NdArrayD([2, 2], [-3, -2, 10, 7])
-    c = a @ b
-    d = a.matmul(b)
+    c = a.matmul(b)
     assert (c == exp).all()
+
+    # as out param
+    d = NdArrayD([], [69])
+    assert (d != c).all()
+    e = a.matmul(b, d)
+
+    assert (c == e).all()
     assert (c == d).all()
 
 
@@ -79,10 +85,8 @@ def test_mat_mul_many():
     b = NdArrayD([8, 3, 2], b_template * 8)
 
     exp = NdArrayD([8, 2, 2], [-3, -2, 10, 7] * 8)
-    c = a @ b
-    d = a.matmul(b)
+    c = a.matmul(b)
     assert (c == exp).all()
-    assert (c == d).all()
 
 
 def test_adding_scalar():

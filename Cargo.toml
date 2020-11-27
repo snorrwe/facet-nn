@@ -1,2 +1,6 @@
 [workspace]
 members = ["du-core", "pydu"]
+
+[profile.release]
+debug = true
+lto = true

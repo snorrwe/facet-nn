@@ -27,10 +27,6 @@ pub struct NdArrayI {
 
 #[pyproto]
 impl<T> PyNumberProtocol for NdArrayI {
-    fn __matmul__(lhs: PyRef<'p, Self>, rhs: PyRef<'p, Self>) -> PyResult<Self> {
-        <Self as AsNumArray>::matmul(lhs, rhs).map(|inner| Self { inner })
-    }
-
     fn __add__(lhs: PyRef<'p, Self>, rhs: PyRef<'p, Self>) -> PyResult<Self> {
         <Self as AsNumArray>::add(lhs, rhs).map(|inner| Self { inner })
     }

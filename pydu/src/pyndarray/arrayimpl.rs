@@ -23,7 +23,9 @@ trait AsNumArray: PyClass {
         + Div<Self::T, Output = Self::T>
         + DivAssign
         + Default
-        + Copy;
+        + Copy
+        + Send
+        + Sync;
 
     fn cast(&self) -> &NdArray<Self::T>;
 
@@ -42,17 +44,8 @@ trait AsNumArray: PyClass {
             .map(|(a, b)| op(a, b))
             .collect();
         let mut res = NdArray::<bool>::new_vector(values);
-        res.reshape(a.shape().clone())
-            .map_err(|err| PyValueError::new_err::<String>(format!("{}", err).into()))?;
+        res.reshape(a.shape().clone());
         Ok(NdArrayB { inner: res })
-    }
-
-    fn matmul<'p>(lhs: PyRef<'p, Self>, rhs: PyRef<'p, Self>) -> PyResult<NdArray<Self::T>>
-    where
-        Self::T: Send + Sync,
-    {
-        NdArray::<Self::T>::matmul(lhs.cast(), rhs.cast())
-            .map_err(|err| PyValueError::new_err::<String>(format!("{}", err).into()))
     }
 
     fn add<'p>(lhs: PyRef<'p, Self>, rhs: PyRef<'p, Self>) -> PyResult<NdArray<Self::T>> {
@@ -221,9 +214,7 @@ macro_rules! impl_ndarray {
                     mut this: PyRefMut<Self>,
                     new_shape: Vec<u32>,
                 ) -> PyResult<PyRefMut<Self>> {
-                    this.inner.reshape(Shape::from(new_shape)).map_err(|err| {
-                        PyValueError::new_err::<String>(format!("{}", err).into())
-                    })?;
+                    this.inner.reshape(Shape::from(new_shape));
                     Ok(this)
                 }
 

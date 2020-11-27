@@ -40,8 +40,7 @@ pub fn argmax(py: Python, inp: PyObject) -> PyResult<NdArrayI> {
     let shape = inp.inner.shape();
 
     let mut res = NdArray::new_vector(res);
-    res.reshape(&shape.as_slice()[..shape.as_slice().len() - 1])
-        .unwrap();
+    res.reshape(&shape.as_slice()[..shape.as_slice().len() - 1]);
 
     Ok(NdArrayI { inner: res })
 }
@@ -68,8 +67,7 @@ pub fn argmin(py: Python, inp: PyObject) -> PyResult<NdArrayI> {
     let shape = inp.inner.shape();
 
     let mut res = NdArray::new_vector(res);
-    res.reshape(&shape.as_slice()[..shape.as_slice().len() - 1])
-        .unwrap();
+    res.reshape(&shape.as_slice()[..shape.as_slice().len() - 1]);
 
     Ok(NdArrayI { inner: res })
 }
@@ -100,7 +98,7 @@ pub fn diagflat(py: Python, inp: PyObject) -> PyResult<NdArrayD> {
     let n = u32::try_from(n).map_err(|err| {
         PyValueError::new_err(format!("Failed to convert inp len to u32 {:?}", err))
     })?;
-    inp.inner.reshape(n).unwrap();
+    inp.inner.reshape(n);
     let inp = inp.inner.as_slice();
     let mut res = NdArray::new_default([n, n]);
     for i in 0..n {
