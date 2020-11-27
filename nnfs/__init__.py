@@ -13,22 +13,27 @@ class DenseLayer:
         :param inp: number of input neurons
         :param out: number of output neurons
         """
-
         self.weights = pydu.array([[0.69] * out] * inp)
         self.biases = pydu.array([0.42] * out)
         self.inputs = None
         self.name = name
+        self.output = None
+        self.dweights = None
+        self.dbiases = None
+        self.dinputs = None
 
     def forward(self, inp):
         self.inputs = inp
-        z = inp.matmul(self.weights)
-        self.output = z + self.biases
+        # the second parameter is the out param, this lets us re-use the output buffer for matrix multiplication
+        # saving a bit of time on copies..
+        self.output = inp.matmul(self.weights, self.output)
+        self.output = self.output + self.biases
         return self.output
 
     def backward(self, dvalues):
-        self.dweights = self.inputs.T.matmul(dvalues)
+        self.dweights = self.inputs.T.matmul(dvalues, self.dweights)
         self.dbiases = pydu.sum(dvalues.T)
-        self.dinputs = dvalues.matmul(self.weights.T)
+        self.dinputs = dvalues.matmul(self.weights.T, self.dinputs)
 
     def __repr__(self):
         return (
