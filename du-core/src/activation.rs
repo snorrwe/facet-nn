@@ -1,18 +1,32 @@
-use std::f64::consts::E;
-
 use crate::{
     ndarray::NdArray,
     ndarray::{matrix::matmul_impl, shape::Shape},
     DuResult,
 };
+use std::f64::consts::E;
 
-/// ReLU
+#[cfg(feature = "rayon")]
+use rayon::prelude::*;
+
+#[cfg(feature = "rayon")]
+pub fn relu(inp: &NdArray<f64>) -> NdArray<f64> {
+    let mut out = inp.clone();
+    out.par_iter_cols_mut().for_each(|col| {
+        for v in col {
+            *v = v.max(0.0);
+        }
+    });
+    out
+}
+
+#[cfg(not(feature = "rayon"))]
 pub fn relu(inp: &NdArray<f64>) -> NdArray<f64> {
     inp.map(|v| v.max(0.0))
 }
 
 /// ReLU derivative
 pub fn drelu_dz(inputs: &NdArray<f64>, dvalues: &NdArray<f64>) -> NdArray<f64> {
+    // #[cfg(feature = "rayon")]
     let mut res = dvalues.clone();
     for (dx, dz) in res.iter_cols_mut().zip(inputs.iter_cols()) {
         debug_assert_eq!(dx.len(), dz.len());
