@@ -11,6 +11,20 @@ pub fn relu(inp: &NdArray<f64>) -> NdArray<f64> {
     inp.map(|v| v.max(0.0))
 }
 
+/// ReLU derivative
+pub fn drelu_dz(inputs: &NdArray<f64>, dvalues: &NdArray<f64>) -> NdArray<f64> {
+    let mut res = dvalues.clone();
+    for (dx, dz) in res.iter_cols_mut().zip(inputs.iter_cols()) {
+        debug_assert_eq!(dx.len(), dz.len());
+        for i in 0..dx.len() {
+            if dz[i] <= 0.0 {
+                dx[i] = 0.0;
+            }
+        }
+    }
+    res
+}
+
 /// Inp is interpreted as a either a collection of vectors, applying softmax to each column or as a
 /// single vector.
 ///

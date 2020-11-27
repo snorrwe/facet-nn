@@ -4,22 +4,14 @@ use crate::pyndarray::NdArrayD;
 
 #[pyfunction]
 pub fn relu(inp: PyRef<'_, NdArrayD>) -> NdArrayD {
-    let res = inp.inner.map(|v| v.max(0.0));
+    let res = du_core::activation::relu(&inp.inner);
     NdArrayD { inner: res }
 }
 
 #[pyfunction]
 pub fn drelu_dz(inputs: PyRef<'_, NdArrayD>, dvalues: PyRef<'_, NdArrayD>) -> NdArrayD {
-    let mut res: NdArrayD = dvalues.clone();
-    for (dx, dz) in res.inner.iter_cols_mut().zip(inputs.inner.iter_cols()) {
-        debug_assert_eq!(dx.len(), dz.len());
-        for i in 0..dx.len() {
-            if dz[i] <= 0.0 {
-                dx[i] = 0.0;
-            }
-        }
-    }
-    res
+    let res = du_core::activation::drelu_dz(&inputs.inner, &dvalues.inner);
+    NdArrayD { inner: res }
 }
 
 /// Inp is interpreted as a either a collection of vectors, applying softmax to each column or as a
