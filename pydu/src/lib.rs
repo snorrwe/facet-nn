@@ -85,6 +85,20 @@ pub fn zeros(py: Python, inp: PyObject) -> PyResult<NdArrayD> {
     Ok(NdArrayD { inner: res })
 }
 
+#[pyfunction]
+pub fn ones(py: Python, inp: PyObject) -> PyResult<NdArrayD> {
+    let inp: PyNdIndex = inp
+        .extract(py)
+        .or_else(|_| PyNdIndex::new(inp.extract(py)?))?;
+
+    let shape = Shape::from(inp.inner);
+
+    let values = (0..shape.span()).map(|_| 1.0).collect();
+    let res = NdArray::new_with_values(shape, values).unwrap();
+
+    Ok(NdArrayD { inner: res })
+}
+
 /// Creates a square matrix where the diagonal holds the values of the input vector and the other
 /// values are 0
 #[pyfunction]
@@ -182,6 +196,7 @@ fn pydu(py: Python, m: &PyModule) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(sqrt, m)?)?;
     m.add_function(wrap_pyfunction!(argmax, m)?)?;
     m.add_function(wrap_pyfunction!(argmin, m)?)?;
+    m.add_function(wrap_pyfunction!(ones, m)?)?;
 
     Ok(())
 }

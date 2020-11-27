@@ -81,7 +81,7 @@ trait AsNumArray: PyClass {
 
 #[macro_export(internal_macros)]
 macro_rules! impl_ndarray {
-    ($ty: ty, $name: ident, $inner: ident, $colit: ident, $itemit: ident, $mod: ident) => {
+    ($ty: ty, $name: ident, $inner: ident, $mod: ident) => {
         mod $mod {
             use super::$name;
             use crate::pyndarray::PyNdIndex;
@@ -99,21 +99,21 @@ macro_rules! impl_ndarray {
             }
 
             #[pyclass]
-            pub struct $colit {
+            pub struct ColIter {
                 iter: ColumnIter<'static, $ty>,
                 /// hold a reference to the original array to prevent the GC from collecting it
                 arr: Option<Py<$name>>,
             }
 
             #[pyclass]
-            pub struct $itemit {
+            pub struct ItemIter {
                 iter: Box<dyn Iterator<Item = $ty> + Send + 'static>,
                 /// hold a reference to the original array to prevent the GC from collecting it
                 arr: Option<Py<$name>>,
             }
 
             #[pyproto]
-            impl PyGCProtocol for $colit {
+            impl PyGCProtocol for ColIter {
                 fn __traverse__(
                     &'p self,
                     visit: pyo3::PyVisit,
@@ -127,7 +127,7 @@ macro_rules! impl_ndarray {
             }
 
             #[pyproto]
-            impl PyIterProtocol for $colit {
+            impl PyIterProtocol for ColIter {
                 fn __iter__(this: PyRef<Self>) -> PyRef<Self> {
                     this
                 }
@@ -138,7 +138,7 @@ macro_rules! impl_ndarray {
             }
 
             #[pyproto]
-            impl PyGCProtocol for $itemit {
+            impl PyGCProtocol for ItemIter {
                 fn __traverse__(
                     &'p self,
                     visit: pyo3::PyVisit,
@@ -152,7 +152,7 @@ macro_rules! impl_ndarray {
             }
 
             #[pyproto]
-            impl PyIterProtocol for $itemit {
+            impl PyIterProtocol for ItemIter {
                 fn __iter__(this: PyRef<Self>) -> PyRef<Self> {
                     this
                 }
@@ -163,14 +163,14 @@ macro_rules! impl_ndarray {
             }
             #[pyproto]
             impl PyIterProtocol for $name {
-                fn __iter__(this: PyRef<Self>) -> PyResult<$itemit> {
+                fn __iter__(this: PyRef<Self>) -> PyResult<ItemIter> {
                     let iter: Box<dyn Iterator<Item = _> + Send> =
                         Box::new(this.inner.iter().map(|x| *x));
                     // transmute the lifetime, we know this is safe because the iterator will hold
                     // a reference to this array, and Python is single threaded, so no mutations
                     // _should_ occur during iteration
                     let iter = unsafe { std::mem::transmute(iter) };
-                    let iter = $itemit {
+                    let iter = ItemIter {
                         iter,
                         arr: Some(this.into()),
                     };
@@ -228,14 +228,14 @@ macro_rules! impl_ndarray {
                     }
                 }
 
-                pub fn iter_cols<'py>(this: Py<Self>, py: Python<'py>) -> PyResult<Py<$colit>> {
+                pub fn iter_cols<'py>(this: Py<Self>, py: Python<'py>) -> PyResult<Py<ColIter>> {
                     let s = this.borrow(py);
                     let it = s.inner.iter_cols();
                     // transmute the lifetime, we know this is safe because the iterator will hold
                     // a reference to this array, and Python is single threaded, so no mutations
                     // _should_ occur during iteration
                     let it = unsafe { std::mem::transmute(it) };
-                    let it = $colit {
+                    let it = ColIter {
                         iter: it,
                         arr: Some(this.clone()),
                     };
@@ -274,6 +274,9 @@ macro_rules! impl_ndarray {
                 }
 
                 fn __getitem__(&self, shape: &PyAny) -> PyResult<$ty> {
+                    // TODO: not just single items.
+                    // Shape could possibly hold fewer items than our shape, meaning they want
+                    // vectors or matrices or sub-tensors returned...
                     let shape = PyNdIndex::new(shape)?;
                     self.inner
                         .get(&shape.inner[..])

@@ -1,6 +1,8 @@
 use crate::impl_ndarray;
 use du_core::ndarray::NdArray;
-pub use ndarraydimpl::*;
+pub use implmod::ColIter as ColIterI;
+pub use implmod::ItemIter as ItemIterI;
+pub use implmod::*;
 
 use pyo3::{
     basic::CompareOp, exceptions::PyNotImplementedError, prelude::*, PyNumberProtocol,
@@ -9,14 +11,7 @@ use pyo3::{
 
 use super::{AsNumArray, NdArrayB, NdArrayD};
 
-impl_ndarray!(
-    i64,
-    NdArrayI,
-    inner,
-    NdArrayIColIter,
-    NdArrayIIter,
-    ndarraydimpl
-);
+impl_ndarray!(i64, NdArrayI, inner, implmod);
 
 /// Index array
 #[pyclass]

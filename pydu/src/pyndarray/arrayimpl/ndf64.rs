@@ -1,4 +1,6 @@
 use du_core::ndarray::NdArray;
+pub use ndarraydimpl::ColIter as ColIterD;
+pub use ndarraydimpl::ItemIter as ItemIterD;
 pub use ndarraydimpl::*;
 
 use crate::impl_ndarray;
@@ -13,14 +15,7 @@ use pyo3::{
 use super::AsNumArray;
 use super::NdArrayB;
 
-impl_ndarray!(
-    f64,
-    NdArrayD,
-    inner,
-    NdArrayDColIter,
-    NdArrayDIter,
-    ndarraydimpl
-);
+impl_ndarray!(f64, NdArrayD, inner, ndarraydimpl);
 
 #[pyclass]
 #[derive(Debug, Clone)]
@@ -52,7 +47,7 @@ impl<T> PyNumberProtocol for NdArrayD {
 }
 
 #[pyproto]
-impl<T> PyObjectProtocol for NdArrayD {
+impl PyObjectProtocol for NdArrayD {
     fn __str__(&self) -> String {
         self.to_string()
     }

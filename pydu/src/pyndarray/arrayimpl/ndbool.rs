@@ -1,4 +1,6 @@
 use du_core::ndarray::NdArray;
+pub use ndarraybimpl::ColIter as ColIterB;
+pub use ndarraybimpl::ItemIter as ItemIterB;
 pub use ndarraybimpl::*;
 
 use crate::impl_ndarray;
@@ -6,14 +8,7 @@ use crate::pyndarray::NdArrayD;
 
 use pyo3::{basic::CompareOp, exceptions::PyNotImplementedError, prelude::*, PyObjectProtocol};
 
-impl_ndarray!(
-    bool,
-    NdArrayB,
-    inner,
-    NdArrayBColIter,
-    NdArrayBIter,
-    ndarraybimpl
-);
+impl_ndarray!(bool, NdArrayB, inner, ndarraybimpl);
 
 #[pyclass]
 #[derive(Debug)]
