@@ -168,3 +168,12 @@ def test_iter():
     assert arr.shape == [4, 4, 4]
     flat = list(arr)
     assert flat == [1, 2, 3, 4] * 16
+
+
+def test_replace_where():
+    arr = pydu.array([[[1, 2, 3, 4]] * 4] * 4)
+
+    arr.replace_where(lambda _i, x: 69 if x % 2 == 0 else None)
+
+    flat = list(arr)
+    assert flat == [1, 69, 3, 69] * 16

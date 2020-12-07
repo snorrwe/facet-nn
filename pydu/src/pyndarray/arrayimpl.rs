@@ -265,6 +265,19 @@ macro_rules! impl_ndarray {
                         inner: self.inner.clone(),
                     }
                 }
+
+                /// Call the given function with `(index, entry)` returning `None` leaves the entry
+                /// unchanged, else replaces the given `entry` with the returned `value`
+                pub fn replace_where(&mut self, cb: &PyAny) -> PyResult<()> {
+                    for (i, entry) in self.inner.as_mut_slice().iter_mut().enumerate() {
+                        let res = cb.call1((i, *entry))?;
+                        match res.extract::<Option<$ty>>()? {
+                            Some(x) => *entry = x,
+                            None => {}
+                        }
+                    }
+                    Ok(())
+                }
             }
 
             #[pyproto]
