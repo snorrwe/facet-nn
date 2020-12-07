@@ -222,6 +222,11 @@ macro_rules! impl_ndarray {
                     self.inner.get(&index).cloned()
                 }
 
+                /// Treat this array as a flat array / vector and return the nth item
+                pub fn flat_get(&self, index: usize) -> Option<$ty> {
+                    self.inner.as_slice().get(index).cloned()
+                }
+
                 pub fn set(&mut self, index: Vec<u32>, value: $ty) {
                     if let Some(x) = self.inner.get_mut(&index) {
                         *x = value;

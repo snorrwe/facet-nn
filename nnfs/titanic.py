@@ -45,17 +45,22 @@ n_classes = 2
 n_inputs = X.shape[1]
 
 # the model
-dense1 = DenseLayer(n_inputs, 8)
+dense1 = DenseLayer(
+    n_inputs,
+    16,
+    weight_regularizer_l1=0.1,
+    weight_regularizer_l2=5e-4,
+    bias_regularizer_l2=5e-4,
+)
 acti1 = Activation(pydu.relu, pydu.drelu_dz)
 
-dense2 = DenseLayer(8, 13)
+dense2 = DenseLayer(16, 8)
 acti2 = Activation(pydu.relu, pydu.drelu_dz)
 
-dense3 = DenseLayer(13, n_classes)
+dense3 = DenseLayer(8, n_classes)
 loss_acti = Activation_Softmax_Loss_CategoricalCrossentropy()
 
-
-optim = Optimizer_Adam(learning_rate=5e-3, decay=1e-4)
+optim = Optimizer_Adam(learning_rate=1e-3, decay=1e-5)
 
 last = pydu.scalar(0)
 for epoch in progressbar.progressbar(range(10000 + 1), redirect_stdout=True):

@@ -8,7 +8,17 @@ class DenseLayer:
     Dense layers are interconnected, all inputs are connected to all outputs
     """
 
-    def __init__(self, inp, out, name=None):
+    def __init__(
+        self,
+        inp,
+        out,
+        *,
+        name=None,
+        weight_regularizer_l1=0,
+        weight_regularizer_l2=0,
+        bias_regularizer_l1=0,
+        bias_regularizer_l2=0,
+    ):
         """
         :param inp: number of input neurons
         :param out: number of output neurons
@@ -21,18 +31,42 @@ class DenseLayer:
         self.dweights = None
         self.dbiases = None
         self.dinputs = None
+        self.weight_regularizer_l1 = weight_regularizer_l1
+        self.weight_regularizer_l2 = weight_regularizer_l2
+        self.bias_regularizer_l1 = bias_regularizer_l1
+        self.bias_regularizer_l2 = bias_regularizer_l2
 
     def forward(self, inp):
         self.inputs = inp
         # the second parameter is the out param, this lets us re-use the output buffer for matrix multiplication
         # saving a bit of time on copies..
         self.output = inp.matmul(self.weights, self.output)
-        self.output = self.output + self.biases
+        self.output += self.biases
         return self.output
 
     def backward(self, dvalues):
         self.dweights = self.inputs.T.matmul(dvalues, self.dweights)
         self.dbiases = pydu.sum(dvalues.T)
+
+        # L1 on weights
+        if self.weight_regularizer_l1 > 0:
+            dL1 = pydu.ones(self.weights.shape)
+            dL1.replace_where(lambda i, _: -1 if self.weights.flat_get(i) < 0 else None)
+            self.dweights += pydu.scalar(self.weight_regularizer_l1) * dL1
+        # L2 on weights
+        if self.weight_regularizer_l2 > 0:
+            self.dweights += pydu.scalar(self.weight_regularizer_l2) * self.weights
+
+        # L1 on biases
+        if self.bias_regularizer_l1 > 0:
+            dL1 = pydu.ones(self.biases.shape)
+            dL1.replace_where(lambda i, _: -1 if self.biases.flat_get(i) < 0 else None)
+            self.dbiases += pydu.scalar(self.bias_regularizer_l1) * dL1
+        # L2 on biases
+        if self.bias_regularizer_l2 > 0:
+            self.dbiases += pydu.scalar(self.bias_regularizer_l2) * self.biases
+
+        # Gradient
         self.dinputs = dvalues.matmul(self.weights.T, self.dinputs)
 
     def __repr__(self):
