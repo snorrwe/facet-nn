@@ -232,6 +232,18 @@ where
 }
 
 impl<T> NdArray<T> {
+    pub fn new_scalar(value: T) -> Self
+    where
+        T: Clone,
+    {
+        let shape = Shape::Scalar(Default::default());
+        let stride = shape::stride_vec(1, shape.as_slice());
+        Self {
+            values: [value][..].into(),
+            stride,
+            shape,
+        }
+    }
     pub fn new_with_values<S: Into<Shape>>(
         shape: S,
         values: Data<T>,

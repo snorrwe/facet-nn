@@ -2,6 +2,7 @@ pub mod activation;
 pub mod io;
 pub mod loss;
 pub mod pyndarray;
+pub mod layer;
 use du_core::rayon::iter::ParallelIterator;
 
 use du_core::ndarray::{shape::Shape, Data, NdArray};
@@ -187,6 +188,7 @@ fn pydu(py: Python, m: &PyModule) -> PyResult<()> {
     activation::setup_module(py, &m)?;
     io::setup_module(py, &m)?;
     loss::setup_module(py, &m)?;
+    layer::setup_module(py, &m)?;
 
     m.add_function(wrap_pyfunction!(eye, m)?)?;
     m.add_function(wrap_pyfunction!(diagflat, m)?)?;

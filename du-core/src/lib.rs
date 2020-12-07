@@ -8,6 +8,7 @@ pub type DuResult<T> = Result<T, DuError>;
 
 #[cfg(feature = "rayon")]
 pub use rayon;
+pub use smallvec;
 
 #[derive(Debug, thiserror::Error)]
 pub enum DuError {

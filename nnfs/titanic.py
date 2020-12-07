@@ -4,6 +4,7 @@ import progressbar
 
 import pydu
 from nnfs import *
+from pydu import DenseLayer
 
 print("Loading data")
 

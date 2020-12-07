@@ -50,42 +50,48 @@ class Optimizer_Adam:
         self.beta_1 = beta_1
         self.beta_2 = beta_2
 
+        self.weight_cache = {}
+        self.bias_cache = {}
+        self.weight_momentums = {}
+        self.bias_momentums = {}
+
     def pre_update(self):
         self.lr = pydu.scalar(self.initial_lr * (1.0 / (1 + self.decay * self.iters)))
         self.iters += 1
 
     def update_params(self, layer):
+        lid = layer.id
         if not hasattr(layer, "weight_cache"):
-            layer.weight_cache = pydu.zeros(layer.weights.shape)
-            layer.bias_cache = pydu.zeros(layer.biases.shape)
-            layer.weight_momentums = pydu.zeros(layer.weights.shape)
-            layer.bias_momentums = pydu.zeros(layer.biases.shape)
+            self.weight_cache[lid] = pydu.zeros(layer.weights.shape)
+            self.bias_cache[lid] = pydu.zeros(layer.biases.shape)
+            self.weight_momentums[lid] = pydu.zeros(layer.weights.shape)
+            self.bias_momentums[lid] = pydu.zeros(layer.biases.shape)
 
-        layer.weight_momentums = (pydu.scalar(self.beta_1) * layer.weight_momentums) + (
-            pydu.scalar(1.0 - self.beta_1) * layer.dweights
-        )
-        layer.bias_momentums = (pydu.scalar(self.beta_1) * layer.bias_momentums) + (
-            pydu.scalar(1.0 - self.beta_1) * layer.dbiases
-        )
+        self.weight_momentums[lid] = (
+            pydu.scalar(self.beta_1) * self.weight_momentums[lid]
+        ) + (pydu.scalar(1.0 - self.beta_1) * layer.dweights)
+        self.bias_momentums[lid] = (
+            pydu.scalar(self.beta_1) * self.bias_momentums[lid]
+        ) + (pydu.scalar(1.0 - self.beta_1) * layer.dbiases)
 
-        weight_momentum_corrected = layer.weight_momentums / pydu.scalar(
+        weight_momentum_corrected = self.weight_momentums[lid] / pydu.scalar(
             1 - (self.beta_1 ** self.iters)
         )
-        bias_momentum_corrected = layer.bias_momentums / pydu.scalar(
+        bias_momentum_corrected = self.bias_momentums[lid] / pydu.scalar(
             1 - (self.beta_1 ** self.iters)
         )
 
-        layer.weight_cache = pydu.scalar(
-            self.beta_2
-        ) * layer.weight_cache + pydu.scalar(1 - self.beta_2) * (layer.dweights ** 2)
-        layer.bias_cache = pydu.scalar(self.beta_2) * layer.bias_cache + pydu.scalar(
-            1 - self.beta_2
-        ) * (layer.dbiases ** 2)
+        self.weight_cache[lid] = pydu.scalar(self.beta_2) * self.weight_cache[
+            lid
+        ] + pydu.scalar(1 - self.beta_2) * (layer.dweights ** 2)
+        self.bias_cache[lid] = pydu.scalar(self.beta_2) * self.bias_cache[
+            lid
+        ] + pydu.scalar(1 - self.beta_2) * (layer.dbiases ** 2)
 
-        weight_cache_corrected = layer.weight_cache / pydu.scalar(
+        weight_cache_corrected = self.weight_cache[lid] / pydu.scalar(
             1 - self.beta_2 ** self.iters
         )
-        bias_cache_corrected = layer.bias_cache / pydu.scalar(
+        bias_cache_corrected = self.bias_cache[lid] / pydu.scalar(
             1 - self.beta_2 ** self.iters
         )
 
