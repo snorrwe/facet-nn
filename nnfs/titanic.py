@@ -55,7 +55,7 @@ dense1 = DenseLayer(
 )
 acti1 = Activation(pydu.relu, pydu.drelu_dz)
 
-dropout1 = DropoutLayer(0.1)
+dropout1 = DropoutLayer(0.3)
 
 dense2 = DenseLayer(16, 8)
 acti2 = Activation(pydu.relu, pydu.drelu_dz)
@@ -63,7 +63,7 @@ acti2 = Activation(pydu.relu, pydu.drelu_dz)
 dense3 = DenseLayer(8, n_classes)
 loss_acti = Activation_Softmax_Loss_CategoricalCrossentropy()
 
-optim = Optimizer_Adam(learning_rate=1e-3, decay=1e-5)
+optim = Optimizer_Adam(learning_rate=2e-3, decay=5e-6)
 
 last = pydu.scalar(0)
 for epoch in progressbar.progressbar(range(15000 + 1), redirect_stdout=True):

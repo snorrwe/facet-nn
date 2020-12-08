@@ -43,7 +43,22 @@ pub struct NdArray<T> {
     values: Data<T>,
 }
 
-impl<T> NdArray<T> {}
+impl<T> Default for NdArray<T>
+where
+    T: Default,
+{
+    fn default() -> Self {
+        let shape = Shape::Scalar(Default::default());
+        let stride = shape::stride_vec(1, shape.as_slice());
+        let mut values = Data::new();
+        values.push(Default::default());
+        Self {
+            shape,
+            stride,
+            values,
+        }
+    }
+}
 
 impl<T> Clone for NdArray<T>
 where

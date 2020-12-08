@@ -14,6 +14,7 @@ class DropoutLayer:
         self.inputs = inputs
         self.mask = pydu.binomial(1, self.rate, inputs.shape) / pydu.scalar(self.rate)
         self.output = inputs * self.mask
+        return self.output
 
     def backward(self, dvalues):
         self.dinputs = dvalues * self.mask

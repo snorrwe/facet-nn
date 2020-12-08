@@ -5,7 +5,7 @@ pub mod loss;
 pub mod pyndarray;
 use du_core::rayon::iter::ParallelIterator;
 
-use du_core::ndarray::{shape::Shape, Data, NdArray};
+use du_core::ndarray::{shape::Shape, NdArray};
 use pyndarray::{NdArrayD, NdArrayI, PyNdIndex};
 use pyo3::{
     exceptions::{PyAssertionError, PyValueError},
@@ -135,20 +135,8 @@ pub fn sum(py: Python, inp: PyObject) -> PyResult<NdArrayD> {
 
     let inp: &PyCell<NdArrayD> = inp.into_ref(py);
     let inp = inp.borrow();
-    let res = inp
-        .inner
-        .iter_cols()
-        .map(|x| x.iter().sum())
-        .collect::<Data<_>>();
 
-    let shape = inp.shape();
-    let shape = shape.as_slice();
-    let res = if shape.len() > 0 {
-        NdArray::new_with_values(&shape[..shape.len() - 1], res).unwrap()
-    } else {
-        // scalar
-        NdArray::new_with_values(0, res).unwrap()
-    };
+    let res = du_core::sum(&inp.inner);
     Ok(NdArrayD { inner: res })
 }
 
