@@ -48,7 +48,7 @@ n_inputs = X.shape[1]
 # the model
 dense1 = DenseLayer(
     n_inputs,
-    16,
+    17,
     weight_regularizer_l1=0.1,
     weight_regularizer_l2=5e-4,
     bias_regularizer_l2=5e-4,
@@ -57,22 +57,25 @@ acti1 = Activation(pydu.relu, pydu.drelu_dz)
 
 dropout1 = DropoutLayer(0.3)
 
-dense2 = DenseLayer(16, 8)
+dense2 = DenseLayer(17, 13)
 acti2 = Activation(pydu.relu, pydu.drelu_dz)
 
-dense3 = DenseLayer(8, n_classes)
+dropout2 = DropoutLayer(0.1)
+
+dense3 = DenseLayer(13, n_classes)
 loss_acti = Activation_Softmax_Loss_CategoricalCrossentropy()
 
-optim = Optimizer_Adam(learning_rate=2e-3, decay=5e-6)
+optim = Optimizer_Adam(learning_rate=5e-4, decay=5e-5)
 
 last = pydu.scalar(0)
 for epoch in progressbar.progressbar(range(15000 + 1), redirect_stdout=True):
     dense1.forward(X)
     acti1.forward(dense1.output)
-    dense2.forward(acti1.output)
-    dropout1.forward(dense2.output)
-    acti2.forward(dropout1.output)
-    dense3.forward(acti2.output)
+    dropout1.forward(acti1.output)
+    dense2.forward(dropout1.output)
+    acti2.forward(dense2.output)
+    dropout2.forward(acti2.output)
+    dense3.forward(dropout2.output)
 
     loss = loss_acti.forward(dense3.output, y)[0]
     acc = accuracy(loss_acti.output, y)[0]
@@ -87,10 +90,11 @@ for epoch in progressbar.progressbar(range(15000 + 1), redirect_stdout=True):
     # backward pass
     loss_acti.backward(loss_acti.output, y)
     dense3.backward(loss_acti.dinputs)
-    acti2.backward(dense3.dinputs)
-    dropout1.backward(acti2.dinputs)
-    dense2.backward(dropout1.dinputs)
-    acti1.backward(dense2.dinputs)
+    dropout2.backward(dense3.dinputs)
+    acti2.backward(dropout2.dinputs)
+    dense2.backward(acti2.dinputs)
+    dropout1.backward(dense2.dinputs)
+    acti1.backward(dropout1.dinputs)
     dense1.backward(acti1.dinputs)
 
     # optim
