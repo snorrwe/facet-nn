@@ -28,7 +28,7 @@ impl Shape {
         match self {
             Shape::Scalar(_) => None,
             Shape::Vector(_) => None,
-            Shape::Matrix(s) => Some(s.clone()),
+            Shape::Matrix(s) => Some(*s),
             Shape::Tensor(shp) => {
                 let len = shp.len();
                 debug_assert!(len >= 3);

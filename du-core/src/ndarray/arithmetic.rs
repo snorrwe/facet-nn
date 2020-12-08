@@ -236,11 +236,8 @@ where
             Shape::Scalar(_) => Ok(self.clone()),
             Shape::Vector([n]) => {
                 let s: T = self.values.iter().cloned().sum();
-                let res = s / T::try_from(
-                    u32::try_from(n)
-                        .map_err(|_| NdArrayError::ConversionError(format!("{:?}", n)))?,
-                )
-                .map_err(|_| NdArrayError::ConversionError(format!("{:?}", n)))?;
+                let res = s / T::try_from(n)
+                    .map_err(|_| NdArrayError::ConversionError(format!("{:?}", n)))?;
                 let mut values = Data::new();
                 values.push(res);
                 Ok(Self::new_with_values(0, values)?)

@@ -114,7 +114,7 @@ pub fn dsoftmax(output: &NdArray<f64>, dvalues: &NdArray<f64>) -> DuResult<NdArr
     Ok(res)
 }
 
-fn diagflat(output: &[f64], mat: &mut NdArray<f64>) -> () {
+fn diagflat(output: &[f64], mat: &mut NdArray<f64>) {
     for i in 0..output.len() {
         for j in 0..output.len() {
             let i = i as u32;

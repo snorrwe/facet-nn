@@ -36,11 +36,10 @@ where
 
     let shape = inp.shape();
     let shape = shape.as_slice();
-    let res = if shape.len() > 0 {
+    if !shape.is_empty() {
         ndarray::NdArray::new_with_values(&shape[..shape.len() - 1], res).unwrap()
     } else {
         // scalar
         ndarray::NdArray::new_with_values(0, res).unwrap()
-    };
-    res
+    }
 }

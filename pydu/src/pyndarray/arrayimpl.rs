@@ -29,7 +29,7 @@ trait AsNumArray: PyClass {
 
     fn cast(&self) -> &NdArray<Self::T>;
 
-    fn richcmp<'p, F>(&'p self, other: PyRef<'p, Self>, op: F) -> PyResult<NdArrayB>
+    fn richcmp<F>(&self, other: PyRef<Self>, op: F) -> PyResult<NdArrayB>
     where
         F: Fn(&Self::T, &Self::T) -> bool,
     {
@@ -48,35 +48,35 @@ trait AsNumArray: PyClass {
         Ok(NdArrayB { inner: res })
     }
 
-    fn add<'p>(lhs: PyRef<'p, Self>, rhs: PyRef<'p, Self>) -> PyResult<NdArray<Self::T>> {
+    fn add(lhs: PyRef<Self>, rhs: PyRef<Self>) -> PyResult<NdArray<Self::T>> {
         let lhs: &NdArray<Self::T> = lhs.cast();
         let rhs: &NdArray<Self::T> = rhs.cast();
         lhs.add(rhs)
-            .map_err(|err| PyValueError::new_err::<String>(format!("{}", err).into()))
+            .map_err(|err| PyValueError::new_err::<String>(format!("{}", err)))
     }
 
-    fn sub<'p>(lhs: PyRef<'p, Self>, rhs: PyRef<'p, Self>) -> PyResult<NdArray<Self::T>> {
+    fn sub(lhs: PyRef<Self>, rhs: PyRef<Self>) -> PyResult<NdArray<Self::T>> {
         let lhs: &NdArray<Self::T> = lhs.cast();
         let rhs: &NdArray<Self::T> = rhs.cast();
         lhs.sub(rhs)
-            .map_err(|err| PyValueError::new_err::<String>(format!("{}", err).into()))
+            .map_err(|err| PyValueError::new_err::<String>(format!("{}", err)))
     }
 
-    fn mul<'p>(lhs: PyRef<'p, Self>, rhs: PyRef<'p, Self>) -> PyResult<NdArray<Self::T>> {
+    fn mul(lhs: PyRef<Self>, rhs: PyRef<Self>) -> PyResult<NdArray<Self::T>> {
         let lhs: &NdArray<Self::T> = lhs.cast();
         let rhs: &NdArray<Self::T> = rhs.cast();
         lhs.mul(rhs)
-            .map_err(|err| PyValueError::new_err::<String>(format!("{}", err).into()))
+            .map_err(|err| PyValueError::new_err::<String>(format!("{}", err)))
     }
 
-    fn truediv<'p>(lhs: PyRef<'p, Self>, rhs: PyRef<'p, Self>) -> PyResult<NdArray<Self::T>> {
+    fn truediv(lhs: PyRef<Self>, rhs: PyRef<Self>) -> PyResult<NdArray<Self::T>> {
         let lhs: &NdArray<Self::T> = lhs.cast();
         let rhs: &NdArray<Self::T> = rhs.cast();
         lhs.div(rhs)
-            .map_err(|err| PyValueError::new_err::<String>(format!("{}", err).into()))
+            .map_err(|err| PyValueError::new_err::<String>(format!("{}", err)))
     }
 
-    fn pow<'p>(lhs: PyRef<'p, Self>, rhs: Self::T) -> PyResult<NdArray<Self::T>>;
+    fn pow(lhs: PyRef<Self>, rhs: Self::T) -> PyResult<NdArray<Self::T>>;
 }
 
 #[macro_export(internal_macros)]
@@ -265,6 +265,7 @@ macro_rules! impl_ndarray {
                 }
 
                 /// Deep-copy this instance
+                #[allow(clippy::should_implement_trait)] // this clone method is bridged to python
                 pub fn clone(&self) -> Self {
                     Self {
                         inner: self.inner.clone(),

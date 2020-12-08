@@ -53,10 +53,10 @@ pub fn load_csv<'a, 'py>(
             for (i, item) in head.split(',').enumerate() {
                 columns.push(item.to_string());
                 column_indices.insert(item.to_string(), i);
-                if labels.iter().find(|l| **l == item).is_some() {
+                if labels.iter().any(|l| *l == item) {
                     label_columns.push(i);
                 }
-                if meta.iter().find(|l| **l == item).is_some() {
+                if meta.iter().any(|l| *l == item) {
                     meta_columns.push(i);
                 }
             }
@@ -84,7 +84,7 @@ pub fn load_csv<'a, 'py>(
                         return Err(PyValueError::new_err(format!(
                             "Failed to parse data point in row: {}, col: {} item: {} error: {}",
                             rows, i, item, err
-                        )))?;
+                        )));
                     }
                     _ => data.push(f64::NAN),
                 }
@@ -103,10 +103,7 @@ pub fn load_csv<'a, 'py>(
     let res = PyDict::new(py);
     match label_columns.len() {
         1 => {
-            res.set_item(
-                "labels",
-                labels.into_iter().flat_map(|x| x).collect::<Vec<_>>(),
-            )?;
+            res.set_item("labels", labels.into_iter().flatten().collect::<Vec<_>>())?;
         }
         _ => {
             res.set_item("labels", labels)?;

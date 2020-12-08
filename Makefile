@@ -5,6 +5,7 @@ foo:
 
 check-rust:
 	cargo check
+	cargo clippy
 
 test-rust:
 	cargo test
@@ -16,5 +17,8 @@ nd:
 	cd pydu && maturin build --release
 	pip install target/wheels/pydu-0.1.0-cp39-none-win_amd64.whl --upgrade
 
-test: check-rust test-rust nd-dev
+
+test-py: nd-dev
 	pytest tests -v
+
+test: check-rust test-rust test-py

@@ -530,39 +530,38 @@ impl<'a, T> FromIterator<T> for NdArray<T> {
     }
 }
 
-impl<T> NdArray<T>
+impl<T> std::fmt::Display for NdArray<T>
 where
     T: Debug,
 {
-    // TODO: fix Tensor printing, currently the inner `[]`'s aren't printed.
-    // maybe do a recursive function?
-    pub fn to_string(&self) -> String {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        // TODO: fix Tensor printing, currently the inner `[]`'s aren't printed.
+        // maybe do a recursive function?
         let depth = match self.shape() {
             Shape::Scalar(_) => {
-                return format!("{:?}", self.get(&[]).unwrap());
+                return write!(f, "{:?}", self.get(&[]).unwrap());
             }
             Shape::Vector(_) => 1,
             Shape::Matrix(_) => 2,
             Shape::Tensor(s) => s.len(),
         };
-        let mut s = String::with_capacity(self.len() * 4);
         for _ in 0..depth - 1 {
-            s.push('[');
+            f.write_char('[')?;
         }
         let mut it = self.iter_cols();
         if let Some(col) = it.next() {
-            write!(s, "{:.5?}", col).unwrap();
+            write!(f, "{:.5?}", col).unwrap();
         }
         for col in it {
-            s.push('\n');
+            f.write_char('\n')?;
             for _ in 0..depth - 1 {
-                s.push(' ');
+                f.write_char(' ')?;
             }
-            write!(s, "{:.5?}", col).unwrap();
+            write!(f, "{:.5?}", col).unwrap();
         }
         for _ in 0..depth - 1 {
-            s.push(']');
+            f.write_char(']')?;
         }
-        s
+        Ok(())
     }
 }

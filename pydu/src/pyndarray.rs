@@ -28,8 +28,8 @@ pub struct PyNdIndex {
 impl PyNdIndex {
     #[new]
     pub fn new(inp: &PyAny) -> PyResult<Self> {
-        let shape = if let Ok(lst) = inp.extract::<Vec<u32>>() {
-            lst.into()
+        let shape = if let Ok(shape) = inp.extract::<Vec<u32>>() {
+            shape
         } else if let Ok(n) = inp.extract::<u32>() {
             if n == 0 {
                 vec![0]
@@ -43,6 +43,8 @@ impl PyNdIndex {
     }
 }
 
+type Factory = fn(Python, Vec<u32>, &PyList) -> Result<Py<PyAny>, PyErr>;
+
 #[pyfunction]
 pub fn array(py: Python, inp: PyObject) -> PyResult<PyObject> {
     let mut dims = Vec::new();
@@ -53,16 +55,16 @@ pub fn array(py: Python, inp: PyObject) -> PyResult<PyObject> {
             })
             .map(|f: f64| PyList::new(py, vec![f]))
     })?;
-    let factory: fn(Python, Vec<u32>, &PyList) -> Result<Py<PyAny>, PyErr> = {
+    let factory: Factory = {
         let mut inp = inp;
         loop {
             dims.push(u32::try_from(inp.len()).expect("expected dimensions to fit into 32 bits"));
             let i = inp.get_item(0);
             if let Ok(i) = i.downcast() {
                 inp = i;
-            } else if let Ok(_) = i.extract::<bool>() {
+            } else if i.extract::<bool>().is_ok() {
                 break factory::array_bool;
-            } else if let Ok(_) = i.extract::<f64>() {
+            } else if i.extract::<f64>().is_ok() {
                 break factory::array_f64;
             } else {
                 return Err(PyNotImplementedError::new_err(format!(

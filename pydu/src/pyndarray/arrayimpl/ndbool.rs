@@ -57,7 +57,7 @@ impl<T> PyObjectProtocol for NdArrayB {
 
     fn __bool__(&'p self) -> PyResult<bool> {
         Err(PyNotImplementedError::new_err::<String>(
-            format!("Array to bool conversion is ambigous! Use .any or .all").into(),
+            "Array to bool conversion is ambigous! Use .any or .all".to_string(),
         ))
     }
 

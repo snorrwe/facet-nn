@@ -8,7 +8,7 @@ pub fn array_f64(py: Python, dims: Vec<u32>, inp: &PyList) -> PyResult<PyObject>
     let mut values: Vec<f64> = Vec::with_capacity(shape.span());
     flatten(inp, &mut values)?;
     let arr = NdArray::<f64>::new_with_values(shape, values.into()).map_err(|err| {
-        PyValueError::new_err::<String>(format!("Failed to create nd-array of f64: {}", err).into())
+        PyValueError::new_err::<String>(format!("Failed to create nd-array of f64: {}", err))
     })?;
     let res = NdArrayD { inner: arr };
     let res = Py::new(py, res)?;
@@ -23,9 +23,7 @@ pub fn array_bool(py: Python, dims: Vec<u32>, inp: &PyList) -> PyResult<PyObject
     let mut values: Vec<bool> = Vec::with_capacity(shape.span());
     flatten(inp, &mut values)?;
     let arr = NdArray::<bool>::new_with_values(shape, values.into()).map_err(|err| {
-        PyValueError::new_err::<String>(
-            format!("Failed to create nd-array of bool: {}", err).into(),
-        )
+        PyValueError::new_err::<String>(format!("Failed to create nd-array of bool: {}", err))
     })?;
     let res = NdArrayB { inner: arr };
     let res = Py::new(py, res)?;

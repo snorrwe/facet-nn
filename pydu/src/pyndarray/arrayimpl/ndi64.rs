@@ -53,15 +53,15 @@ impl<T> PyObjectProtocol for NdArrayI {
         )
     }
 
-    fn __bool__(&'p self) -> PyResult<bool> {
+    fn __bool__(&self) -> PyResult<bool> {
         Err(PyNotImplementedError::new_err::<String>(
-            format!("Array to bool conversion is ambigous! Use .any or .all").into(),
+            "Array to bool conversion is ambigous! Use .any or .all".to_string(),
         ))
     }
 
     /// Returns an NdArray where each element is 1 if true 0 if false for the given pair of
     /// elements.
-    fn __richcmp__(&'p self, other: PyRef<'p, Self>, op: CompareOp) -> PyResult<NdArrayB> {
+    fn __richcmp__(&self, other: PyRef<Self>, op: CompareOp) -> PyResult<NdArrayB> {
         let op: fn(&i64, &i64) -> bool = match op {
             CompareOp::Lt => |a, b| a < b,
             CompareOp::Le => |a, b| a <= b,
@@ -81,7 +81,7 @@ impl AsNumArray for NdArrayI {
         &self.inner
     }
 
-    fn pow<'p>(lhs: PyRef<'p, Self>, rhs: Self::T) -> PyResult<NdArray<Self::T>> {
+    fn pow(lhs: PyRef<Self>, rhs: Self::T) -> PyResult<NdArray<Self::T>> {
         let lhs: &NdArray<Self::T> = lhs.cast();
         let res = lhs.map(|x| x.pow(rhs as u32));
         Ok(res)

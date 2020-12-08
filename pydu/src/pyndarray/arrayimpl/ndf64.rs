@@ -62,7 +62,7 @@ impl PyObjectProtocol for NdArrayD {
 
     fn __bool__(&'p self) -> PyResult<bool> {
         Err(PyNotImplementedError::new_err::<String>(
-            format!("Array to bool conversion is ambigous! Use .any or .all").into(),
+            "Array to bool conversion is ambigous! Use .any or .all".to_string(),
         ))
     }
 
@@ -88,7 +88,7 @@ impl AsNumArray for NdArrayD {
         &self.inner
     }
 
-    fn pow<'p>(lhs: PyRef<'p, Self>, rhs: Self::T) -> PyResult<NdArray<f64>> {
+    fn pow(lhs: PyRef<Self>, rhs: Self::T) -> PyResult<NdArray<f64>> {
         let lhs: &NdArray<Self::T> = lhs.cast();
         let res = lhs.map(|x| x.powf(rhs));
         Ok(res)
@@ -106,7 +106,7 @@ impl NdArrayD {
         let outref = out.as_mut().map(|m| &mut m.inner).unwrap_or(&mut _out);
         this.inner
             .matmul(&other.inner, outref)
-            .map_err(|err| PyValueError::new_err::<String>(format!("{}", err).into()))?;
+            .map_err(|err| PyValueError::new_err::<String>(format!("{}", err)))?;
         let py = this.py();
         let out = out.map(|m| m.into_py(py)).unwrap_or_else(|| {
             let res = NdArrayD { inner: _out };
@@ -120,7 +120,7 @@ impl NdArrayD {
         self.inner
             .mean()
             .map(|inner| Self { inner })
-            .map_err(|err| PyValueError::new_err::<String>(format!("{}", err).into()))
+            .map_err(|err| PyValueError::new_err::<String>(format!("{}", err)))
     }
 
     pub fn clip(mut this: PyRefMut<Self>, min: f64, max: f64) -> PyResult<PyRefMut<Self>> {

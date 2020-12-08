@@ -79,7 +79,7 @@ impl DenseLayer {
 
         inputs
             .matmul(&self.weights, &mut self.output)
-            .map_err(|err| DenseLayerError::MatMulFail(err))?;
+            .map_err(DenseLayerError::MatMulFail)?;
 
         assert_eq!(self.output.shape().last(), self.biases.shape().last());
 
@@ -110,7 +110,7 @@ impl DenseLayer {
         inputs
             .transpose()
             .matmul(&dvalues, &mut training.dweights)
-            .map_err(|err| DenseLayerError::MatMulFail(err))?;
+            .map_err(DenseLayerError::MatMulFail)?;
 
         let s = dvalues.clone().transpose();
         training.dbiases = crate::sum(&s);
@@ -133,7 +133,7 @@ impl DenseLayer {
         // Gradients
         dvalues
             .matmul(&self.weights.clone().transpose(), &mut training.dinputs)
-            .map_err(|err| DenseLayerError::MatMulFail(err))?;
+            .map_err(DenseLayerError::MatMulFail)?;
 
         Ok(())
     }
