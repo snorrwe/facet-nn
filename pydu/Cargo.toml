@@ -13,3 +13,5 @@ crate-type = ["cdylib"]
 du-core = { path = "../du-core" }
 pyo3 = { version = "0.12", features = ["extension-module"] }
 uuid = { version = "*", features = ["v4"] }
+rand = "0.7"
+rand_distr = "0.3"

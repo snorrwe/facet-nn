@@ -1,13 +1,17 @@
 pub mod activation;
 pub mod io;
+pub mod layer;
 pub mod loss;
 pub mod pyndarray;
-pub mod layer;
 use du_core::rayon::iter::ParallelIterator;
 
 use du_core::ndarray::{shape::Shape, Data, NdArray};
 use pyndarray::{NdArrayD, NdArrayI, PyNdIndex};
-use pyo3::{exceptions::PyValueError, prelude::*, wrap_pyfunction};
+use pyo3::{
+    exceptions::{PyAssertionError, PyValueError},
+    prelude::*,
+    wrap_pyfunction,
+};
 
 use std::convert::TryFrom;
 
@@ -182,6 +186,30 @@ pub fn sqrt(py: Python, inp: PyObject) -> PyResult<NdArrayD> {
     Ok(res)
 }
 
+#[pyfunction]
+pub fn binomial(n: u64, p: f64, size: Option<u32>) -> PyResult<NdArrayD> {
+    use rand::prelude::*;
+
+    let dist = rand_distr::Binomial::new(n, p).map_err(|err| {
+        PyAssertionError::new_err(format!(
+            "Failed to create binomial distribution from the given arguments {}",
+            err
+        ))
+    })?;
+
+    let size = size.unwrap_or(1);
+    let mut res = NdArray::<f64>::new(size);
+
+    let mut rng = rand::thread_rng();
+    for i in 0..size {
+        let x = dist.sample(&mut rng);
+        res.as_mut_slice()[i as usize] = x as f64;
+    }
+
+    let res = NdArrayD { inner: res };
+    Ok(res)
+}
+
 #[pymodule]
 fn pydu(py: Python, m: &PyModule) -> PyResult<()> {
     pyndarray::setup_module(py, &m)?;
@@ -199,6 +227,7 @@ fn pydu(py: Python, m: &PyModule) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(argmax, m)?)?;
     m.add_function(wrap_pyfunction!(argmin, m)?)?;
     m.add_function(wrap_pyfunction!(ones, m)?)?;
+    m.add_function(wrap_pyfunction!(binomial, m)?)?;
 
     Ok(())
 }
