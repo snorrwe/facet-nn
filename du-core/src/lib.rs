@@ -43,3 +43,34 @@ where
         ndarray::NdArray::new_with_values(0, res).unwrap()
     }
 }
+
+pub fn mean<T>(inp: &ndarray::NdArray<T>) -> Result<ndarray::NdArray<T>, NdArrayError>
+where
+    T: Clone + Default + std::iter::Sum + std::ops::Div<Output = T> + std::convert::TryFrom<u32>,
+{
+    match inp.shape() {
+        Shape::Scalar(_) => Ok(inp.clone()),
+        Shape::Vector([n]) => {
+            let s: T = inp.as_slice().iter().cloned().sum();
+            let res = s / T::try_from(*n)
+                .map_err(|_| NdArrayError::ConversionError(format!("{:?}", n)))?;
+            let mut values = ndarray::Data::new();
+            values.push(res);
+            ndarray::NdArray::new_with_values(0, values)
+        }
+        Shape::Tensor(_) | Shape::Matrix([_, _]) => {
+            let mut values = Vec::with_capacity(inp.shape().col_span());
+            for col in inp.iter_cols() {
+                let s: T = col.iter().cloned().sum();
+                let res = s
+                    / (T::try_from(col.len() as u32))
+                        .map_err(|_| NdArrayError::ConversionError(format!("{:?}", col.len())))?;
+                values.push(res)
+            }
+            let mut res = ndarray::NdArray::new_vector(values);
+            let shape = inp.shape().as_slice();
+            res.reshape(&shape[..shape.len() - 1]);
+            Ok(res)
+        }
+    }
+}

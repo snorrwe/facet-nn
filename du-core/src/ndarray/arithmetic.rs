@@ -1,11 +1,6 @@
 //! Basic arithmetic operations
 //!
-use std::{
-    convert::TryFrom,
-    fmt::Debug,
-    iter::Sum,
-    ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Sub, SubAssign},
-};
+use std::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Sub, SubAssign};
 
 use super::Data;
 use super::{column_iter::ColumnIterMut, shape::Shape, NdArray, NdArrayError};
@@ -223,41 +218,6 @@ impl<T> NdArray<T> {
         }
         let res = NdArray::new_with_values(self.shape.clone(), res).unwrap();
         Ok(res)
-    }
-}
-
-impl<T> NdArray<T>
-where
-    T: Add + Div<Output = T> + Clone + TryFrom<u32> + Sum + Debug + Default,
-{
-    /// Collapses the last columns into a scalar
-    pub fn mean(&self) -> Result<Self, NdArrayError> {
-        match self.shape {
-            Shape::Scalar(_) => Ok(self.clone()),
-            Shape::Vector([n]) => {
-                let s: T = self.values.iter().cloned().sum();
-                let res = s / T::try_from(n)
-                    .map_err(|_| NdArrayError::ConversionError(format!("{:?}", n)))?;
-                let mut values = Data::new();
-                values.push(res);
-                Ok(Self::new_with_values(0, values)?)
-            }
-            Shape::Tensor(_) | Shape::Matrix([_, _]) => {
-                let mut values = Vec::with_capacity(self.shape.col_span());
-                for col in self.iter_cols() {
-                    let s: T = col.iter().cloned().sum();
-                    let res = s
-                        / (T::try_from(col.len() as u32)).map_err(|_| {
-                            NdArrayError::ConversionError(format!("{:?}", col.len()))
-                        })?;
-                    values.push(res)
-                }
-                let mut res = Self::new_vector(values);
-                let shape = self.shape.as_slice();
-                res.reshape(&shape[..shape.len() - 1]);
-                Ok(res)
-            }
-        }
     }
 }
 

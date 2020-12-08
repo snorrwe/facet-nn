@@ -49,7 +49,7 @@ class Loss:
         assert pred.shape == target.shape
 
         losses = self.loss(pred, target)
-        return losses.mean()
+        return pydu.mean(losses)
 
     def backward(self, dvalues, target):
         self.dinputs = self.dlossfn(dvalues, target)
@@ -103,7 +103,7 @@ def accuracy(pred, target):
         target = pydu.argmax(target)
     pred = pydu.argmax(pred)
     diff = pred == target
-    return diff.as_f64().mean()
+    return pydu.mean(diff.as_f64())
 
 
 def first_n(n, it):

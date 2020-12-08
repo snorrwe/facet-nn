@@ -156,6 +156,19 @@ pub fn scalar(s: f64) -> NdArrayD {
 }
 
 #[pyfunction]
+pub fn mean(py: Python, inp: PyObject) -> PyResult<NdArrayD> {
+    let inp: Py<NdArrayD> = inp
+        .extract(py)
+        .or_else(|_| pyndarray::array(py, inp.extract(py)?)?.extract(py))?;
+    let inp: &PyCell<NdArrayD> = inp.into_ref(py);
+
+    let inp = inp.borrow();
+    du_core::mean(&inp.inner)
+        .map(|inner| NdArrayD { inner })
+        .map_err(|err| PyValueError::new_err::<String>(format!("{}", err)))
+}
+
+#[pyfunction]
 pub fn sqrt(py: Python, inp: PyObject) -> PyResult<NdArrayD> {
     let inp: Py<NdArrayD> = inp
         .extract(py)
@@ -228,6 +241,7 @@ fn pydu(py: Python, m: &PyModule) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(argmin, m)?)?;
     m.add_function(wrap_pyfunction!(ones, m)?)?;
     m.add_function(wrap_pyfunction!(binomial, m)?)?;
+    m.add_function(wrap_pyfunction!(mean, m)?)?;
 
     Ok(())
 }

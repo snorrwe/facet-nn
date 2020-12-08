@@ -116,13 +116,6 @@ impl NdArrayD {
         Ok(out)
     }
 
-    pub fn mean(&self) -> PyResult<Self> {
-        self.inner
-            .mean()
-            .map(|inner| Self { inner })
-            .map_err(|err| PyValueError::new_err::<String>(format!("{}", err)))
-    }
-
     pub fn clip(mut this: PyRefMut<Self>, min: f64, max: f64) -> PyResult<PyRefMut<Self>> {
         this.inner
             .as_mut_slice()
