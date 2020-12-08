@@ -177,3 +177,13 @@ def test_replace_where():
 
     flat = list(arr)
     assert flat == [1, 69, 3, 69] * 16
+
+
+def test_element_wise_mul():
+    arr = pydu.array([[1, 2, 3, 4] * 4])
+
+    mask = pydu.array([[1, 0, 1, 0] * 4])
+
+    res = arr * mask
+
+    assert (res == pydu.array([[1, 0, 3, 0] * 4])).all()

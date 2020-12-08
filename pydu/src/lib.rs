@@ -187,7 +187,7 @@ pub fn sqrt(py: Python, inp: PyObject) -> PyResult<NdArrayD> {
 }
 
 #[pyfunction]
-pub fn binomial(n: u64, p: f64, size: Option<u32>) -> PyResult<NdArrayD> {
+pub fn binomial(py: Python, n: u64, p: f64, size: Option<PyObject>) -> PyResult<NdArrayD> {
     use rand::prelude::*;
 
     let dist = rand_distr::Binomial::new(n, p).map_err(|err| {
@@ -197,11 +197,23 @@ pub fn binomial(n: u64, p: f64, size: Option<u32>) -> PyResult<NdArrayD> {
         ))
     })?;
 
-    let size = size.unwrap_or(1);
-    let mut res = NdArray::<f64>::new(size);
+    let shape = size
+        .and_then(|s| {
+            let inp: PyNdIndex = s
+                .extract(py)
+                .or_else(|_| PyNdIndex::new(s.extract(py)?))
+                .ok()?;
+
+            let shape = Shape::from(inp.inner);
+            Some(shape)
+        })
+        .unwrap_or_else(|| Shape::from(1));
+
+    let len = shape.span();
+    let mut res = NdArray::<f64>::new(shape);
 
     let mut rng = rand::thread_rng();
-    for i in 0..size {
+    for i in 0..len {
         let x = dist.sample(&mut rng);
         res.as_mut_slice()[i as usize] = x as f64;
     }

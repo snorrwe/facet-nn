@@ -55,6 +55,8 @@ dense1 = DenseLayer(
 )
 acti1 = Activation(pydu.relu, pydu.drelu_dz)
 
+dropout1 = DropoutLayer(0.1)
+
 dense2 = DenseLayer(16, 8)
 acti2 = Activation(pydu.relu, pydu.drelu_dz)
 
@@ -64,11 +66,12 @@ loss_acti = Activation_Softmax_Loss_CategoricalCrossentropy()
 optim = Optimizer_Adam(learning_rate=1e-3, decay=1e-5)
 
 last = pydu.scalar(0)
-for epoch in progressbar.progressbar(range(10000 + 1), redirect_stdout=True):
+for epoch in progressbar.progressbar(range(15000 + 1), redirect_stdout=True):
     dense1.forward(X)
     acti1.forward(dense1.output)
     dense2.forward(acti1.output)
-    acti2.forward(dense2.output)
+    dropout1.forward(dense2.output)
+    acti2.forward(dropout1.output)
     dense3.forward(acti2.output)
 
     loss = loss_acti.forward(dense3.output, y)[0]
@@ -85,7 +88,8 @@ for epoch in progressbar.progressbar(range(10000 + 1), redirect_stdout=True):
     loss_acti.backward(loss_acti.output, y)
     dense3.backward(loss_acti.dinputs)
     acti2.backward(dense3.dinputs)
-    dense2.backward(acti2.dinputs)
+    dropout1.backward(acti2.dinputs)
+    dense2.backward(dropout1.dinputs)
     acti1.backward(dense2.dinputs)
     dense1.backward(acti1.dinputs)
 

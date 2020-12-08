@@ -6,6 +6,19 @@ from .optimizers import *
 import pydu
 
 
+class DropoutLayer:
+    def __init__(self, rate):
+        self.rate = 1 - rate
+
+    def forward(self, inputs):
+        self.inputs = inputs
+        self.mask = pydu.binomial(1, self.rate, inputs.shape) / pydu.scalar(self.rate)
+        self.output = inputs * self.mask
+
+    def backward(self, dvalues):
+        self.dinputs = dvalues * self.mask
+
+
 class Activation:
     def __init__(self, fn, df=None):
         assert callable(fn)
