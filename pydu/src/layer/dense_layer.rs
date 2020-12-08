@@ -26,16 +26,12 @@ impl DenseLayer {
         bias_regularizer_l2: Option<f64>,
     ) -> PyResult<Self> {
         Ok(Self {
-            inner: CoreLayer::new(
-                inputs,
-                outputs,
+            inner: CoreLayer::new(inputs, outputs).with_training(
                 weight_regularizer_l1,
                 weight_regularizer_l2,
                 bias_regularizer_l1,
                 bias_regularizer_l2,
-            )
-            .with_default_training(),
-
+            ),
             id: uuid::Uuid::new_v4(),
         })
     }

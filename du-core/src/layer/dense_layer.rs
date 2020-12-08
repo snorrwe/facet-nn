@@ -16,7 +16,7 @@ pub struct DenseLayer {
 /// Holds data related to back propagation / training
 #[derive(Clone, Default)]
 pub struct DenseLayerTraining {
-    // memoization for training purpuses
+    // memoization for training purposes
     pub inputs: NdArray<f64>,
     // training data
     pub dweights: NdArray<f64>,
@@ -38,14 +38,7 @@ pub enum DenseLayerError {
 }
 
 impl DenseLayer {
-    pub fn new(
-        inputs: u32,
-        outputs: u32,
-        weight_regularizer_l1: Option<f64>,
-        weight_regularizer_l2: Option<f64>,
-        bias_regularizer_l1: Option<f64>,
-        bias_regularizer_l2: Option<f64>,
-    ) -> Self {
+    pub fn new(inputs: u32, outputs: u32) -> Self {
         let weights = NdArray::new_with_values(
             [inputs, outputs],
             smallvec::smallvec![ 0.69; inputs as usize * outputs as usize ],
@@ -56,33 +49,28 @@ impl DenseLayer {
             NdArray::new_with_values(outputs, smallvec::smallvec![ 0.42;outputs as usize ])
                 .unwrap();
 
-        let training;
-        if weight_regularizer_l1.is_some()
-            || weight_regularizer_l2.is_some()
-            || bias_regularizer_l1.is_some()
-            || bias_regularizer_l2.is_some()
-        {
-            training = Some(Box::new(DenseLayerTraining {
-                weight_regularizer_l1,
-                weight_regularizer_l2,
-                bias_regularizer_l1,
-                bias_regularizer_l2,
-                ..Default::default()
-            }))
-        } else {
-            training = None
-        }
-
         Self {
             weights,
             biases,
             output: Default::default(),
-            training,
+            training: None,
         }
     }
 
-    pub fn with_default_training(mut self) -> Self {
-        self.training = Some(Box::new(Default::default()));
+    pub fn with_training(
+        mut self,
+        weight_regularizer_l1: Option<f64>,
+        weight_regularizer_l2: Option<f64>,
+        bias_regularizer_l1: Option<f64>,
+        bias_regularizer_l2: Option<f64>,
+    ) -> Self {
+        self.training = Some(Box::new(DenseLayerTraining {
+            weight_regularizer_l1,
+            weight_regularizer_l2,
+            bias_regularizer_l1,
+            bias_regularizer_l2,
+            ..Default::default()
+        }));
         self
     }
 
@@ -108,7 +96,7 @@ impl DenseLayer {
         Ok(())
     }
 
-    /// Consumes the last `inputs` replacing it with `None`.
+    /// Consumes the last `inputs` replacing it with an empty array.
     pub fn backward(&mut self, dvalues: NdArray<f64>) -> Result<(), DenseLayerError> {
         let inputs = self
             .training
