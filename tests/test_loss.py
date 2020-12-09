@@ -1,5 +1,5 @@
 import sys
-from pydu import categorical_cross_entropy, array
+from pyfacet import categorical_cross_entropy, array
 
 
 def test_cce_simple():

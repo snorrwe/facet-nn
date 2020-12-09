@@ -1,6 +1,6 @@
 import pytest
-import pydu
-from pydu import NdArrayD, NdArrayI, array
+import pyfacet
+from pyfacet import NdArrayD, NdArrayI, array
 
 
 def test_factory():
@@ -18,28 +18,28 @@ def test_factory():
 def test_sum_mat():
     arr = [[2, 4], [2, 1], [2, 3]] * 2
 
-    res = pydu.sum(arr)
+    res = pyfacet.sum(arr)
 
     print(res)
 
     assert res.shape == [6]
-    assert (res == pydu.array([6, 3, 5, 6, 3, 5])).all()
+    assert (res == pyfacet.array([6, 3, 5, 6, 3, 5])).all()
 
 
 def test_sum_vec():
     arr = [2, 4, 2, 1, 2, 3]
 
-    res = pydu.sum(arr)
+    res = pyfacet.sum(arr)
 
     print(res)
 
     assert len(res.shape) == 0
-    assert (res == pydu.array([14])).all()
+    assert (res == pyfacet.array([14])).all()
 
 
 def test_sum_scalar():
-    res = pydu.sum(69)
-    assert (res == pydu.scalar(69)).all()
+    res = pyfacet.sum(69)
+    assert (res == pyfacet.scalar(69)).all()
 
 
 def test_ctor():
@@ -141,7 +141,7 @@ def test_adding_matrix_to_tensor():
 def test_argmax():
     a = array([[1, 2, 3], [4, 2, 3], [1, 5, 3]])
 
-    res = pydu.argmax(a)
+    res = pyfacet.argmax(a)
 
     assert res.shape == [3]
     assert (res == NdArrayI([3], [2, 0, 1])).all()
@@ -149,14 +149,14 @@ def test_argmax():
 
 def test_argmax_2():
     values = [1, 5, 3, 4]
-    res = pydu.argmax(values)
+    res = pyfacet.argmax(values)
     assert res.shape == []
     assert res[0] == 1, res
 
 
 def test_argmax_3():
     values = [[1, 0, 5, 4]] * 3
-    res = pydu.argmax(values)
+    res = pyfacet.argmax(values)
     assert res.shape == [3]
     assert res[0] == 2, res
     assert res[1] == 2, res
@@ -164,14 +164,14 @@ def test_argmax_3():
 
 
 def test_iter():
-    arr = pydu.array([[[1, 2, 3, 4]] * 4] * 4)
+    arr = pyfacet.array([[[1, 2, 3, 4]] * 4] * 4)
     assert arr.shape == [4, 4, 4]
     flat = list(arr)
     assert flat == [1, 2, 3, 4] * 16
 
 
 def test_replace_where():
-    arr = pydu.array([[[1, 2, 3, 4]] * 4] * 4)
+    arr = pyfacet.array([[[1, 2, 3, 4]] * 4] * 4)
 
     arr.replace_where(lambda _i, x: 69 if x % 2 == 0 else None)
 
@@ -180,10 +180,10 @@ def test_replace_where():
 
 
 def test_element_wise_mul():
-    arr = pydu.array([[1, 2, 3, 4] * 4])
+    arr = pyfacet.array([[1, 2, 3, 4] * 4])
 
-    mask = pydu.array([[1, 0, 1, 0] * 4])
+    mask = pyfacet.array([[1, 0, 1, 0] * 4])
 
     res = arr * mask
 
-    assert (res == pydu.array([[1, 0, 3, 0] * 4])).all()
+    assert (res == pyfacet.array([[1, 0, 3, 0] * 4])).all()

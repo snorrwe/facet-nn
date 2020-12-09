@@ -395,7 +395,7 @@ impl<T> NdArray<T> {
     /// Returns `None` on invalid index.
     ///
     /// ```
-    /// use du_core::ndarray::NdArray;
+    /// use facet_core::ndarray::NdArray;
     ///
     /// let mut arr = NdArray::<i32>::new(&[4, 2, 3][..]);
     /// arr.as_mut_slice()

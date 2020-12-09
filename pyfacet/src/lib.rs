@@ -3,9 +3,9 @@ pub mod io;
 pub mod layer;
 pub mod loss;
 pub mod pyndarray;
-use du_core::rayon::iter::ParallelIterator;
+use facet_core::rayon::iter::ParallelIterator;
 
-use du_core::ndarray::{shape::Shape, NdArray};
+use facet_core::ndarray::{shape::Shape, NdArray};
 use pyndarray::{NdArrayD, NdArrayI, PyNdIndex};
 use pyo3::{
     exceptions::{PyAssertionError, PyValueError},
@@ -136,7 +136,7 @@ pub fn sum(py: Python, inp: PyObject) -> PyResult<NdArrayD> {
     let inp: &PyCell<NdArrayD> = inp.into_ref(py);
     let inp = inp.borrow();
 
-    let res = du_core::sum(&inp.inner);
+    let res = facet_core::sum(&inp.inner);
     Ok(NdArrayD { inner: res })
 }
 
@@ -163,7 +163,7 @@ pub fn mean(py: Python, inp: PyObject) -> PyResult<NdArrayD> {
     let inp: &PyCell<NdArrayD> = inp.into_ref(py);
 
     let inp = inp.borrow();
-    du_core::mean(&inp.inner)
+    facet_core::mean(&inp.inner)
         .map(|inner| NdArrayD { inner })
         .map_err(|err| PyValueError::new_err::<String>(format!("{}", err)))
 }
@@ -224,7 +224,7 @@ pub fn binomial(py: Python, n: u64, p: f64, size: Option<PyObject>) -> PyResult<
 }
 
 #[pymodule]
-fn pydu(py: Python, m: &PyModule) -> PyResult<()> {
+fn pyfacet(py: Python, m: &PyModule) -> PyResult<()> {
     pyndarray::setup_module(py, &m)?;
     activation::setup_module(py, &m)?;
     io::setup_module(py, &m)?;

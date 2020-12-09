@@ -2,7 +2,7 @@ mod ndbool;
 mod ndf64;
 mod ndi64;
 
-use du_core::ndarray::NdArray;
+use facet_core::ndarray::NdArray;
 pub use ndbool::*;
 pub use ndf64::*;
 pub use ndi64::*;
@@ -85,7 +85,7 @@ macro_rules! impl_ndarray {
         mod $mod {
             use super::$name;
             use crate::pyndarray::PyNdIndex;
-            use du_core::ndarray::{column_iter::ColumnIter, shape::Shape, NdArray};
+            use facet_core::ndarray::{column_iter::ColumnIter, shape::Shape, NdArray};
             use pyo3::{
                 exceptions::{PyIndexError, PyValueError},
                 prelude::*,

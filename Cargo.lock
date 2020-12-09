@@ -96,19 +96,19 @@ dependencies = [
 ]
 
 [[package]]
-name = "du-core"
+name = "either"
+version = "1.6.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e78d4f1cc4ae33bbfc157ed5d5a5ef3bc29227303d595861deb238fcec4e9457"
+
+[[package]]
+name = "facet-core"
 version = "0.1.0"
 dependencies = [
  "rayon",
  "smallvec",
  "thiserror",
 ]
-
-[[package]]
-name = "either"
-version = "1.6.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e78d4f1cc4ae33bbfc157ed5d5a5ef3bc29227303d595861deb238fcec4e9457"
 
 [[package]]
 name = "getrandom"
@@ -318,10 +318,10 @@ dependencies = [
 ]
 
 [[package]]
-name = "pydu"
+name = "pyfacet"
 version = "0.1.0"
 dependencies = [
- "du-core",
+ "facet-core",
  "pyo3",
  "rand",
  "rand_distr",

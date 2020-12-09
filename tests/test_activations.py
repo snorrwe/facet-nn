@@ -3,8 +3,8 @@ import sys
 
 import pytest
 
-import pydu
-from pydu import NdArrayD, softmax
+import pyfacet
+from pyfacet import NdArrayD, softmax
 
 
 def flatten2d(lst):
@@ -44,8 +44,8 @@ def test_softmax_rand():
 
 
 def test_diagflat():
-    softmax_output = pydu.array([0.7, 0.1, 0.2]).reshape([3, 1])
-    foo = pydu.diagflat([a for l in softmax_output.iter_cols() for a in l])
+    softmax_output = pyfacet.array([0.7, 0.1, 0.2]).reshape([3, 1])
+    foo = pyfacet.diagflat([a for l in softmax_output.iter_cols() for a in l])
     for i in range(3):
         for j in range(3):
             if i == j:

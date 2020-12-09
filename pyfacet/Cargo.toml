@@ -1,16 +1,16 @@
 [package]
-name = "pydu"
+name = "pyfacet"
 version = "0.1.0"
 authors = ["Daniel Kiss <littlesnorrboy@gmail.com>"]
 edition = "2018"
 
 [lib]
-name = "pydu"
+name = "pyfacet"
 crate-type = ["cdylib"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 [dependencies]
-du-core = { path = "../du-core" }
+facet-core = { path = "../facet-core" }
 pyo3 = { version = "0.12", features = ["extension-module"] }
 uuid = { version = "*", features = ["v4"] }
 rand = "0.7"

@@ -1,5 +1,5 @@
 use crate::pyndarray::NdArrayD;
-use du_core::ndarray::{Data, NdArray};
+use facet_core::ndarray::{Data, NdArray};
 use pyo3::{exceptions::PyValueError, prelude::*, types::PyDict, wrap_pyfunction};
 
 use std::{

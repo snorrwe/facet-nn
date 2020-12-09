@@ -2,9 +2,9 @@ import csv
 
 import progressbar
 
-import pydu
+import pyfacet
 from nnfs import *
-from pydu import DenseLayer
+from pyfacet import DenseLayer
 
 print("Loading data")
 
@@ -36,7 +36,7 @@ def load_data(fname):
         y = labels_to_y(labels)
     else:
         y = None
-    X = pydu.array(data)
+    X = pyfacet.array(data)
     return (X, y, meta)
 
 
@@ -53,12 +53,12 @@ dense1 = DenseLayer(
     weight_regularizer_l2=5e-4,
     bias_regularizer_l2=5e-4,
 )
-acti1 = Activation(pydu.relu, pydu.drelu_dz)
+acti1 = Activation(pyfacet.relu, pyfacet.drelu_dz)
 
 dropout1 = DropoutLayer(0.3)
 
 dense2 = DenseLayer(17, 13)
-acti2 = Activation(pydu.relu, pydu.drelu_dz)
+acti2 = Activation(pyfacet.relu, pyfacet.drelu_dz)
 
 dropout2 = DropoutLayer(0.1)
 
@@ -67,7 +67,7 @@ loss_acti = Activation_Softmax_Loss_CategoricalCrossentropy()
 
 optim = Optimizer_Adam(learning_rate=5e-4, decay=5e-5)
 
-last = pydu.scalar(0)
+last = pyfacet.scalar(0)
 for epoch in progressbar.progressbar(range(15000 + 1), redirect_stdout=True):
     dense1.forward(X)
     acti1.forward(dense1.output)
@@ -116,10 +116,10 @@ dense2.forward(acti1.output)
 acti2.forward(dense2.output)
 dense3.forward(acti2.output)
 
-finalacti = Activation(pydu.softmax)
+finalacti = Activation(pyfacet.softmax)
 finalacti.forward(dense3.output)
 
-predi = pydu.argmax(finalacti.output)
+predi = pyfacet.argmax(finalacti.output)
 
 output = zip(meta, iter(predi))
 with open("submission.csv", "w") as f:

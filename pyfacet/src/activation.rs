@@ -4,13 +4,13 @@ use crate::pyndarray::NdArrayD;
 
 #[pyfunction]
 pub fn relu(inp: PyRef<'_, NdArrayD>) -> NdArrayD {
-    let res = du_core::activation::relu(&inp.inner);
+    let res = facet_core::activation::relu(&inp.inner);
     NdArrayD { inner: res }
 }
 
 #[pyfunction]
 pub fn drelu_dz(inputs: PyRef<'_, NdArrayD>, dvalues: PyRef<'_, NdArrayD>) -> NdArrayD {
-    let res = du_core::activation::drelu_dz(&inputs.inner, &dvalues.inner);
+    let res = facet_core::activation::drelu_dz(&inputs.inner, &dvalues.inner);
     NdArrayD { inner: res }
 }
 
@@ -20,7 +20,7 @@ pub fn drelu_dz(inputs: PyRef<'_, NdArrayD>, dvalues: PyRef<'_, NdArrayD>) -> Nd
 /// Scalars will always return 1
 #[pyfunction]
 pub fn softmax(inp: PyRef<'_, NdArrayD>) -> PyResult<NdArrayD> {
-    du_core::activation::softmax(&inp.inner)
+    facet_core::activation::softmax(&inp.inner)
         .map_err(|err| PyValueError::new_err(format!("Failed to perform softmax {}", err)))
         .map(|inner| NdArrayD { inner })
 }

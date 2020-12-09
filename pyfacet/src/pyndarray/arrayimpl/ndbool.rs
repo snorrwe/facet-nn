@@ -1,4 +1,4 @@
-use du_core::ndarray::NdArray;
+use facet_core::ndarray::NdArray;
 pub use ndarraybimpl::ColIter as ColIterB;
 pub use ndarraybimpl::ItemIter as ItemIterB;
 pub use ndarraybimpl::*;

@@ -1,11 +1,11 @@
 use crate::pyndarray::NdArrayD;
-use du_core::layer::dense_layer::DenseLayer as CoreLayer;
+use facet_core::layer::dense_layer::DenseLayer as CoreLayer;
 use pyo3::{exceptions::PyValueError, prelude::*};
 
 #[pyclass]
 #[derive(Clone)]
 pub struct DenseLayer {
-    inner: du_core::layer::dense_layer::DenseLayer,
+    inner: facet_core::layer::dense_layer::DenseLayer,
     id: uuid::Uuid,
 }
 

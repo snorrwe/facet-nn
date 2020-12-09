@@ -81,8 +81,8 @@ impl<'a, T> NdArray<T> {
     ///
     ///
     /// ```
-    /// use du_core::ndarray::{NdArray, Data};
-    /// use du_core::ndarray::shape::Shape;
+    /// use facet_core::ndarray::{NdArray, Data};
+    /// use facet_core::ndarray::shape::Shape;
     ///
     /// // 2 by 3 matrix
     /// let a = NdArray::new_with_values([2, 3], Data::from_slice(&[1, 2, -1, 2, 0, 1])).unwrap();

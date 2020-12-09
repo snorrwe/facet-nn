@@ -1,5 +1,5 @@
 use crate::impl_ndarray;
-use du_core::ndarray::NdArray;
+use facet_core::ndarray::NdArray;
 pub use implmod::ColIter as ColIterI;
 pub use implmod::ItemIter as ItemIterI;
 pub use implmod::*;

@@ -1,5 +1,5 @@
 [workspace]
-members = ["du-core", "pydu"]
+members = ["facet-core", "pyfacet"]
 
 [profile.release]
 debug = true

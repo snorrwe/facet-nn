@@ -3,7 +3,7 @@ import random
 import string
 
 from .optimizers import *
-import pydu
+import pyfacet
 
 
 class DropoutLayer:
@@ -12,7 +12,7 @@ class DropoutLayer:
 
     def forward(self, inputs):
         self.inputs = inputs
-        self.mask = pydu.binomial(1, self.rate, inputs.shape) / pydu.scalar(self.rate)
+        self.mask = pyfacet.binomial(1, self.rate, inputs.shape) / pyfacet.scalar(self.rate)
         self.output = inputs * self.mask
         return self.output
 
@@ -49,7 +49,7 @@ class Loss:
         assert pred.shape == target.shape
 
         losses = self.loss(pred, target)
-        return pydu.mean(losses)
+        return pyfacet.mean(losses)
 
     def backward(self, dvalues, target):
         self.dinputs = self.dlossfn(dvalues, target)
@@ -57,8 +57,8 @@ class Loss:
 
 class Activation_Softmax_Loss_CategoricalCrossentropy:
     def __init__(self):
-        self.activation = Activation(pydu.softmax)
-        self.loss = Loss(pydu.categorical_cross_entropy)
+        self.activation = Activation(pyfacet.softmax)
+        self.loss = Loss(pyfacet.categorical_cross_entropy)
 
     def forward(self, inputs, target):
         y = self.activation.forward(inputs)
@@ -73,7 +73,7 @@ class Activation_Softmax_Loss_CategoricalCrossentropy:
         """
         samples = dvalues.shape[0]
         self.dinputs = dvalues - target
-        s = pydu.scalar(samples)
+        s = pyfacet.scalar(samples)
         self.dinputs = self.dinputs / s
 
 
@@ -91,7 +91,7 @@ def labels_to_y(labels):
         v[label_pos[label]] = 1.0
         res.append(v)
 
-    return pydu.array(res)
+    return pyfacet.array(res)
 
 
 def accuracy(pred, target):
@@ -100,10 +100,10 @@ def accuracy(pred, target):
     """
     # collapse dense data into sparse data
     if len(target.shape) == 2:
-        target = pydu.argmax(target)
-    pred = pydu.argmax(pred)
+        target = pyfacet.argmax(target)
+    pred = pyfacet.argmax(pred)
     diff = pred == target
-    return pydu.mean(diff.as_f64())
+    return pyfacet.mean(diff.as_f64())
 
 
 def first_n(n, it):
@@ -128,6 +128,6 @@ def reduce(op, arr, init):
 def cce_backward(z, y):
     samples = reduce(mul, z.shape[:-1], 1)
 
-    gradient = (y / z) * pydu.array([-1.0]).reshape([0])
+    gradient = (y / z) * pyfacet.array([-1.0]).reshape([0])
     # Normalize gradient
-    return gradient / pydu.array([samples]).reshape([0])
+    return gradient / pyfacet.array([samples]).reshape([0])

@@ -1,11 +1,11 @@
 [package]
-name = "du-core"
+name = "facet-core"
 version = "0.1.0"
 authors = ["Daniel Kiss <littlesnorrboy@gmail.com>"]
 edition = "2018"
 
 [lib]
-name = "du_core"
+name = "facet_core"
 
 [features]
 default = ["rayon"]
