@@ -223,6 +223,41 @@ pub fn binomial(py: Python, n: u64, p: f64, size: Option<PyObject>) -> PyResult<
     Ok(res)
 }
 
+#[pyfunction]
+pub fn clip(py: Python, inp: PyObject, min: f64, max: f64) -> PyResult<NdArrayD> {
+    // maybe throw a python exception?
+    debug_assert!(min <= max);
+    let inp: Py<NdArrayD> = inp
+        .extract(py)
+        .or_else(|_| pyndarray::array(py, inp.extract(py)?)?.extract(py))?;
+
+    let inp: &PyCell<NdArrayD> = inp.into_ref(py);
+    let inp = inp.borrow();
+
+    let mut res = inp.inner.clone();
+    facet_core::clip(&mut res, min, max);
+
+    let res = NdArrayD { inner: res };
+    Ok(res)
+}
+
+#[pyfunction]
+pub fn log(py: Python, inp: PyObject, base: Option<f64>) -> PyResult<NdArrayD> {
+    let inp: Py<NdArrayD> = inp
+        .extract(py)
+        .or_else(|_| pyndarray::array(py, inp.extract(py)?)?.extract(py))?;
+
+    let inp: &PyCell<NdArrayD> = inp.into_ref(py);
+    let inp = inp.borrow();
+
+    let base = base.unwrap_or(std::f64::consts::E);
+    let res = inp.inner.as_slice().iter().map(|x| x.log(base)).collect();
+
+    let inner = NdArray::new_with_values(inp.shape(), res).unwrap();
+
+    Ok(NdArrayD { inner })
+}
+
 #[pymodule]
 fn pyfacet(py: Python, m: &PyModule) -> PyResult<()> {
     pyndarray::setup_module(py, &m)?;
@@ -242,6 +277,8 @@ fn pyfacet(py: Python, m: &PyModule) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(ones, m)?)?;
     m.add_function(wrap_pyfunction!(binomial, m)?)?;
     m.add_function(wrap_pyfunction!(mean, m)?)?;
+    m.add_function(wrap_pyfunction!(clip, m)?)?;
+    m.add_function(wrap_pyfunction!(log, m)?)?;
 
     Ok(())
 }

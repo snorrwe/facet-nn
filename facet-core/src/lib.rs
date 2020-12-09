@@ -74,3 +74,17 @@ where
         }
     }
 }
+
+pub fn clip<T>(inp: &mut ndarray::NdArray<T>, min: T, max: T)
+where
+    T: Copy + std::cmp::PartialOrd,
+{
+    use std::cmp::Ordering;
+    inp.as_mut_slice().iter_mut().for_each(|x| {
+        if let Some(Ordering::Less) = (*x).partial_cmp(&min) {
+            *x = min
+        } else if let Some(Ordering::Greater) = (*x).partial_cmp(&max) {
+            *x = max
+        }
+    })
+}

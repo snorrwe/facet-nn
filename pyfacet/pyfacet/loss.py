@@ -1,4 +1,5 @@
 from . import pyfacet as pf
+from .pyfacet import scalar
 
 
 class Loss:
@@ -17,3 +18,16 @@ class Loss:
 
     def backward(self, dvalues, target):
         self.dinputs = self.dlossfn(dvalues, target)
+
+
+class BinaryCrossentropy:
+    def forward(self, pred, target):
+        pred_clipped = pf.clip(pred, 1e-7, 1 - 1e-7)
+
+        sample_losses = scalar(-1) * (
+            target * pf.log(pred_clipped)
+            + (scalar(1) - target) * pf.log(scalar(1) - pred_clipped)
+        )
+
+        sample_losses = pf.mean(sample_losses)
+        return sample_losses
