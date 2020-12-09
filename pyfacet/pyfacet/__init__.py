@@ -5,22 +5,6 @@ import string
 from .pyfacet import *
 
 
-class DropoutLayer:
-    def __init__(self, rate):
-        self.rate = 1 - rate
-
-    def forward(self, inputs):
-        self.inputs = inputs
-        self.mask = pyfacet.binomial(1, self.rate, inputs.shape) / pyfacet.scalar(
-            self.rate
-        )
-        self.output = inputs * self.mask
-        return self.output
-
-    def backward(self, dvalues):
-        self.dinputs = dvalues * self.mask
-
-
 class Activation:
     def __init__(self, fn, df=None):
         assert callable(fn)

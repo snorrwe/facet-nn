@@ -3,8 +3,9 @@ import csv
 import progressbar
 
 import pyfacet as pf
-from pyfacet.optimizers import Adam
-from pyfacet import DenseLayer, Activation, DropoutLayer, accuracy
+from pyfacet.optimizer import Adam
+from pyfacet.layer import DropoutLayer, DenseLayer
+from pyfacet import Activation, accuracy
 
 print("Loading data")
 
