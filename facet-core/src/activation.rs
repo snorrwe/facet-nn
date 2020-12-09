@@ -124,3 +124,23 @@ fn diagflat(output: &[f64], mat: &mut NdArray<f64>) {
         }
     }
 }
+
+pub fn sigmoid(input: &NdArray<f64>, output: &mut NdArray<f64>) -> DuResult<()> {
+    output.reshape(input.shape().clone());
+    for (x, y) in input
+        .as_slice()
+        .iter()
+        .zip(output.as_mut_slice().iter_mut())
+    {
+        *y = 1.0 / (1. + E.powf(-x))
+    }
+    Ok(())
+}
+
+/// Derivative of sigmoid function
+///
+/// dvalues * (1-output) * output
+pub fn dsigmoid(output: &NdArray<f64>, dvalues: &NdArray<f64>) -> DuResult<NdArray<f64>> {
+    let v = dvalues.mul(&(NdArray::new_scalar(1.).sub(output)?))?;
+    Ok(v.mul(output)?)
+}
