@@ -2,7 +2,7 @@ import csv
 
 import progressbar
 
-import pyfacet as pyf
+import pyfacet as pf
 from pyfacet.optimizers import Adam
 from pyfacet import DenseLayer, Activation, DropoutLayer, accuracy
 
@@ -17,7 +17,7 @@ def normalized_data(rowdict):
     return [
         1 if rowdict["Sex"] == "female" else -1,
         float(rowdict["Pclass"]) - 2,
-        (float(rowdict["Age"]) if rowdict["Age"] else 0) / 80,
+        (float(rowdict["Age"]) if rowdict["Age"] else 40) / 80,
         fare,
     ]
 
@@ -33,10 +33,10 @@ def load_data(fname):
             if "Survived" in row:
                 labels.append(int(row["Survived"]))
     if labels:
-        y = pyf.labels_to_y(labels)
+        y = pf.labels_to_y(labels)
     else:
         y = None
-    X = pyf.array(data)
+    X = pf.array(data)
     return (X, y, meta)
 
 
@@ -53,21 +53,21 @@ dense1 = DenseLayer(
     weight_regularizer_l2=5e-4,
     bias_regularizer_l2=5e-4,
 )
-acti1 = Activation(pyf.relu, pyf.drelu_dz)
+acti1 = Activation(pf.relu, pf.drelu_dz)
 
 dropout1 = DropoutLayer(0.3)
 
 dense2 = DenseLayer(17, 13)
-acti2 = Activation(pyf.relu, pyf.drelu_dz)
+acti2 = Activation(pf.relu, pf.drelu_dz)
 
 dropout2 = DropoutLayer(0.1)
 
 dense3 = DenseLayer(13, n_classes)
-loss_acti = pyf.Activation_Softmax_Loss_CategoricalCrossentropy()
+loss_acti = pf.Activation_Softmax_Loss_CategoricalCrossentropy()
 
 optim = Adam(learning_rate=5e-4, decay=5e-5)
 
-last = pyf.scalar(0)
+last = pf.scalar(0)
 for epoch in progressbar.progressbar(range(15000 + 1), redirect_stdout=True):
     dense1.forward(X)
     acti1.forward(dense1.output)
@@ -116,10 +116,10 @@ dense2.forward(acti1.output)
 acti2.forward(dense2.output)
 dense3.forward(acti2.output)
 
-finalacti = Activation(pyf.softmax)
+finalacti = Activation(pf.softmax)
 finalacti.forward(dense3.output)
 
-predi = pyf.argmax(finalacti.output)
+predi = pf.argmax(finalacti.output)
 
 output = zip(meta, iter(predi))
 with open("submission.csv", "w") as f:
