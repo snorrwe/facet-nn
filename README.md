@@ -19,3 +19,15 @@ make nd
 ```sh
 make test
 ```
+
+
+## Code layout
+
+```txt
+|- facet-core  # Core, Rust-only linalg / nn code
+|- pyfacet     # The Python library using facet-core
+  |- pyfacet   # Python code
+  |- src/      # Rust code interfacing between Python and facet-core
+|- tests       # Python tests
+|- models      # Actual models built on top of this lib
+```
