@@ -22,24 +22,6 @@ class Activation:
         self.dinputs = self.df(self.inputs, dvalues)
 
 
-class Loss:
-    def __init__(self, lossfn, dlossfn=None):
-        assert callable(lossfn)
-        if dlossfn:
-            assert callable(dlossfn)
-        self.loss = lossfn
-        self.dloss = dlossfn
-
-    def calculate(self, pred, target):
-        assert pred.shape == target.shape
-
-        losses = self.loss(pred, target)
-        return pyfacet.mean(losses)
-
-    def backward(self, dvalues, target):
-        self.dinputs = self.dlossfn(dvalues, target)
-
-
 class Activation_Softmax_Loss_CategoricalCrossentropy:
     def __init__(self):
         self.activation = Activation(pyfacet.softmax)
