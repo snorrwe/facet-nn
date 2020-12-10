@@ -20,7 +20,7 @@ macro_rules! arithimpl {
             | (Shape::Scalar(_), Shape::Tensor(_)) => {
                 let mut res = $rhs.clone();
                 let val = $lhs.values[0];
-                res.values.iter_mut().for_each(|x| *x $opeq val);
+                res.values.iter_mut().for_each(|x| *x = val $op *x);
                 Ok(res)
             }
             (Shape::Vector(_), Shape::Scalar(_))

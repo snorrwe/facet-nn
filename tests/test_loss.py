@@ -12,14 +12,3 @@ def test_cce_simple():
     assert len(res) == 2
     assert abs(res[0] - 0.35667494393873245) < sys.float_info.epsilon
     assert abs(res[1] - 11.512925464970229) < sys.float_info.epsilon
-
-
-def test_binary_ce_simple():
-
-    x = array([[0.7, 0.1, 0.2], [0.00001, 0.99999, 0.00001]])
-    y = array([[1, 0, 0]] * 2)
-
-
-    loss = BinaryCrossentropy()
-
-    res = loss.forward(x, y)
