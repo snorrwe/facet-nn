@@ -193,4 +193,5 @@ def test_rotate_cw():
     arr = pyfacet.array([[[1, 2, 3, 4]] * 4] * 4)
 
     res = arr.rotate_cw()
+    assert arr.shape == res.shape
     assert (res == pyfacet.array([[[3] * 4, [4] * 4, [1] * 4, [2] * 4] * 4])).all()

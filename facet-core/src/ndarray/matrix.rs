@@ -98,7 +98,7 @@ pub fn flip_mat_vertical<T: Clone>([n, m]: [usize; 2], inp: &[T], out: &mut [T])
     }
 }
 
-/// rotates all elements clockwise
+/// rotates all elements clockwise in a square matrix
 ///
 ///
 /// ```txt
@@ -109,11 +109,11 @@ pub fn flip_mat_vertical<T: Clone>([n, m]: [usize; 2], inp: &[T], out: &mut [T])
 /// | c  a |
 /// | d  b |
 /// ```
-pub fn rotate_mat_cw<T: Clone>(shape: [usize; 2], inp: &[T], out: &mut [T]) {
+pub fn rotate_mat_cw<T: Clone>(col: usize, inp: &[T], out: &mut [T]) {
     let mut intermediate: smallvec::SmallVec<[T; 32]> =
         smallvec::smallvec![inp[0].clone(); inp.len()];
-    transpose_mat(shape, inp, intermediate.as_mut_slice());
-    flip_mat_horizontal(shape, intermediate.as_slice(), out);
+    transpose_mat([col, col], inp, intermediate.as_mut_slice());
+    flip_mat_horizontal([col, col], intermediate.as_slice(), out);
 }
 
 impl<T> NdArray<T> {
@@ -159,7 +159,7 @@ impl<T> NdArray<T> {
 
     /// Tensors are broadcast as a list of matrices
     ///
-    /// Rotates the contents of the invidual matrices clockwise
+    /// Rotates the contents of invidual square matrices clockwise.
     ///
     /// ```
     /// use facet_core::ndarray::NdArray;
@@ -194,19 +194,30 @@ impl<T> NdArray<T> {
             .last_two()
             .ok_or_else(|| NdArrayError::UnsupportedShape(self.shape.clone()))?;
 
+        if n != m {
+            return Err(NdArrayError::DimensionMismatch {
+                expected: n as usize,
+                actual: m as usize,
+            });
+        }
+
         let mut out = Data::new();
         out.resize(self.len(), self.values[0].clone());
         let span = n as usize * m as usize;
         // broadcast tensors as a colection of matrices
         for (i, innermat) in ColumnIter::new(self.as_slice(), span).enumerate() {
-            rotate_mat_cw(
-                [n as usize, m as usize],
-                innermat,
-                &mut out.as_mut_slice()[i * span..],
-            );
+            rotate_mat_cw(n as usize, innermat, &mut out.as_mut_slice()[i * span..]);
         }
 
-        Self::new_with_values(self.shape.clone(), out)
+        let mut shape = self.shape.clone();
+        // swap m, n because we did a transpose
+        let s = shape.as_mut_slice();
+        let l = s.len();
+        debug_assert!(l >= 2);
+        s[l - 1] = n;
+        s[l - 2] = m;
+
+        Self::new_with_values(shape, out)
     }
 
     /// - Scalars not allowed.

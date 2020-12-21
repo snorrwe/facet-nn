@@ -85,8 +85,17 @@ impl Shape {
     }
 
     pub fn as_slice(&self) -> &[u32] {
-        match &self {
+        match self {
             Shape::Scalar(s) => &s[0..0], // empty slice
+            Shape::Vector(s) => s,
+            Shape::Matrix(s) => s,
+            Shape::Tensor(s) => s,
+        }
+    }
+
+    pub fn as_mut_slice(&mut self) -> &mut [u32] {
+        match self {
+            Shape::Scalar(s) => &mut s[0..0], // empty slice
             Shape::Vector(s) => s,
             Shape::Matrix(s) => s,
             Shape::Tensor(s) => s,
