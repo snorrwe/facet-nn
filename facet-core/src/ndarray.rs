@@ -31,11 +31,14 @@ pub enum NdArrayError {
     BinaryOpNotSupported { shape_a: Shape, shape_b: Shape },
     #[error("Failed to convert value type into another. {0}")]
     ConversionError(String),
+    #[error("Shape {0:?} is not supported for this operation")]
+    UnsupportedShape(Shape),
 }
 
 pub type Data<T> = SmallVec<[T; 16]>;
 pub type Stride = SmallVec<[usize; 4]>;
 
+/// Dense array of values
 #[derive(Debug, Eq, PartialEq)]
 pub struct NdArray<T> {
     shape: Shape,
@@ -190,10 +193,7 @@ where
     }
 }
 
-impl<T> NdArray<T>
-where
-    T: Copy,
-{
+impl<T> NdArray<T> {
     pub fn new(shape: impl Into<Shape>) -> Self {
         let shape = shape.into();
         let len: usize = shape.span();
@@ -208,7 +208,7 @@ where
     /// e.g. Shape `[3, 4, 5]` becomes `[3, 5, 4]`
     pub fn transpose(self) -> Self
     where
-        T: Send + Sync,
+        T: Send + Sync + Copy,
     {
         match &self.shape {
             Shape::Scalar(_) => self,
@@ -244,9 +244,7 @@ where
             }
         }
     }
-}
 
-impl<T> NdArray<T> {
     pub fn new_scalar(value: T) -> Self
     where
         T: Clone,
@@ -286,13 +284,11 @@ impl<T> NdArray<T> {
         let values = values.into();
         Self::new_with_values(values.len() as u32, values).unwrap()
     }
-}
 
-impl<T> NdArray<T>
-where
-    T: Default,
-{
-    pub fn new_default<S: Into<Shape>>(shape: S) -> Self {
+    pub fn new_default<S: Into<Shape>>(shape: S) -> Self
+    where
+        T: Default,
+    {
         let shape: Shape = shape.into();
         let len: usize = shape.span().max(1);
         let values = (0..len).map(|_| Default::default()).collect::<Data<T>>();
@@ -314,10 +310,7 @@ where
         }
         res
     }
-}
 
-// Generic methods
-impl<T> NdArray<T> {
     /// If invalid returns false and leaves this instance unchanged
     pub fn set_slice(&mut self, values: Data<T>) -> Result<&mut Self, NdArrayError> {
         if values.len() != self.values.len() {
@@ -372,6 +365,7 @@ impl<T> NdArray<T> {
         }
     }
 
+    /// Returns `None` on invalid index
     pub fn get_mut(&mut self, index: &[u32]) -> Option<&mut T> {
         match &self.shape {
             Shape::Scalar(_) => self.values.get_mut(0),

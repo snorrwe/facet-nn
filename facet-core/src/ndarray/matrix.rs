@@ -63,6 +63,8 @@ where
 }
 
 pub fn transpose_mat<T: Clone>([n, m]: [usize; 2], inp: &[T], out: &mut [T]) {
+    assert!(inp.len() == n * m);
+    assert!(inp.len() <= out.len());
     for (i, col) in ColumnIter::new(inp, m).enumerate() {
         for (j, v) in col.iter().cloned().enumerate() {
             out[j * n + i] = v;
@@ -70,7 +72,143 @@ pub fn transpose_mat<T: Clone>([n, m]: [usize; 2], inp: &[T], out: &mut [T]) {
     }
 }
 
-impl<'a, T> NdArray<T> {
+pub fn flip_mat_horizontal<T: Clone>([n, m]: [usize; 2], inp: &[T], out: &mut [T]) {
+    assert!(inp.len() == n * m);
+    assert!(inp.len() <= out.len());
+
+    let mid = n / 2;
+    for (i, col) in ColumnIter::new(inp, m).enumerate() {
+        for (j, v) in col.iter().cloned().enumerate() {
+            let col = (mid + i) % n;
+            let ind = col * m + j;
+            out[ind] = v;
+        }
+    }
+}
+
+pub fn flip_mat_vertical<T: Clone>([n, m]: [usize; 2], inp: &[T], out: &mut [T]) {
+    assert!(inp.len() == n * m);
+    assert!(inp.len() <= out.len());
+
+    for (i, col) in ColumnIter::new(inp, m).enumerate() {
+        for (j, v) in col.iter().rev().cloned().enumerate() {
+            let ind = i * m + j;
+            out[ind] = v;
+        }
+    }
+}
+
+/// rotates all elements clockwise
+///
+///
+/// ```txt
+/// | a  b |
+/// | c  d |
+///
+/// // becomes
+/// | c  a |
+/// | d  b |
+/// ```
+pub fn rotate_mat_cw<T: Clone>(shape: [usize; 2], inp: &[T], out: &mut [T]) {
+    let mut intermediate: smallvec::SmallVec<[T; 32]> =
+        smallvec::smallvec![inp[0].clone(); inp.len()];
+    transpose_mat(shape, inp, intermediate.as_mut_slice());
+    flip_mat_horizontal(shape, intermediate.as_slice(), out);
+}
+
+impl<T> NdArray<T> {
+    /// Tensors are broadcast as a list of matrices
+    pub fn flip_mat_vertical(&self) -> Result<Self, NdArrayError>
+    where
+        T: Clone,
+    {
+        self.flip_impl(flip_mat_vertical)
+    }
+
+    /// Tensors are broadcast as a list of matrices
+    pub fn flip_mat_horizontal(&self) -> Result<Self, NdArrayError>
+    where
+        T: Clone,
+    {
+        self.flip_impl(flip_mat_horizontal)
+    }
+
+    fn flip_impl(&self, f: fn([usize; 2], &[T], &mut [T])) -> Result<Self, NdArrayError>
+    where
+        T: Clone,
+    {
+        let [n, m] = self
+            .shape
+            .last_two()
+            .ok_or_else(|| NdArrayError::UnsupportedShape(self.shape.clone()))?;
+
+        let mut out = Data::new();
+        out.resize(self.len(), self.values[0].clone());
+        let span = n as usize * m as usize;
+        // broadcast tensors as a colection of matrices
+        for (i, innermat) in ColumnIter::new(self.as_slice(), span).enumerate() {
+            f(
+                [n as usize, m as usize],
+                innermat,
+                &mut out.as_mut_slice()[i * span..],
+            );
+        }
+
+        Self::new_with_values(self.shape.clone(), out)
+    }
+
+    /// Tensors are broadcast as a list of matrices
+    ///
+    /// Rotates the contents of the invidual matrices clockwise
+    ///
+    /// ```
+    /// use facet_core::ndarray::NdArray;
+    ///
+    /// let inp = NdArray::new_with_values(
+    ///     &[3, 2, 2][..],
+    ///     // 3x matrix
+    ///     // | 1  3 |
+    ///     // | 2  4 |
+    ///     vec![1, 2, 3, 4, 1, 2, 3, 4, 1, 2, 3, 4].into(),
+    /// ).unwrap();
+    ///
+    /// let out = inp.rotate_cw().unwrap();
+    ///
+    /// assert_eq!(out.as_slice(),
+    /// // 3x matrix
+    /// // | 2  1 |
+    /// // | 4  3 |
+    /// &[
+    ///     2, 4, 1, 3,
+    ///     2, 4, 1, 3,
+    ///     2, 4, 1, 3,
+    /// ]
+    /// );
+    /// ```
+    pub fn rotate_cw(&self) -> Result<Self, NdArrayError>
+    where
+        T: Clone,
+    {
+        let [n, m] = self
+            .shape
+            .last_two()
+            .ok_or_else(|| NdArrayError::UnsupportedShape(self.shape.clone()))?;
+
+        let mut out = Data::new();
+        out.resize(self.len(), self.values[0].clone());
+        let span = n as usize * m as usize;
+        // broadcast tensors as a colection of matrices
+        for (i, innermat) in ColumnIter::new(self.as_slice(), span).enumerate() {
+            rotate_mat_cw(
+                [n as usize, m as usize],
+                innermat,
+                &mut out.as_mut_slice()[i * span..],
+            );
+        }
+
+        Self::new_with_values(self.shape.clone(), out)
+    }
+
     /// - Scalars not allowed.
     /// - Tensor arrays are treated as a colection of matrices and are broadcast accordingly
     ///
@@ -101,7 +239,7 @@ impl<'a, T> NdArray<T> {
     /// assert_eq!(c.shape(), &Shape::Tensor((&[2, 2, 2][..]).into()));
     /// assert_eq!(c.as_slice(), &[5, -4, 4, 5, /*|*/ 5, -4, 4, 5]);
     /// ```
-    pub fn matmul(&'a self, other: &'a Self, out: &mut Self) -> Result<(), NdArrayError>
+    pub fn matmul<'a>(&'a self, other: &'a Self, out: &mut Self) -> Result<(), NdArrayError>
     where
         T: AddAssign + Add<Output = T> + Mul<Output = T> + Default + 'a + Copy + Sync + Send,
     {

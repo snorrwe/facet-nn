@@ -222,3 +222,59 @@ fn test_tensor_transpose() {
         b.to_string()
     );
 }
+
+#[test]
+fn test_horizontal_flip_even_cols() {
+    let inp = [1, 2, 3, 4, 5, 6, 7, 8];
+    let mut out = [0; 8];
+
+    matrix::flip_mat_horizontal([2, 4], &inp, &mut out);
+    assert_eq!(&out, &[5, 6, 7, 8, 1, 2, 3, 4][..]);
+}
+
+#[test]
+fn test_horizontal_flip_odd_cols() {
+    let inp = [1, 2, 3, 4, 5, 6];
+    let mut out = [0; 6];
+
+    matrix::flip_mat_horizontal([3, 2], &inp, &mut out);
+
+    assert_eq!(&out, &[5, 6, 1, 2, 3, 4][..]);
+}
+
+#[test]
+fn test_vertical_flip_even_cols() {
+    let inp = [1, 2, 3, 4, 5, 6, 7, 8];
+    let mut out = [0; 8];
+
+    matrix::flip_mat_vertical([2, 4], &inp, &mut out);
+    assert_eq!(&out, &[4, 3, 2, 1, 8, 7, 6, 5][..]);
+}
+
+#[test]
+fn test_vertical_flip_odd_cols() {
+    let inp = [1, 2, 3, 4, 5, 6];
+    let mut out = [0; 6];
+
+    matrix::flip_mat_vertical([3, 2], &inp, &mut out);
+
+    assert_eq!(&out, &[2, 1, 4, 3, 6, 5][..]);
+}
+
+#[test]
+fn test_vertical_flip_tensor() {
+    let inp = NdArray::new_with_values(
+        &[3, 2, 2][..],
+        vec![1, 2, 3, 4, 1, 2, 3, 4, 1, 2, 3, 4].into(),
+    )
+    .unwrap();
+
+    let out = inp.flip_mat_vertical().unwrap();
+    assert_eq!(out.as_slice(), &[2, 1, 4, 3, 2, 1, 4, 3, 2, 1, 4, 3][..]);
+
+    //sanity check
+    let inp = [1, 2, 3, 4];
+    let mut out = [0; 4];
+    matrix::flip_mat_vertical([2, 2], &inp, &mut out);
+    assert_eq!(&out, &[2, 1, 4, 3][..]);
+}
