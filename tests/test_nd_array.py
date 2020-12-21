@@ -187,3 +187,10 @@ def test_element_wise_mul():
     res = arr * mask
 
     assert (res == pyfacet.array([[1, 0, 3, 0] * 4])).all()
+
+
+def test_rotate_cw():
+    arr = pyfacet.array([[[1, 2, 3, 4]] * 4] * 4)
+
+    res = arr.rotate_cw()
+    assert (res == pyfacet.array([[[3] * 4, [4] * 4, [1] * 4, [2] * 4] * 4])).all()

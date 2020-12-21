@@ -255,6 +255,30 @@ macro_rules! impl_ndarray {
                         .map_err(|err| PyValueError::new_err::<String>(format!("{}", err).into()))
                 }
 
+                pub fn flip_mat_vertical(&self) -> PyResult<Self> {
+                    let res = self
+                        .inner
+                        .flip_mat_vertical()
+                        .map_err(|err| PyValueError::new_err::<String>(format!("{}", err)))?;
+                    Ok(Self { inner: res })
+                }
+
+                pub fn flip_mat_horizontal(&self) -> PyResult<Self> {
+                    let res = self
+                        .inner
+                        .flip_mat_horizontal()
+                        .map_err(|err| PyValueError::new_err::<String>(format!("{}", err)))?;
+                    Ok(Self { inner: res })
+                }
+
+                pub fn rotate_cw(&self) -> PyResult<Self> {
+                    let res = self
+                        .inner
+                        .rotate_cw()
+                        .map_err(|err| PyValueError::new_err::<String>(format!("{}", err)))?;
+                    Ok(Self { inner: res })
+                }
+
                 pub fn to_string(&self) -> String {
                     self.inner.to_string()
                 }
