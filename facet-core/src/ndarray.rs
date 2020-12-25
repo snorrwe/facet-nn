@@ -329,6 +329,10 @@ impl<T> NdArray<T> {
         &self.shape
     }
 
+    pub fn stride(&self) -> &Stride {
+        &self.stride
+    }
+
     /// Smaller shape span will result in the last items being 'cut'
     pub fn reshape(&mut self, new_shape: impl Into<Shape>) -> &mut Self
     where

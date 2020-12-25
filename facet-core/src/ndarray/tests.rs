@@ -278,3 +278,30 @@ fn test_vertical_flip_tensor() {
     matrix::flip_mat_vertical([2, 2], &inp, &mut out);
     assert_eq!(&out, &[2, 1, 4, 3][..]);
 }
+
+#[test]
+fn test_col_iter_returns_one_scalar() {
+    let a = NdArray::new_scalar(42.69f32);
+
+    let mut c = a.iter_cols();
+
+    let s = c.next().expect("expected one");
+
+    assert_eq!(s[0], 42.69);
+    assert!(matches!(c.next(), None));
+}
+
+#[test]
+fn test_iter_cols_returns_all_items_in_vec() {
+    let a = NdArray::new_vector(vec![1, 2, 3, 4, 5, 6, 7, 8]);
+
+    let count = a
+        .iter_cols()
+        .map(|actual| {
+            assert_eq!(actual.len(), 8);
+            assert_eq!(actual, &[1, 2, 3, 4, 5, 6, 7, 8]);
+        })
+        .count();
+
+    assert_eq!(count, 1);
+}

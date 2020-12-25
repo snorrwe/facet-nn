@@ -209,14 +209,7 @@ impl<T> NdArray<T> {
             rotate_mat_cw(n as usize, innermat, &mut out.as_mut_slice()[i * span..]);
         }
 
-        let mut shape = self.shape.clone();
-        // swap m, n because we did a transpose
-        let s = shape.as_mut_slice();
-        let l = s.len();
-        debug_assert!(l >= 2);
-        s[l - 1] = n;
-        s[l - 2] = m;
-
+        let shape = self.shape.clone();
         Self::new_with_values(shape, out)
     }
 
