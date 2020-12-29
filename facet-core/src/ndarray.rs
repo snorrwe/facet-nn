@@ -411,7 +411,7 @@ impl<T> NdArray<T> {
             Shape::Matrix([n, m]) => {
                 let i = get_index(
                     &[*n], // skip the last dim
-                    &[1],
+                    self.stride.as_slice(),
                     index,
                 )?;
                 let m = *m as usize;
