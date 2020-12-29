@@ -6,6 +6,9 @@ pub mod loss;
 pub mod ndarray;
 pub mod prelude;
 
+#[cfg(test)]
+mod tests;
+
 pub type DuResult<T> = Result<T, DuError>;
 
 #[cfg(feature = "rayon")]
@@ -130,6 +133,81 @@ where
             Ok(res)
         }
     }
+}
+
+/// Calculate moving averages of the innermost dimension.
+///
+/// For matrices and tensors return a matrix where each columns will contain the moving averages of
+/// their corresponding columns.
+///
+/// ```
+/// use facet_core::prelude::*;
+///
+/// let values = NdArray::new_vector( vec![9.0, 8.0,9.0,12.0,9.,12.,11.,7.,13.,9.,11.,10.] );
+/// let ma = facet_core::moving_average(&values, 3).unwrap();
+///
+/// assert_eq!(ma.as_slice(),
+/// &[  8.666666666666666, 9.666666666666666, 10.0, 11.0,
+///     10.666666666666666, 10.0, 10.333333333333334,
+///     9.666666666666666, 11.0, 10.0]);
+/// ```
+pub fn moving_average<T>(
+    inp: &ndarray::NdArray<T>,
+    window: usize,
+) -> Result<ndarray::NdArray<T>, NdArrayError>
+where
+    T: Clone
+        + Default
+        + std::iter::Sum
+        + std::ops::Div<Output = T>
+        + std::convert::From<u32>
+        + std::fmt::Debug,
+{
+    use crate::prelude::*;
+    if window == 0 {
+        return Err(NdArrayError::BadInput(
+            "window must be non-negative".to_string(),
+        ));
+    }
+    let arr = match inp.shape() {
+        Shape::Scalar(_) => return Err(NdArrayError::UnsupportedShape(inp.shape().clone())),
+        Shape::Vector(_) => {
+            let data = inp
+                .as_slice()
+                .windows(window)
+                .map(|window| {
+                    let sum: T = window.iter().cloned().sum();
+                    let mean = sum / T::from(window.len() as u32);
+                    mean
+                })
+                .fold(prelude::Data::default(), |mut res, mean| {
+                    res.push(mean);
+                    res
+                });
+
+            ndarray::NdArray::new_vector(data)
+        }
+        _ => {
+            let n: u32 = inp.shape().last().unwrap();
+            let win_sum = inp
+                .as_slice()
+                .windows(window * n as usize)
+                .step_by(n as usize)
+                .fold(Data::default(), |mut res, x| {
+                    for i in 0..n {
+                        let s: T = x.iter().skip(i as usize).step_by(n as usize).cloned().sum();
+                        let mean = s / T::from(window as u32);
+                        res.push(mean);
+                    }
+                    res
+                });
+
+            ndarray::NdArray::new_with_values([(win_sum.len() / n as usize) as u32, n], win_sum)
+                .unwrap()
+        }
+    };
+
+    Ok(arr)
 }
 
 /// Calculate the standard deviation for each column in the array.
