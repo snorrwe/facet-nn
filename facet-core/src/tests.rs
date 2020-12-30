@@ -1,9 +1,8 @@
-use super::*;
 use crate::prelude::*;
 
 #[test]
 fn test_moving_average_matrix() {
-    let mut values = NdArray::new_with_values(
+    let values = NdArray::new_with_values(
         [2, 12],
         smallvec![
             9.0, 8.0, 9.0, 12.0, 9., 12., 11., 7., 13., 9., 11., 10., //
@@ -14,6 +13,7 @@ fn test_moving_average_matrix() {
     let values = values.transpose();
     let ma = crate::moving_average(&values, 3).unwrap();
     let ma = ma.transpose();
+
 
     assert_eq!(
         ma.as_slice(),
