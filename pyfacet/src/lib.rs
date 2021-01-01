@@ -258,6 +258,71 @@ pub fn log(py: Python, inp: PyObject, base: Option<f64>) -> PyResult<NdArrayD> {
     Ok(NdArrayD { inner })
 }
 
+#[pyfunction]
+pub fn std_squared(py: Python, inp: PyObject, mean: Option<PyObject>) -> PyResult<NdArrayD> {
+    let inp: Py<NdArrayD> = inp
+        .extract(py)
+        .or_else(|_| pyndarray::array(py, inp.extract(py)?)?.extract(py))?;
+
+    let mean: Option<Py<NdArrayD>> = mean.and_then(|m| {
+        m.extract(py)
+            .or_else(|_| pyndarray::array(py, inp.extract(py)?)?.extract(py))
+            .ok()
+    });
+
+    let inp: &PyCell<NdArrayD> = inp.into_ref(py);
+    let inp = inp.borrow();
+
+    let mean: Option<&PyCell<NdArrayD>> = mean.map(|m| m.into_ref(py));
+    let mean = mean.map(|m| m.borrow());
+    let mean = mean.as_ref().map(|m| &m.inner);
+
+    let res = facet_core::std_squared(&inp.inner, mean).map_err(|e| {
+        PyValueError::new_err(format!("Failed to perform std squared calculation {:?}", e))
+    })?;
+
+    Ok(NdArrayD { inner: res })
+}
+
+#[pyfunction]
+pub fn std(py: Python, inp: PyObject, mean: Option<PyObject>) -> PyResult<NdArrayD> {
+    let inp: Py<NdArrayD> = inp
+        .extract(py)
+        .or_else(|_| pyndarray::array(py, inp.extract(py)?)?.extract(py))?;
+
+    let mean: Option<Py<NdArrayD>> = mean.and_then(|m| {
+        m.extract(py)
+            .or_else(|_| pyndarray::array(py, inp.extract(py)?)?.extract(py))
+            .ok()
+    });
+
+    let inp: &PyCell<NdArrayD> = inp.into_ref(py);
+    let inp = inp.borrow();
+
+    let mean: Option<&PyCell<NdArrayD>> = mean.map(|m| m.into_ref(py));
+    let mean = mean.map(|m| m.borrow());
+    let mean = mean.as_ref().map(|m| &m.inner);
+
+    let res = facet_core::std(&inp.inner, mean)
+        .map_err(|e| PyValueError::new_err(format!("Failed to perform std calculation {:?}", e)))?;
+
+    Ok(NdArrayD { inner: res })
+}
+
+#[pyfunction]
+pub fn moving_average(py: Python, inp: PyObject, window: u64) -> PyResult<NdArrayD> {
+    let inp: Py<NdArrayD> = inp
+        .extract(py)
+        .or_else(|_| pyndarray::array(py, inp.extract(py)?)?.extract(py))?;
+
+    let inp: &PyCell<NdArrayD> = inp.into_ref(py);
+    let inp = inp.borrow();
+
+    facet_core::moving_average(&inp.inner, window as usize)
+        .map_err(|err| PyValueError::new_err::<String>(format!("{}", err)))
+        .map(|inner| NdArrayD { inner })
+}
+
 #[pymodule]
 fn pyfacet(py: Python, m: &PyModule) -> PyResult<()> {
     pyndarray::setup_module(py, &m)?;
@@ -279,6 +344,9 @@ fn pyfacet(py: Python, m: &PyModule) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(mean, m)?)?;
     m.add_function(wrap_pyfunction!(clip, m)?)?;
     m.add_function(wrap_pyfunction!(log, m)?)?;
+    m.add_function(wrap_pyfunction!(std_squared, m)?)?;
+    m.add_function(wrap_pyfunction!(std, m)?)?;
+    m.add_function(wrap_pyfunction!(moving_average, m)?)?;
 
     Ok(())
 }

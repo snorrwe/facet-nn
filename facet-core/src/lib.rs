@@ -289,8 +289,7 @@ where
         Some(mean) => _std_squared_from_mean(inp, mean),
         None => {
             let mean = crate::mean(inp)?;
-            let mean = &mean;
-            _std_squared_from_mean(inp, mean)
+            _std_squared_from_mean(inp, &mean)
         }
     }
 }
