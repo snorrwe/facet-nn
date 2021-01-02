@@ -323,6 +323,67 @@ pub fn moving_average(py: Python, inp: PyObject, window: u64) -> PyResult<NdArra
         .map(|inner| NdArrayD { inner })
 }
 
+#[pyfunction]
+pub fn veclen(py: Python, inp: PyObject) -> PyResult<NdArrayD> {
+    let inp: Py<NdArrayD> = inp
+        .extract(py)
+        .or_else(|_| pyndarray::array(py, inp.extract(py)?)?.extract(py))?;
+
+    let inp: &PyCell<NdArrayD> = inp.into_ref(py);
+    let inp = inp.borrow();
+
+    let mut out = NdArray::new(0);
+
+    facet_core::veclen(&inp.inner, &mut out);
+
+    Ok(NdArrayD { inner: out })
+}
+
+#[pyfunction]
+pub fn veclen_squared(py: Python, inp: PyObject) -> PyResult<NdArrayD> {
+    let inp: Py<NdArrayD> = inp
+        .extract(py)
+        .or_else(|_| pyndarray::array(py, inp.extract(py)?)?.extract(py))?;
+
+    let inp: &PyCell<NdArrayD> = inp.into_ref(py);
+    let inp = inp.borrow();
+
+    let mut out = NdArray::new(0);
+    facet_core::veclen_squared(&inp.inner, &mut out);
+
+    Ok(NdArrayD { inner: out })
+}
+
+#[pyfunction]
+pub fn normalize_vectors(py: Python, inp: PyObject) -> PyResult<NdArrayD> {
+    let inp: Py<NdArrayD> = inp
+        .extract(py)
+        .or_else(|_| pyndarray::array(py, inp.extract(py)?)?.extract(py))?;
+
+    let inp: &PyCell<NdArrayD> = inp.into_ref(py);
+    let inp = inp.borrow();
+
+    let mut out = NdArray::new(0);
+    facet_core::normalize_f64_vectors(&inp.inner, &mut out);
+
+    Ok(NdArrayD { inner: out })
+}
+
+#[pyfunction]
+pub fn fast_inverse_sqrt(py: Python, inp: PyObject) -> PyResult<NdArrayD> {
+    let inp: Py<NdArrayD> = inp
+        .extract(py)
+        .or_else(|_| pyndarray::array(py, inp.extract(py)?)?.extract(py))?;
+
+    let inp: &PyCell<NdArrayD> = inp.into_ref(py);
+    let inp = inp.borrow();
+
+    let mut out = NdArray::new(0);
+    facet_core::fast_inv_sqrt_f64(&inp.inner, &mut out);
+
+    Ok(NdArrayD { inner: out })
+}
+
 #[pymodule]
 fn pyfacet(py: Python, m: &PyModule) -> PyResult<()> {
     pyndarray::setup_module(py, &m)?;
@@ -347,6 +408,10 @@ fn pyfacet(py: Python, m: &PyModule) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(std_squared, m)?)?;
     m.add_function(wrap_pyfunction!(std, m)?)?;
     m.add_function(wrap_pyfunction!(moving_average, m)?)?;
+    m.add_function(wrap_pyfunction!(veclen, m)?)?;
+    m.add_function(wrap_pyfunction!(veclen_squared, m)?)?;
+    m.add_function(wrap_pyfunction!(normalize_vectors, m)?)?;
+    m.add_function(wrap_pyfunction!(fast_inverse_sqrt, m)?)?;
 
     Ok(())
 }
