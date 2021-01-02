@@ -104,7 +104,7 @@ where
 /// ```
 pub fn mean<T>(inp: &ndarray::NdArray<T>) -> Result<ndarray::NdArray<T>, NdArrayError>
 where
-    T: Clone + Default + std::iter::Sum + std::ops::Div<Output = T> + std::convert::TryFrom<u32>,
+    T: Copy + Default + std::iter::Sum + std::ops::Div<Output = T> + std::convert::TryFrom<u32>,
 {
     match inp.shape() {
         Shape::Scalar(_) => Ok(inp.clone()),
@@ -156,7 +156,7 @@ pub fn moving_average<T>(
     window: usize,
 ) -> Result<ndarray::NdArray<T>, NdArrayError>
 where
-    T: Clone
+    T: Copy
         + Default
         + std::iter::Sum
         + std::ops::Div<Output = T>
@@ -233,7 +233,7 @@ pub fn std<'a, T>(
     mean: Option<&'a ndarray::NdArray<T>>,
 ) -> Result<ndarray::NdArray<T>, NdArrayError>
 where
-    T: Clone
+    T: Copy
         + Default
         + std::iter::Sum
         + std::ops::Div<Output = T>
@@ -273,7 +273,7 @@ pub fn std_squared<'a, T>(
     mean: Option<&'a ndarray::NdArray<T>>,
 ) -> Result<ndarray::NdArray<T>, NdArrayError>
 where
-    T: Clone
+    T: Copy
         + Default
         + std::iter::Sum
         + std::ops::Div<Output = T>
@@ -299,7 +299,7 @@ fn _std_squared_from_mean<'a, T>(
     mean: &'a ndarray::NdArray<T>,
 ) -> Result<ndarray::NdArray<T>, NdArrayError>
 where
-    T: Clone
+    T: Copy
         + std::ops::Mul<Output = T>
         + std::iter::Sum
         + std::convert::TryFrom<u32>
@@ -311,14 +311,14 @@ where
         .iter_cols()
         .zip(mean.iter_cols().map(|mean| {
             debug_assert_eq!(mean.len(), 1);
-            mean[0].clone()
+            mean[0]
         }))
         .map(move |(col, m)| {
             let s: T = col
                 .iter()
                 .map(move |x| {
-                    let d: T = x.clone() - m.clone();
-                    d.clone() * d
+                    let d: T = *x - m;
+                    d * d
                 })
                 .sum();
 
@@ -333,7 +333,7 @@ where
     let mut shape = inp.shape().clone();
     let l = shape.as_slice().len();
     shape.as_mut_slice()[l - 1] = 1;
-    ndarray::NdArray::new_with_values(shape, res)
+    ndarray::NdArray::new_with_values(shape.clone(), res)
 }
 
 pub fn clip<T>(inp: &mut ndarray::NdArray<T>, min: T, max: T)
@@ -351,37 +351,51 @@ where
 }
 
 /// calculate `y=1/sqrt(x)` for each x element in the input array
-pub fn fast_inv_sqrt_f32(
-    inp: &ndarray::NdArray<f32>,
-    out: &mut ndarray::NdArray<f32>,
-) -> Result<(), NdArrayError> {
-    if inp.shape() != out.shape() {
-        return Err(NdArrayError::ShapeMismatch {
-            expected: inp.shape().clone(),
-            actual: out.shape().clone(),
-        });
-    }
-
+pub fn fast_inv_sqrt_f32(inp: &ndarray::NdArray<f32>, out: &mut ndarray::NdArray<f32>) {
+    out.reshape(inp.shape().clone());
     let len = inp.as_slice().len();
     for i in 0..len {
         out.as_mut_slice()[i] = _fast_inv_sqrt_f32(inp.as_slice()[i]);
     }
+}
 
-    Ok(())
+/// Calculate the square of the eucledian length of the vector(s). Matrices and Tensors are treated as a list of vectors.
+pub fn veclen_squared<'a, T>(inp: &'a ndarray::NdArray<T>, out: &mut ndarray::NdArray<T>)
+where
+    T: Copy + Default + std::ops::AddAssign,
+    &'a T: std::ops::Mul<Output = T>,
+{
+    if matches!(inp.shape(), Shape::Scalar(_)) {
+        *out = inp.clone();
+    }
+    let shape_len = inp.shape().as_slice().len();
+    let out_shape = &inp.shape().as_slice()[..shape_len - 1];
+    out.reshape(out_shape);
+    for (i, vector) in inp.iter_cols().enumerate() {
+        let mut vec_len = T::default();
+        for x in vector {
+            vec_len += x * x;
+        }
+        out.as_mut_slice()[i] = vec_len;
+    }
+}
+
+/// Calculate the eucledian length of the vector(s). Matrices and Tensors are treated as a list of vectors.
+pub fn veclen<'a, T>(inp: &'a ndarray::NdArray<T>, out: &mut ndarray::NdArray<T>)
+where
+    T: Copy + Default + std::ops::AddAssign + SquareRoot,
+    &'a T: std::ops::Mul<Output = T>,
+{
+    veclen_squared(inp, out);
+    for x in out.as_mut_slice() {
+        *x = x.sqrt();
+    }
 }
 
 /// Normalize the inner column vectors using `fast_inv_sqrt` algorithm. Meaning slightly inaccurate
 /// results. E.g. a vector might have a length slightly less than 1.
-pub fn normalize_f32_vectors(
-    inp: &ndarray::NdArray<f32>,
-    out: &mut ndarray::NdArray<f32>,
-) -> Result<(), NdArrayError> {
-    if inp.shape() != out.shape() {
-        return Err(NdArrayError::ShapeMismatch {
-            expected: inp.shape().clone(),
-            actual: out.shape().clone(),
-        });
-    }
+pub fn normalize_f32_vectors(inp: &ndarray::NdArray<f32>, out: &mut ndarray::NdArray<f32>) {
+    out.reshape(inp.shape().clone());
     let collen = inp.shape().last().unwrap_or(0) as usize;
     for (inp, out) in inp.iter_cols().zip(out.iter_cols_mut()) {
         let mut vec_len = 0.0;
@@ -394,8 +408,6 @@ pub fn normalize_f32_vectors(
             out[i] = inp[i] * inv_vec_len;
         }
     }
-
-    Ok(())
 }
 
 #[inline]

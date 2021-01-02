@@ -56,7 +56,7 @@ impl Shape {
             Shape::Scalar(_) => 1,
             Shape::Vector([n]) => *n as usize,
             Shape::Matrix([n, _]) => *n as usize,
-            Shape::Tensor(shp) => shp[..shp.len() - 2].iter().map(|x| *x as usize).product(),
+            Shape::Tensor(shp) => shp[..shp.len() - 1].iter().map(|x| *x as usize).product(),
         }
     }
 

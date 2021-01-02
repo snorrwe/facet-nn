@@ -1,4 +1,5 @@
 use crate::prelude::*;
+use rand::Rng;
 
 #[test]
 fn test_moving_average_matrix() {
@@ -44,15 +45,13 @@ fn test_moving_average_matrix() {
 
 #[test]
 fn test_fast_inv_sqrt_accuracy() {
-    use rand::Rng;
-
     let mut rng = rand::thread_rng();
     let inp: Data<f32> = (0..10000).map(|_| rng.gen_range(0.0, 10.0)).collect();
 
     let inp = NdArray::new_with_values([2000, 5], inp).unwrap();
-    let mut out = NdArray::new_default(inp.shape().clone());
+    let mut out = NdArray::new_default(0);
 
-    crate::fast_inv_sqrt_f32(&inp, &mut out).unwrap();
+    crate::fast_inv_sqrt_f32(&inp, &mut out);
 
     for (y, x) in out.as_slice().iter().zip(inp.as_slice().iter()) {
         let exp = 1.0 / x.sqrt();
@@ -72,20 +71,49 @@ fn test_fast_inv_sqrt_accuracy() {
 
 #[test]
 fn test_f32_vec_norm_accuracy() {
-    use rand::Rng;
-
     let mut rng = rand::thread_rng();
     let inp: Data<f32> = (0..10000).map(|_| rng.gen_range(0.0, 10.0)).collect();
 
     let inp = NdArray::new_with_values([2000, 5], inp).unwrap();
-    let mut out = NdArray::new_default(inp.shape().clone());
+    let mut out = NdArray::new_default(0);
 
-    crate::normalize_f32_vectors(&inp, &mut out).unwrap();
+    crate::normalize_f32_vectors(&inp, &mut out);
 
     for y in out.iter_cols() {
         let len = y.iter().map(|x| x * x).sum::<f32>().sqrt();
         assert!(len <= 1.0, "{}", len);
         let err = (len - 1.0).abs();
         assert!(err < 0.002, "len {} err {}", len, err);
+    }
+}
+
+#[test]
+fn test_veclen_vector() {
+    let inp = NdArray::new_vector(&[1.0f32, 1., 1.][..]);
+    let mut out = NdArray::new(0);
+
+    crate::veclen(&inp, &mut out);
+
+    assert!(matches!(out.shape(), Shape::Scalar(_)));
+
+    let expected = 3.0.sqrt();
+
+    assert_eq!(expected, *out.get(&[0]).unwrap());
+}
+
+#[test]
+fn test_veclen_tensor() {
+    let inp: Data<f32> = (0..10000).map(|_| 1.0).collect();
+    let inp = NdArray::new_with_values(&[200, 10, 5][..], inp).unwrap();
+    let mut out = NdArray::new(0);
+
+    crate::veclen(&inp, &mut out);
+
+    assert_eq!(out.shape().span(), inp.shape().col_span());
+
+    let expected = 5.0.sqrt();
+
+    for c in out.as_slice() {
+        assert_eq!(expected, *c);
     }
 }

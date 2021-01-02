@@ -4,8 +4,8 @@ foo:
 	echo "boooo"
 
 check-rust:
-	cargo check
 	cargo clippy
+	cargo check
 
 test-rust:
 	cargo test
