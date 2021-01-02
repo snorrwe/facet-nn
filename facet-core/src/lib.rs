@@ -359,6 +359,93 @@ pub fn fast_inv_sqrt_f32(inp: &ndarray::NdArray<f32>, out: &mut ndarray::NdArray
     }
 }
 
+/// Normalize the inner column vectors using [fast_inv_sqrt](https://en.wikipedia.org/wiki/Fast_inverse_square_root) algorithm. Meaning slightly inaccurate
+/// results. E.g. a vector might have a length slightly less than 1.
+pub fn normalize_f32_vectors(inp: &ndarray::NdArray<f32>, out: &mut ndarray::NdArray<f32>) {
+    out.reshape(inp.shape().clone());
+    let collen = inp.shape().last().unwrap_or(0) as usize;
+    for (inp, out) in inp.iter_cols().zip(out.iter_cols_mut()) {
+        let mut vec_len = 0.0;
+        for i in 0..collen {
+            vec_len += inp[i] * inp[i];
+        }
+        let inv_vec_len = _fast_inv_sqrt_f32(vec_len);
+
+        for i in 0..inp.len() {
+            out[i] = inp[i] * inv_vec_len;
+        }
+    }
+}
+
+#[inline]
+fn _fast_inv_sqrt_f32(mut y: f32) -> f32 {
+    const THREE_HALVES: f32 = 1.5;
+    let x2 = y * 0.5;
+
+    unsafe {
+        union F {
+            i: i32,
+            f: f32,
+        }
+
+        let mut f: F = F { f: y };
+        f.i = 0x5F375A86 - (f.i >> 1);
+        y = f.f;
+    }
+
+    // Newton method, 1 iteration is enough to achive ~1% error
+    y = y * (THREE_HALVES - (x2 * y * y));
+    y
+}
+
+/// calculate `y=1/sqrt(x)` for each x element in the input array
+pub fn fast_inv_sqrt_f64(inp: &ndarray::NdArray<f64>, out: &mut ndarray::NdArray<f64>) {
+    out.reshape(inp.shape().clone());
+    let len = inp.as_slice().len();
+    for i in 0..len {
+        out.as_mut_slice()[i] = _fast_inv_sqrt_f64(inp.as_slice()[i]);
+    }
+}
+
+/// Normalize the inner column vectors using [fast_inv_sqrt](https://en.wikipedia.org/wiki/Fast_inverse_square_root) algorithm. Meaning slightly inaccurate
+/// results. E.g. a vector might have a length slightly less than 1.
+pub fn normalize_f64_vectors(inp: &ndarray::NdArray<f64>, out: &mut ndarray::NdArray<f64>) {
+    out.reshape(inp.shape().clone());
+    let collen = inp.shape().last().unwrap_or(0) as usize;
+    for (inp, out) in inp.iter_cols().zip(out.iter_cols_mut()) {
+        let mut vec_len = 0.0;
+        for i in 0..collen {
+            vec_len += inp[i] * inp[i];
+        }
+        let inv_vec_len = _fast_inv_sqrt_f64(vec_len);
+
+        for i in 0..inp.len() {
+            out[i] = inp[i] * inv_vec_len;
+        }
+    }
+}
+
+#[inline]
+fn _fast_inv_sqrt_f64(mut y: f64) -> f64 {
+    const THREE_HALVES: f64 = 1.5;
+    let x2 = y * 0.5;
+
+    unsafe {
+        union F {
+            i: i64,
+            f: f64,
+        }
+
+        let mut f: F = F { f: y };
+        f.i = 0x5FE6EB50C7B537A9 - (f.i >> 1);
+        y = f.f;
+    }
+
+    // Newton method, 1 iteration is enough to achive ~1% error
+    y = y * (THREE_HALVES - (x2 * y * y));
+    y
+}
+
 /// Calculate the square of the eucledian length of the vector(s). Matrices and Tensors are treated as a list of vectors.
 pub fn veclen_squared<'a, T>(inp: &'a ndarray::NdArray<T>, out: &mut ndarray::NdArray<T>)
 where
@@ -390,43 +477,4 @@ where
     for x in out.as_mut_slice() {
         *x = x.sqrt();
     }
-}
-
-/// Normalize the inner column vectors using `fast_inv_sqrt` algorithm. Meaning slightly inaccurate
-/// results. E.g. a vector might have a length slightly less than 1.
-pub fn normalize_f32_vectors(inp: &ndarray::NdArray<f32>, out: &mut ndarray::NdArray<f32>) {
-    out.reshape(inp.shape().clone());
-    let collen = inp.shape().last().unwrap_or(0) as usize;
-    for (inp, out) in inp.iter_cols().zip(out.iter_cols_mut()) {
-        let mut vec_len = 0.0;
-        for i in 0..collen {
-            vec_len += inp[i] * inp[i];
-        }
-        let inv_vec_len = _fast_inv_sqrt_f32(vec_len);
-
-        for i in 0..inp.len() {
-            out[i] = inp[i] * inv_vec_len;
-        }
-    }
-}
-
-#[inline]
-fn _fast_inv_sqrt_f32(mut y: f32) -> f32 {
-    const THREE_HALVES: f32 = 1.5;
-    let x2 = y * 0.5;
-
-    unsafe {
-        union F {
-            i: i32,
-            f: f32,
-        }
-
-        let mut f: F = F { f: y };
-        f.i = 0x5f3759df - (f.i >> 1);
-        y = f.f;
-    }
-
-    // Newton method, 1 iteration is enough to achive ~1% error
-    y = y * (THREE_HALVES - (x2 * y * y));
-    y
 }

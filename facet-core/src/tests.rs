@@ -44,7 +44,7 @@ fn test_moving_average_matrix() {
 }
 
 #[test]
-fn test_fast_inv_sqrt_accuracy() {
+fn test_fast_inv_sqrt_accuracy_f32() {
     let mut rng = rand::thread_rng();
     let inp: Data<f32> = (0..10000).map(|_| rng.gen_range(0.0, 10.0)).collect();
 
@@ -81,7 +81,6 @@ fn test_f32_vec_norm_accuracy() {
 
     for y in out.iter_cols() {
         let len = y.iter().map(|x| x * x).sum::<f32>().sqrt();
-        assert!(len <= 1.0, "{}", len);
         let err = (len - 1.0).abs();
         assert!(err < 0.002, "len {} err {}", len, err);
     }
@@ -115,5 +114,48 @@ fn test_veclen_tensor() {
 
     for c in out.as_slice() {
         assert_eq!(expected, *c);
+    }
+}
+
+#[test]
+fn test_fast_inv_sqrt_accuracy_f64() {
+    let mut rng = rand::thread_rng();
+    let inp: Data<f64> = (0..10000).map(|_| rng.gen_range(0.0, 10.0)).collect();
+
+    let inp = NdArray::new_with_values([2000, 5], inp).unwrap();
+    let mut out = NdArray::new_default(0);
+
+    crate::fast_inv_sqrt_f64(&inp, &mut out);
+
+    for (y, x) in out.as_slice().iter().zip(inp.as_slice().iter()) {
+        let exp = 1.0 / x.sqrt();
+
+        let diff = y - exp;
+        let error = diff.abs() / y;
+        assert!(
+            error < 0.01,
+            "y: {}, exp: {}, diff: {} error: {}",
+            y,
+            exp,
+            diff,
+            error
+        );
+    }
+}
+
+#[test]
+fn test_f64_vec_norm_accuracy() {
+    let mut rng = rand::thread_rng();
+    let inp: Data<f64> = (0..10000).map(|_| rng.gen_range(0.0, 10.0)).collect();
+
+    let inp = NdArray::new_with_values([2000, 5], inp).unwrap();
+    let mut out = NdArray::new_default(0);
+
+    crate::normalize_f64_vectors(&inp, &mut out);
+
+    for y in out.iter_cols() {
+        let len = y.iter().map(|x| x * x).sum::<f64>().sqrt();
+        let err = (len - 1.0).abs();
+        assert!(err < 0.002, "len {} err {}", len, err);
     }
 }
