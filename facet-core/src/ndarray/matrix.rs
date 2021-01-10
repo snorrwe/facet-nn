@@ -132,7 +132,7 @@ pub fn rotate_mat_cw<T: Clone>(col: usize, inp: &[T], out: &mut [T]) {
 impl NdArray<f64> {
     /// specialized matmul
     pub fn matmul_f64<'a>(&'a self, other: &'a Self, out: &mut Self) -> Result<(), NdArrayError> {
-        self._matmul(other, out, matmul_impl)
+        self._matmul(other, out, matmul_impl_f64)
     }
 }
 

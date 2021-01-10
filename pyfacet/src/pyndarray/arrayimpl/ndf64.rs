@@ -105,7 +105,7 @@ impl NdArrayD {
         let mut _out = NdArray::new(0);
         let outref = out.as_mut().map(|m| &mut m.inner).unwrap_or(&mut _out);
         this.inner
-            .matmul(&other.inner, outref)
+            .matmul_f64(&other.inner, outref)
             .map_err(|err| PyValueError::new_err::<String>(format!("{}", err)))?;
         let py = this.py();
         let out = out.map(|m| m.into_py(py)).unwrap_or_else(|| {
