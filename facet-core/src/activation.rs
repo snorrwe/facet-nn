@@ -92,20 +92,13 @@ pub fn dsoftmax(output: &NdArray<f64>, dvalues: &NdArray<f64>) -> DuResult<NdArr
 
     for (i, (output, dvalues)) in output.iter_cols().zip(dvalues.iter_cols()).enumerate() {
         diagflat(output, &mut jacobian_matrix);
-        matmul_impl(
-            [collen, 1],
-            output,
-            [1, collen],
-            output,
-            dotcache.as_mut_slice(),
-        )?;
+        matmul_impl([collen, 1, collen], output, output, dotcache.as_mut_slice())?;
 
         jacobian_matrix = jacobian_matrix.sub(&dotcache)?;
 
         matmul_impl(
-            [collen, collen],
+            [collen, collen, 1],
             jacobian_matrix.as_slice(),
-            [collen, 1],
             dvalues,
             res.get_column_mut(&[i as u32]).unwrap(),
         )?;

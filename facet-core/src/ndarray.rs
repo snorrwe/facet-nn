@@ -34,7 +34,7 @@ pub enum NdArrayError {
     #[error("Shape {0:?} is not supported for this operation")]
     UnsupportedShape(Shape),
     #[error("Invalid input given. {0}")]
-    BadInput(String)
+    BadInput(String),
 }
 
 pub type Data<T> = SmallVec<[T; 16]>;

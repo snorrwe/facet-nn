@@ -15,4 +15,4 @@ def test_normalize_vectors():
     for vec in out.iter_cols():
         l = sqrt(sum(x * x for x in vec))
         diff = abs(1.0 - l)
-        assert diff < 0.001
+        assert diff < 0.02

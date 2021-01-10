@@ -6,14 +6,19 @@ pub mod loss;
 pub mod ndarray;
 pub mod prelude;
 
+#[cfg(feature = "gpu")]
+pub mod gpu;
+
 #[cfg(test)]
 mod tests;
 
-pub type DuResult<T> = Result<T, DuError>;
-
+#[cfg(feature = "vulkano")]
+pub use vulkano;
 #[cfg(feature = "rayon")]
 pub use rayon;
 pub use smallvec;
+
+pub type DuResult<T> = Result<T, DuError>;
 
 #[derive(Debug, thiserror::Error)]
 pub enum DuError {

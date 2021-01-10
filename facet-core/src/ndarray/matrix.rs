@@ -12,21 +12,14 @@ use rayon::prelude::*;
 /// Raw matrix multiplication method
 // this really should be optimized further...
 pub fn matmul_impl<'a, T>(
-    [n, m]: [u32; 2],
+    [n, m, p]: [u32; 3],
     values0: &'a [T],
-    [m1, p]: [u32; 2],
     values1: &'a [T],
     out: &mut [T],
 ) -> Result<(), NdArrayError>
 where
     T: AddAssign + Add<Output = T> + Mul<Output = T> + Default + 'a + Copy + Send + Sync,
 {
-    if m != m1 {
-        return Err(NdArrayError::DimensionMismatch {
-            expected: m as usize,
-            actual: m1 as usize,
-        });
-    }
     debug_assert_eq!((n as usize * m as usize), values0.len());
     debug_assert_eq!((p as usize * m as usize), values1.len());
     debug_assert_eq!(out.len(), n as usize * p as usize);
@@ -51,15 +44,35 @@ where
     #[cfg(not(feature = "rayon"))]
     for i in 0..n {
         for j in 0..p {
+            let mut val = T::default();
             for k in 0..m {
-                let val0 = &values0[(i * m + k) as usize];
-                let val1 = &values1[(k * p + j) as usize];
-                out[(i * p + j) as usize] += *val0 * *val1
+                let val0 = values0[(i * m + k) as usize];
+                let val1 = values1[(k * p + j) as usize];
+                val += val0 * val1
             }
+            out[(i * p + j) as usize] = val;
         }
     }
 
     Ok(())
+}
+
+/// f64 specialized method
+pub fn matmul_impl_f64<'a>(
+    [n, m, p]: [u32; 3],
+    values0: &'a [f64],
+    values1: &'a [f64],
+    out: &mut [f64],
+) -> Result<(), NdArrayError> {
+    #[cfg(feature = "gpu")]
+    if n * p > 64 {
+        return match crate::gpu::matmul::matmul_f64_impl([n, m, p], values0, values1, out) {
+            Ok(()) => Ok(()),
+            Err(crate::gpu::GpuNdArrayError::NdArrayError(err)) => Err(err),
+            err @ Err(_) => panic!("{:?}", err),
+        };
+    }
+    matmul_impl([n, m, p], values0, values1, out)
 }
 
 pub fn transpose_mat<T: Clone>([n, m]: [usize; 2], inp: &[T], out: &mut [T]) {
@@ -114,6 +127,13 @@ pub fn rotate_mat_cw<T: Clone>(col: usize, inp: &[T], out: &mut [T]) {
         smallvec::smallvec![inp[0].clone(); inp.len()];
     transpose_mat([col, col], inp, intermediate.as_mut_slice());
     flip_mat_horizontal([col, col], intermediate.as_slice(), out);
+}
+
+impl NdArray<f64> {
+    /// specialized matmul
+    pub fn matmul_f64<'a>(&'a self, other: &'a Self, out: &mut Self) -> Result<(), NdArrayError> {
+        self._matmul(other, out, matmul_impl)
+    }
 }
 
 impl<T> NdArray<T> {
@@ -247,6 +267,14 @@ impl<T> NdArray<T> {
     where
         T: AddAssign + Add<Output = T> + Mul<Output = T> + Default + 'a + Copy + Sync + Send,
     {
+        self._matmul(other, out, matmul_impl)
+    }
+
+    fn _matmul<'a, F>(&'a self, other: &'a Self, out: &mut Self, f: F) -> Result<(), NdArrayError>
+    where
+        F: Fn([u32; 3], &'a [T], &'a [T], &mut [T]) -> Result<(), NdArrayError> + Sync,
+        T: Default + Send + Sync,
+    {
         match (&self.shape, &other.shape) {
             shapes @ (Shape::Scalar(_), Shape::Scalar(_))
             | shapes @ (Shape::Scalar(_), Shape::Vector(_))
@@ -254,52 +282,41 @@ impl<T> NdArray<T> {
             | shapes @ (Shape::Scalar(_), Shape::Tensor(_))
             | shapes @ (Shape::Vector(_), Shape::Scalar(_))
             | shapes @ (Shape::Matrix(_), Shape::Scalar(_))
-            | shapes @ (Shape::Tensor(_), Shape::Scalar(_)) => {
+            | shapes @ (Shape::Tensor(_), Shape::Scalar(_))
+            | shapes @ (Shape::Vector(_), Shape::Vector(_)) => {
                 Err(NdArrayError::BinaryOpNotSupported {
                     shape_a: shapes.0.clone(),
                     shape_b: shapes.1.clone(),
                 })
             }
 
-            (Shape::Vector([a]), Shape::Vector([b])) => {
-                let res = self.inner(other).ok_or(NdArrayError::DimensionMismatch {
-                    expected: *a as usize,
-                    actual: *b as usize,
-                })?;
-                *out = Self::new_with_values(&[][..], Data::from_slice(&[res][..]))?;
-                Ok(())
-            }
-
-            (Shape::Vector([l]), Shape::Matrix([n, m])) => {
+            (Shape::Vector([l]), Shape::Matrix([_, m])) => {
                 out.reshape(Shape::Matrix([1, *m]));
-                matmul_impl(
-                    [1, *l],
+                f(
+                    [1, *l, *m],
                     self.as_slice(),
-                    [*n, *m],
                     other.as_slice(),
                     out.as_mut_slice(),
                 )?;
                 out.reshape(*m);
                 Ok(())
             }
-            (Shape::Matrix([n, m]), Shape::Vector([l])) => {
+            (Shape::Matrix([n, m]), Shape::Vector([_])) => {
                 out.reshape(Shape::Matrix([*n, 1]));
-                matmul_impl(
-                    [*n, *m],
+                f(
+                    [*n, *m, 1],
                     self.as_slice(),
-                    [*l, 1],
                     other.as_slice(),
                     out.as_mut_slice(),
                 )?;
                 out.reshape(*m);
                 Ok(())
             }
-            (Shape::Matrix([a, b]), Shape::Matrix([c, d])) => {
+            (Shape::Matrix([a, b]), Shape::Matrix([_, d])) => {
                 out.reshape(Shape::Matrix([*a, *d]));
-                matmul_impl(
-                    [*a, *b],
+                f(
+                    [*a, *b, *d],
                     self.as_slice(),
-                    [*c, *d],
                     other.as_slice(),
                     out.as_mut_slice(),
                 )?;
@@ -313,7 +330,7 @@ impl<T> NdArray<T> {
                 let it = ColumnIter::new(&other.values, n as usize * m as usize);
                 out.reshape([(other.len() / (n as usize * m as usize)) as u32, *l]);
                 for (mat, out) in it.zip(ColumnIterMut::new(&mut out.values, *l as usize)) {
-                    matmul_impl([1, *l], self.as_slice(), [n, m], mat, out)?;
+                    f([1, *l, m], self.as_slice(), mat, out)?;
                 }
                 Ok(())
             }
@@ -324,7 +341,7 @@ impl<T> NdArray<T> {
                 let l: u32 = *l;
                 out.reshape([(self.len() / (n as usize * m as usize)) as u32, l]);
                 for (mat, out) in it.zip(ColumnIterMut::new(&mut out.values, l as usize)) {
-                    matmul_impl([n, m], mat, [l, 1], other.as_slice(), out)?;
+                    f([n, m, 1], mat, other.as_slice(), out)?;
                 }
                 Ok(())
             }
@@ -337,7 +354,7 @@ impl<T> NdArray<T> {
                 for (mat, out) in
                     it.zip(ColumnIterMut::new(&mut out.values, a as usize * d as usize))
                 {
-                    matmul_impl([a, b], self.as_slice(), [c, d], mat, out)?;
+                    f([a, b, d], self.as_slice(), mat, out)?;
                 }
                 Ok(())
             }
@@ -350,7 +367,7 @@ impl<T> NdArray<T> {
                 for (mat, out) in
                     it.zip(ColumnIterMut::new(&mut out.values, a as usize * d as usize))
                 {
-                    matmul_impl([a, b], self.as_slice(), [c, d], mat, out)?;
+                    f([a, b, d], self.as_slice(), mat, out)?;
                 }
                 Ok(())
             }
@@ -373,25 +390,24 @@ impl<T> NdArray<T> {
 
                 #[cfg(not(feature = "rayon"))]
                 {
+                    let it_0 = self.values.as_slice().chunks(a as usize * b as usize);
+                    let it_1 = other.values.as_slice().chunks(a as usize * b as usize);
                     for (out, (lhs, rhs)) in
                         ColumnIterMut::new(&mut out.values, a as usize * d as usize)
                             .zip(it_0.zip(it_1))
                     {
-                        matmul_impl([a, b], lhs, [c, d], rhs, out)?;
+                        f([a, b, d], lhs, rhs, out)?;
                     }
                 }
                 #[cfg(feature = "rayon")]
                 {
                     let it_0 = self.values.as_slice().par_chunks(a as usize * b as usize);
                     let it_1 = other.values.as_slice().par_chunks(a as usize * b as usize);
-
                     out.values
                         .as_mut_slice()
                         .par_chunks_mut(a as usize * d as usize)
                         .zip(it_0.zip(it_1))
-                        .try_for_each(|(out, (lhs, rhs))| {
-                            matmul_impl([a, b], lhs, [c, d], rhs, out)
-                        })?;
+                        .try_for_each(|(out, (lhs, rhs))| f([a, b, d], lhs, rhs, out))?;
                 }
 
                 Ok(())
