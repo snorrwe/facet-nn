@@ -8,8 +8,7 @@ use rand::Rng;
 
 fn mat_mul(c: &mut Criterion) {
     let mut g = c.benchmark_group("matrix multiplication");
-    for size in (2..=10).step_by(2) {
-        let size = 1 << size;
+    for size in (256..=512).step_by(32) {
         g.bench_with_input(
             BenchmarkId::new("cpu", size),
             &size,

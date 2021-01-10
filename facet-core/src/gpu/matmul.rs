@@ -10,6 +10,8 @@ use vulkano::{
     descriptor::PipelineLayoutAbstract,
 };
 
+const LOCAL_SIZE_X: u32 = 32;
+
 // naive impl
 // TODO optimize
 // maybe something like this? https://www.ibiblio.org/e-notes/webgl/gpu/mul/sgemm6.htm
@@ -18,7 +20,7 @@ vulkano_shaders::shader! {
     src: r#"
 #version 450
 
-layout(local_size_x = 1, local_size_y = 1, local_size_z = 1) in;
+layout(local_size_x = 32, local_size_y = 1, local_size_z = 1) in;
 
 layout(set = 0, binding = 0) readonly  buffer Data_a { double A[]; };
 layout(set = 0, binding = 1) readonly  buffer Data_b { double B[]; };
@@ -75,11 +77,6 @@ pub fn matmul_f64_impl<'a>(
         .expect("failed to create compute pipeline"),
     );
 
-    dbg!(
-        values0.len() + values1.len() + out.len(),
-        out.len(),
-        exc.buffer_pool_f64.capacity()
-    );
     // force larger allocations
     exc.buffer_pool_f64
         .reserve((values0.len() + values1.len() + out.len()).max(256 * 1024 * 1024)) // 256 MiB
@@ -122,8 +119,9 @@ pub fn matmul_f64_impl<'a>(
     let mut builder =
         vulkano::command_buffer::AutoCommandBufferBuilder::new(device.clone(), exc.queue.family())
             .unwrap();
+    let workgroups = [n / LOCAL_SIZE_X, p, 1];
     builder
-        .dispatch([n, p, 1], compute_pipeline.clone(), descriptor, shape)
+        .dispatch(workgroups, compute_pipeline.clone(), descriptor, shape)
         .unwrap();
     let command_buffer = builder.build().unwrap();
 
@@ -134,13 +132,40 @@ pub fn matmul_f64_impl<'a>(
     let finish = finish
         .then_signal_fence_and_flush()
         .expect("failed to flush");
+
+    // process the remaning columns on the cpu while we await the gpu execution
+    // remaining is in 0 <= r && r < 32
+    let remaining = n % LOCAL_SIZE_X;
+    let offset = n - remaining;
+    let offset = offset as usize;
+
+    for i in 0..remaining {
+        let i = i as usize + offset;
+        for j in 0..p {
+            let j = j as usize;
+            let mut val = 0.0;
+            for k in 0..m {
+                let k = k as usize;
+                let val0 = values0[i * m as usize + k];
+                let val1 = values1[k * p as usize + j];
+                val += val0 * val1
+            }
+            out[i * p as usize + j] = val;
+        }
+    }
+
     finish.wait(None).expect("compute shader execution failed");
 
     // gpu finished processing, copy the result
     let content = c_buffer.read().unwrap();
-    out.par_iter_mut().enumerate().for_each(|(i, b)| {
-        *b = content[i];
-    });
+    out.par_iter_mut()
+        .enumerate()
+        // only set the out values we haven't touched in the cpu-computations
+        .take(offset * p as usize)
+        .for_each(|(i, b)| {
+            // TODO pls use chunks
+            *b = content[i];
+        });
 
     rayon::spawn(move || {
         let mut finish = finish;
@@ -157,10 +182,44 @@ mod tests {
     use rand::Rng;
 
     #[test]
+    fn test_identity_returns_the_og_matrix() {
+        const N: u32 = 9;
+
+        let mut rng = rand::thread_rng();
+        let a =
+            NdArray::new_with_values([N, N], (0..N * N).map(|_| rng.gen_range(0., 10.)).collect())
+                .unwrap();
+
+        let mut b =
+            NdArray::new_with_values(&[N, N][..], (0..N * N).map(|_| 0.0).collect()).unwrap();
+        for i in 0..N {
+            for j in 0..N {
+                if i == j {
+                    *b.get_mut(&[i, j]).unwrap() = 1.0
+                }
+            }
+        }
+
+        let mut c_gpu = NdArray::new([N, N]);
+        matmul_f64_impl([N, N, N], a.as_slice(), b.as_slice(), c_gpu.as_mut_slice()).unwrap();
+
+        println!("{}", c_gpu);
+
+        for (c, a) in c_gpu
+            .as_slice()
+            .iter()
+            .zip(a.as_slice().iter())
+            .map(|(c, a)| (*c, *a))
+        {
+            assert!((a - c).abs() < 0.000001)
+        }
+    }
+
+    #[test]
     fn test_correctness() {
-        const N: u32 = 4;
-        const M: u32 = 7;
-        const P: u32 = 3;
+        const N: u32 = 44;
+        const M: u32 = 70;
+        const P: u32 = 30;
 
         let mut rng = rand::thread_rng();
         let a =
@@ -185,10 +244,13 @@ mod tests {
         )
         .unwrap();
 
-        dbg!(&c_gpu, &c_cpu);
-
-        for (a, b) in c_gpu.as_slice().iter().zip(c_cpu.as_slice().iter()) {
-            assert!((a - b).abs() < 0.000001)
+        for (i, (a, b)) in c_gpu
+            .as_slice()
+            .iter()
+            .zip(c_cpu.as_slice().iter())
+            .enumerate()
+        {
+            assert!((a - b).abs() < 0.000001, "{}: {} != {}", i, a, b)
         }
     }
 }
