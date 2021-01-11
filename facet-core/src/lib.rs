@@ -18,11 +18,11 @@ pub mod gpu;
 #[cfg(test)]
 mod tests;
 
-#[cfg(feature = "vulkano")]
-pub use vulkano;
 #[cfg(feature = "rayon")]
 pub use rayon;
 pub use smallvec;
+#[cfg(feature = "vulkano")]
+pub use vulkano;
 
 pub type DuResult<T> = Result<T, DuError>;
 
@@ -188,8 +188,7 @@ where
                 .windows(window)
                 .map(|window| {
                     let sum: T = window.iter().cloned().sum();
-                    let mean = sum / T::from(window.len() as u32);
-                    mean
+                    sum / T::from(window.len() as u32)
                 })
                 .fold(prelude::Data::default(), |mut res, mean| {
                     res.push(mean);
@@ -377,8 +376,8 @@ pub fn normalize_f32_vectors(inp: &ndarray::NdArray<f32>, out: &mut ndarray::NdA
     let collen = inp.shape().last().unwrap_or(0) as usize;
     for (inp, out) in inp.iter_cols().zip(out.iter_cols_mut()) {
         let mut vec_len = 0.0;
-        for i in 0..collen {
-            vec_len += inp[i] * inp[i];
+        for i in inp.iter().take(collen) {
+            vec_len += i * i;
         }
         let inv_vec_len = _fast_inv_sqrt_f32(vec_len);
 
@@ -425,8 +424,8 @@ pub fn normalize_f64_vectors(inp: &ndarray::NdArray<f64>, out: &mut ndarray::NdA
     let collen = inp.shape().last().unwrap_or(0) as usize;
     for (inp, out) in inp.iter_cols().zip(out.iter_cols_mut()) {
         let mut vec_len = 0.0;
-        for i in 0..collen {
-            vec_len += inp[i] * inp[i];
+        for i in inp.iter().take(collen) {
+            vec_len += i * i;
         }
         let inv_vec_len = _fast_inv_sqrt_f64(vec_len);
 

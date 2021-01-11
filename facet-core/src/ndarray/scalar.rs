@@ -79,7 +79,7 @@ where
 
     fn div(self, b: T) -> Self::Output {
         let values: Data<T> = self.values.iter().map(move |a| *a / b).collect();
-        Self::new_with_values(self.shape.clone(), values).unwrap()
+        Self::new_with_values(self.shape, values).unwrap()
     }
 }
 

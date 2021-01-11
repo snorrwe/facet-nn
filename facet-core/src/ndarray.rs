@@ -196,7 +196,11 @@ where
 }
 
 impl<T> NdArray<T> {
-    pub fn new(shape: impl Into<Shape>) -> Self {
+    /// Created a new array with shape and uninitialized data.
+    pub fn new(shape: impl Into<Shape>) -> Self
+    where
+        T: Copy,
+    {
         let shape = shape.into();
         let len: usize = shape.span();
         let values = (0..len)
@@ -294,8 +298,6 @@ impl<T> NdArray<T> {
         let shape: Shape = shape.into();
         let len: usize = shape.span().max(1);
         let values = (0..len).map(|_| Default::default()).collect::<Data<T>>();
-
-        let shape = Shape::from(shape);
         Self::new_with_values(shape, values).unwrap()
     }
 

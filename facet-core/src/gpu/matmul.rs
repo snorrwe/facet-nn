@@ -131,11 +131,11 @@ pub fn matmul_f64_impl<'a>(
             .unwrap();
     let workgroups = [n / LOCAL_SIZE_X, p, 1];
     builder
-        .dispatch(workgroups, compute_pipeline.clone(), descriptor, shape)
+        .dispatch(workgroups, compute_pipeline, descriptor, shape)
         .unwrap();
     let command_buffer = builder.build().unwrap();
 
-    let finish = vulkano::sync::now(device.clone());
+    let finish = vulkano::sync::now(device);
     let finish = finish
         .then_execute(exc.queue.clone(), command_buffer)
         .unwrap();
