@@ -1,3 +1,9 @@
+//!
+//! ## Features
+//!
+//! - `rayon`: Enables CPU parallelism via the rayon crate
+//! - `gpu`: Enables GPU support
+//!
 use ndarray::{shape::Shape, NdArrayError};
 
 pub mod activation;

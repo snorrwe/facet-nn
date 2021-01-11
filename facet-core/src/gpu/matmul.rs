@@ -81,22 +81,32 @@ pub fn matmul_f64_impl<'a>(
     exc.buffer_pool_f64
         .reserve((values0.len() + values1.len() + out.len()).max(256 * 1024 * 1024)) // 256 MiB
         .unwrap();
-    let a_buffer = exc
-        .buffer_pool_f64
-        .chunk(values0.iter().cloned())
-        .expect("buffer a");
-    let b_buffer = exc
-        .buffer_pool_f64
-        .chunk(values1.iter().cloned())
-        .expect("buffer b");
 
-    let c_buffer = CpuAccessibleBuffer::from_iter(
-        device.clone(),
-        BufferUsage::all(),
-        true,
-        (0..out.len()).map(|_| 0.0f64),
-    )
-    .expect("failed to create buffer c");
+    let ((a_buffer, b_buffer), c_buffer) = rayon::join(
+        || {
+            rayon::join(
+                || {
+                    exc.buffer_pool_f64
+                        .chunk(values0.iter().cloned())
+                        .expect("buffer a")
+                },
+                || {
+                    exc.buffer_pool_f64
+                        .chunk(values1.iter().cloned())
+                        .expect("buffer b")
+                },
+            )
+        },
+        || {
+            CpuAccessibleBuffer::from_iter(
+                device.clone(),
+                BufferUsage::all(),
+                true,
+                (0..out.len()).map(|_| 0.0f64),
+            )
+            .expect("failed to create buffer c")
+        },
+    );
 
     // Descriptor sets
     let descriptor = vulkano::descriptor::descriptor_set::PersistentDescriptorSet::start(
@@ -134,7 +144,7 @@ pub fn matmul_f64_impl<'a>(
         .expect("failed to flush");
 
     // process the remaning columns on the cpu while we await the gpu execution
-    // remaining is in 0 <= r && r < 32
+    // remaining is in 0 <= r < 32
     let remaining = n % LOCAL_SIZE_X;
     let offset = n - remaining;
     let offset = offset as usize;
