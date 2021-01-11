@@ -10,7 +10,8 @@ use vulkano::{
     descriptor::PipelineLayoutAbstract,
 };
 
-pub const LOCAL_SIZE_X: u32 = 32;
+pub const LOCAL_SIZE_X: u32 = 16;
+pub const LOCAL_SIZE_Y: u32 = 8;
 
 // naive impl
 // TODO optimize
@@ -20,7 +21,7 @@ vulkano_shaders::shader! {
     src: r#"
 #version 450
 
-layout(local_size_x = 32, local_size_y = 1, local_size_z = 1) in;
+layout(local_size_x = 16, local_size_y = 8, local_size_z = 1) in;
 
 layout(set = 0, binding = 0) readonly  buffer Data_a { double A[]; };
 layout(set = 0, binding = 1) readonly  buffer Data_b { double B[]; };
@@ -129,7 +130,7 @@ pub fn matmul_f64_impl<'a>(
     let mut builder =
         vulkano::command_buffer::AutoCommandBufferBuilder::new(device.clone(), exc.queue.family())
             .unwrap();
-    let workgroups = [n / LOCAL_SIZE_X, p, 1];
+    let workgroups = [n / LOCAL_SIZE_X, p / LOCAL_SIZE_Y, 1];
     builder
         .dispatch(workgroups, compute_pipeline, descriptor, shape)
         .unwrap();
@@ -144,15 +145,32 @@ pub fn matmul_f64_impl<'a>(
         .expect("failed to flush");
 
     // process the remaning columns on the cpu while we await the gpu execution
-    // remaining is in 0 <= r < 32
-    let remaining = n % LOCAL_SIZE_X;
-    let offset = n - remaining;
-    let offset = offset as usize;
 
-    for i in 0..remaining {
-        let i = i as usize + offset;
+    // note that the last block is calculated twice, the auther deems this ok for now
+    // last columns
+    let remaining_n = n % LOCAL_SIZE_X;
+    let offset_n = (n - remaining_n) as usize;
+    for i in 0..remaining_n {
+        let i = i as usize + offset_n;
         for j in 0..p {
             let j = j as usize;
+            let mut val = 0.0;
+            for k in 0..m {
+                let k = k as usize;
+                let val0 = values0[i * m as usize + k];
+                let val1 = values1[k * p as usize + j];
+                val += val0 * val1
+            }
+            out[i * p as usize + j] = val;
+        }
+    }
+    // last rows
+    let remaining_p = p % LOCAL_SIZE_Y;
+    let offset_p = (p - remaining_p) as usize;
+    for i in 0..n {
+        let i = i as usize;
+        for j in 0..remaining_p {
+            let j = j as usize + offset_p;
             let mut val = 0.0;
             for k in 0..m {
                 let k = k as usize;
@@ -171,10 +189,10 @@ pub fn matmul_f64_impl<'a>(
     out.par_iter_mut()
         .enumerate()
         // only set the out values we haven't touched in the cpu-computations
-        .take(offset * p as usize)
+        .take(offset_n * p as usize)
         .for_each(|(i, b)| {
             // TODO pls use chunks
-            *b = content[i];
+            *b += content[i];
         });
 
     rayon::spawn(move || {
