@@ -10,7 +10,7 @@ use vulkano::{
     descriptor::PipelineLayoutAbstract,
 };
 
-const LOCAL_SIZE_X: u32 = 32;
+pub const LOCAL_SIZE_X: u32 = 64;
 
 // naive impl
 // TODO optimize
@@ -20,7 +20,7 @@ vulkano_shaders::shader! {
     src: r#"
 #version 450
 
-layout(local_size_x = 32, local_size_y = 1, local_size_z = 1) in;
+layout(local_size_x = 64, local_size_y = 1, local_size_z = 1) in;
 
 layout(set = 0, binding = 0) readonly  buffer Data_a { double A[]; };
 layout(set = 0, binding = 1) readonly  buffer Data_b { double B[]; };
@@ -144,7 +144,7 @@ pub fn matmul_f64_impl<'a>(
         .expect("failed to flush");
 
     // process the remaning columns on the cpu while we await the gpu execution
-    // remaining is in 0 <= r < 32
+    // remaining is in 0 <= r < 64
     let remaining = n % LOCAL_SIZE_X;
     let offset = n - remaining;
     let offset = offset as usize;
@@ -193,7 +193,7 @@ mod tests {
 
     #[test]
     fn test_identity_returns_the_og_matrix() {
-        const N: u32 = 9;
+        const N: u32 = LOCAL_SIZE_X + 11; // force combined GPU+CPU computation
 
         let mut rng = rand::thread_rng();
         let a =
@@ -227,7 +227,7 @@ mod tests {
 
     #[test]
     fn test_correctness() {
-        const N: u32 = 44;
+        const N: u32 = LOCAL_SIZE_X + 11; // force combined GPU+CPU computation
         const M: u32 = 70;
         const P: u32 = 30;
 
