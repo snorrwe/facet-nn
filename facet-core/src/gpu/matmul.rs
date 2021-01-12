@@ -1,5 +1,7 @@
 //! compute shaders
 //!
+#[cfg(test)]
+mod tests;
 
 use super::{GpuNdArrayError, EXECUTOR, MATMUL};
 
@@ -11,7 +13,7 @@ use vulkano::{
 };
 
 pub const LOCAL_SIZE_X: u32 = 16;
-pub const LOCAL_SIZE_Y: u32 = 8;
+pub const LOCAL_SIZE_Y: u32 = 16;
 
 // naive impl
 // TODO optimize
@@ -21,7 +23,7 @@ vulkano_shaders::shader! {
     src: r#"
 #version 450
 
-layout(local_size_x = 16, local_size_y = 8, local_size_z = 1) in;
+layout(local_size_x = 16, local_size_y = 16, local_size_z = 1) in;
 
 layout(set = 0, binding = 0) readonly  buffer Data_a { double A[]; };
 layout(set = 0, binding = 1) readonly  buffer Data_b { double B[]; };
@@ -80,17 +82,13 @@ pub fn matmul_f64_impl<'a>(
 
     let ((a_buffer, b_buffer), c_buffer) = rayon::join(
         || {
-            rayon::join(
-                || {
-                    exc.buffer_pool_f64
-                        .chunk(values0.iter().cloned())
-                        .expect("buffer a")
-                },
-                || {
-                    exc.buffer_pool_f64
-                        .chunk(values1.iter().cloned())
-                        .expect("buffer b")
-                },
+            (
+                exc.buffer_pool_f64
+                    .chunk(values0.iter().cloned())
+                    .expect("buffer a"),
+                exc.buffer_pool_f64
+                    .chunk(values1.iter().cloned())
+                    .expect("buffer b"),
             )
         },
         || {
@@ -131,149 +129,70 @@ pub fn matmul_f64_impl<'a>(
         .unwrap();
     let command_buffer = builder.build().unwrap();
 
-    let finish = vulkano::sync::now(device);
-    let finish = finish
+    let finish = vulkano::sync::now(device)
         .then_execute(exc.queue.clone(), command_buffer)
-        .unwrap();
-    let finish = finish
+        .unwrap()
         .then_signal_fence_and_flush()
         .expect("failed to flush");
 
     // process the remaning columns on the cpu while we await the gpu execution
-
     // note that the last block is calculated twice, the auther deems this ok for now
+
     // last columns
     let remaining_n = n % LOCAL_SIZE_X;
     let offset_n = (n - remaining_n) as usize;
-    for i in 0..remaining_n {
-        let i = i as usize + offset_n;
-        for j in 0..p {
-            let j = j as usize;
+    (0..p).for_each(|j| {
+        let j = j as usize;
+        for i in 0..remaining_n {
+            let i = i as usize + offset_n;
             let mut val = 0.0;
             for k in 0..m {
                 let k = k as usize;
-                let val0 = values0[i * m as usize + k];
-                let val1 = values1[k * p as usize + j];
-                val += val0 * val1
+                val += at(values0, i, m as usize, k) * at(values1, k, p as usize, j);
             }
             out[i * p as usize + j] = val;
         }
-    }
+    });
     // last rows
     let remaining_p = p % LOCAL_SIZE_Y;
     let offset_p = (p - remaining_p) as usize;
-    for i in 0..n {
+    (0..n).for_each(|i| {
         let i = i as usize;
         for j in 0..remaining_p {
             let j = j as usize + offset_p;
             let mut val = 0.0;
             for k in 0..m {
                 let k = k as usize;
-                let val0 = values0[i * m as usize + k];
-                let val1 = values1[k * p as usize + j];
-                val += val0 * val1
+                val += at(values0, i, m as usize, k) * at(values1, k, p as usize, j);
             }
             out[i * p as usize + j] = val;
         }
-    }
+    });
 
     finish.wait(None).expect("compute shader execution failed");
 
     // gpu finished processing, copy the result
     let content = c_buffer.read().unwrap();
-    out.par_iter_mut()
+    out.par_chunks_mut(p as usize)
         .enumerate()
         // only set the out values we haven't touched in the cpu-computations
-        .take(offset_n * p as usize)
         .for_each(|(i, b)| {
-            // TODO pls use chunks
-            *b += content[i];
+            let offset = i * p as usize;
+            for (i, v) in b.iter_mut().enumerate() {
+                // use add as we might touch values skipped by the gpu
+                // these values will be set to 0.
+                *v += content[offset + i];
+            }
         });
 
-    rayon::spawn(move || {
-        let mut finish = finish;
-        finish.cleanup_finished();
-    });
+    // we should periodically clean up the gpu resources, for now let's do that in every call
+    let mut finish = finish;
+    finish.cleanup_finished();
 
     Ok(())
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::prelude::*;
-    use rand::Rng;
-
-    #[test]
-    fn test_identity_returns_the_og_matrix() {
-        const N: u32 = LOCAL_SIZE_X + 11; // force combined GPU+CPU computation
-
-        let mut rng = rand::thread_rng();
-        let a =
-            NdArray::new_with_values([N, N], (0..N * N).map(|_| rng.gen_range(0., 10.)).collect())
-                .unwrap();
-
-        let mut b =
-            NdArray::new_with_values(&[N, N][..], (0..N * N).map(|_| 0.0).collect()).unwrap();
-        for i in 0..N {
-            for j in 0..N {
-                if i == j {
-                    *b.get_mut(&[i, j]).unwrap() = 1.0
-                }
-            }
-        }
-
-        let mut c_gpu = NdArray::new([N, N]);
-        matmul_f64_impl([N, N, N], a.as_slice(), b.as_slice(), c_gpu.as_mut_slice()).unwrap();
-
-        println!("{}", c_gpu);
-
-        for (c, a) in c_gpu
-            .as_slice()
-            .iter()
-            .zip(a.as_slice().iter())
-            .map(|(c, a)| (*c, *a))
-        {
-            assert!((a - c).abs() < 0.000001)
-        }
-    }
-
-    #[test]
-    fn test_correctness() {
-        const N: u32 = LOCAL_SIZE_X + 11; // force combined GPU+CPU computation
-        const M: u32 = 70;
-        const P: u32 = 30;
-
-        let mut rng = rand::thread_rng();
-        let a =
-            NdArray::new_with_values([N, M], (0..N * M).map(|_| rng.gen_range(0., 10.)).collect())
-                .unwrap();
-
-        let b = NdArray::new_with_values(
-            &[M, P][..],
-            (0..M * P).map(|_| rng.gen_range(0., 10.)).collect(),
-        )
-        .unwrap();
-
-        let mut c_gpu = NdArray::new(N * P);
-        matmul_f64_impl([N, M, P], a.as_slice(), b.as_slice(), c_gpu.as_mut_slice()).unwrap();
-
-        let mut c_cpu = NdArray::new(N * P);
-        crate::ndarray::matrix::matmul_impl(
-            [N, M, P],
-            a.as_slice(),
-            b.as_slice(),
-            c_cpu.as_mut_slice(),
-        )
-        .unwrap();
-
-        for (i, (a, b)) in c_gpu
-            .as_slice()
-            .iter()
-            .zip(c_cpu.as_slice().iter())
-            .enumerate()
-        {
-            assert!((a - b).abs() < 0.000001, "{}: {} != {}", i, a, b)
-        }
-    }
+#[inline(always)]
+fn at(values: &[f64], i: usize, cols: usize, j: usize) -> f64 {
+    unsafe { *values.as_ptr().add(i * cols + j) }
 }
