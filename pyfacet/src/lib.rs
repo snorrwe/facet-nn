@@ -34,7 +34,7 @@ pub fn argmax(py: Python, inp: PyObject) -> PyResult<NdArrayI> {
 
     let res: Vec<i64> = inp
         .inner
-        .par_iter_cols()
+        .par_iter_rows()
         .map(|col| {
             col.iter()
                 .enumerate()
@@ -61,7 +61,7 @@ pub fn argmin(py: Python, inp: PyObject) -> PyResult<NdArrayI> {
 
     let res: Vec<i64> = inp
         .inner
-        .par_iter_cols()
+        .par_iter_rows()
         .map(|col| {
             col.iter()
                 .enumerate()

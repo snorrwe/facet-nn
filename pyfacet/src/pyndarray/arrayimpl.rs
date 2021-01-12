@@ -233,9 +233,9 @@ macro_rules! impl_ndarray {
                     }
                 }
 
-                pub fn iter_cols<'py>(this: Py<Self>, py: Python<'py>) -> PyResult<Py<ColIter>> {
+                pub fn iter_rows<'py>(this: Py<Self>, py: Python<'py>) -> PyResult<Py<ColIter>> {
                     let s = this.borrow(py);
-                    let it = s.inner.iter_cols();
+                    let it = s.inner.iter_rows();
                     // transmute the lifetime, we know this is safe because the iterator will hold
                     // a reference to this array, and Python is single threaded, so no mutations
                     // _should_ occur during iteration

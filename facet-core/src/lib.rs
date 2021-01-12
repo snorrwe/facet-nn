@@ -61,7 +61,7 @@ where
     T: 'a + std::iter::Sum + Copy,
 {
     let res = inp
-        .iter_cols()
+        .iter_rows()
         .map(|x| x.iter().cloned().sum())
         .collect::<ndarray::Data<_>>();
 
@@ -129,7 +129,7 @@ where
         }
         Shape::Tensor(_) | Shape::Matrix([_, _]) => {
             let mut values = Vec::with_capacity(inp.shape().col_span());
-            for col in inp.iter_cols() {
+            for col in inp.iter_rows() {
                 let s: T = col.iter().cloned().sum();
                 let res = s
                     / (T::try_from(col.len() as u32))
@@ -318,8 +318,8 @@ where
         + std::ops::Sub<T, Output = T>,
 {
     let res = inp
-        .iter_cols()
-        .zip(mean.iter_cols().map(|mean| {
+        .iter_rows()
+        .zip(mean.iter_rows().map(|mean| {
             debug_assert_eq!(mean.len(), 1);
             mean[0]
         }))
@@ -374,7 +374,7 @@ pub fn fast_inv_sqrt_f32(inp: &ndarray::NdArray<f32>, out: &mut ndarray::NdArray
 pub fn normalize_f32_vectors(inp: &ndarray::NdArray<f32>, out: &mut ndarray::NdArray<f32>) {
     out.reshape(inp.shape().clone());
     let collen = inp.shape().last().unwrap_or(0) as usize;
-    for (inp, out) in inp.iter_cols().zip(out.iter_cols_mut()) {
+    for (inp, out) in inp.iter_rows().zip(out.iter_rows_mut()) {
         let mut vec_len = 0.0;
         for i in inp.iter().take(collen) {
             vec_len += i * i;
@@ -422,7 +422,7 @@ pub fn fast_inv_sqrt_f64(inp: &ndarray::NdArray<f64>, out: &mut ndarray::NdArray
 pub fn normalize_f64_vectors(inp: &ndarray::NdArray<f64>, out: &mut ndarray::NdArray<f64>) {
     out.reshape(inp.shape().clone());
     let collen = inp.shape().last().unwrap_or(0) as usize;
-    for (inp, out) in inp.iter_cols().zip(out.iter_cols_mut()) {
+    for (inp, out) in inp.iter_rows().zip(out.iter_rows_mut()) {
         let mut vec_len = 0.0;
         for i in inp.iter().take(collen) {
             vec_len += i * i;
@@ -468,7 +468,7 @@ where
     let shape_len = inp.shape().as_slice().len();
     let out_shape = &inp.shape().as_slice()[..shape_len - 1];
     out.reshape(out_shape);
-    for (i, vector) in inp.iter_cols().enumerate() {
+    for (i, vector) in inp.iter_rows().enumerate() {
         let mut vec_len = T::default();
         for x in vector {
             vec_len += x * x;

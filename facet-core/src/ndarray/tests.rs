@@ -31,12 +31,12 @@ fn test_slice_frees_correctly() {
 }
 
 #[test]
-fn test_iter_cols() {
+fn test_iter_rows() {
     let mut arr = NdArray::new([5, 8]);
     arr.set_slice((0..40).collect::<Data<_>>()).unwrap();
 
     let mut count = 0;
-    for (i, col) in arr.iter_cols().enumerate() {
+    for (i, col) in arr.iter_rows().enumerate() {
         count = i + 1;
         assert_eq!(col.len(), 8, "index {}", i);
         let i = i * 8;
@@ -133,7 +133,7 @@ fn test_vector_matrix_mul_w_broadcasting() {
 
     println!("{:?}", c);
     assert_eq!(c.shape, Shape::Matrix([4, 4]));
-    for col in c.iter_cols() {
+    for col in c.iter_rows() {
         assert_eq!(col, &[6, 7, 8, 1]);
     }
 }
@@ -224,7 +224,7 @@ fn test_tensor_transpose() {
 }
 
 #[test]
-fn test_horizontal_flip_even_cols() {
+fn test_horizontal_flip_even_rows() {
     let inp = [1, 2, 3, 4, 5, 6, 7, 8];
     let mut out = [0; 8];
 
@@ -233,7 +233,7 @@ fn test_horizontal_flip_even_cols() {
 }
 
 #[test]
-fn test_horizontal_flip_odd_cols() {
+fn test_horizontal_flip_odd_rows() {
     let inp = [1, 2, 3, 4, 5, 6];
     let mut out = [0; 6];
 
@@ -243,7 +243,7 @@ fn test_horizontal_flip_odd_cols() {
 }
 
 #[test]
-fn test_vertical_flip_even_cols() {
+fn test_vertical_flip_even_rows() {
     let inp = [1, 2, 3, 4, 5, 6, 7, 8];
     let mut out = [0; 8];
 
@@ -252,7 +252,7 @@ fn test_vertical_flip_even_cols() {
 }
 
 #[test]
-fn test_vertical_flip_odd_cols() {
+fn test_vertical_flip_odd_rows() {
     let inp = [1, 2, 3, 4, 5, 6];
     let mut out = [0; 6];
 
@@ -283,7 +283,7 @@ fn test_vertical_flip_tensor() {
 fn test_col_iter_returns_one_scalar() {
     let a = NdArray::new_scalar(42.69f32);
 
-    let mut c = a.iter_cols();
+    let mut c = a.iter_rows();
 
     let s = c.next().expect("expected one");
 
@@ -292,11 +292,11 @@ fn test_col_iter_returns_one_scalar() {
 }
 
 #[test]
-fn test_iter_cols_returns_all_items_in_vec() {
+fn test_iter_rows_returns_all_items_in_vec() {
     let a = NdArray::new_vector(vec![1, 2, 3, 4, 5, 6, 7, 8]);
 
     let count = a
-        .iter_cols()
+        .iter_rows()
         .map(|actual| {
             assert_eq!(actual.len(), 8);
             assert_eq!(actual, &[1, 2, 3, 4, 5, 6, 7, 8]);

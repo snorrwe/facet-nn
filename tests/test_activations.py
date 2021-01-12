@@ -25,7 +25,7 @@ def test_softmax_rand():
 
     assert out.shape == [M, N]
 
-    for (out, inp) in zip(out.iter_cols(), inp.iter_cols()):
+    for (out, inp) in zip(out.iter_rows(), inp.iter_rows()):
         s = sum(out)
         assert abs(s - 1) <= sys.float_info.epsilon * 8  # add some tolerance
 
@@ -45,7 +45,7 @@ def test_softmax_rand():
 
 def test_diagflat():
     softmax_output = pyfacet.array([0.7, 0.1, 0.2]).reshape([3, 1])
-    foo = pyfacet.diagflat([a for l in softmax_output.iter_cols() for a in l])
+    foo = pyfacet.diagflat([a for l in softmax_output.iter_rows() for a in l])
     for i in range(3):
         for j in range(3):
             if i == j:

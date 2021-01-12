@@ -11,7 +11,7 @@ use rayon::prelude::*;
 #[cfg(feature = "rayon")]
 pub fn relu(inp: &NdArray<f64>) -> NdArray<f64> {
     let mut out = inp.clone();
-    out.par_iter_cols_mut().for_each(|col| {
+    out.par_iter_rows_mut().for_each(|col| {
         for v in col {
             *v = v.max(0.0);
         }
@@ -28,7 +28,7 @@ pub fn relu(inp: &NdArray<f64>) -> NdArray<f64> {
 pub fn drelu_dz(inputs: &NdArray<f64>, dvalues: &NdArray<f64>) -> NdArray<f64> {
     // #[cfg(feature = "rayon")]
     let mut res = dvalues.clone();
-    for (dx, dz) in res.iter_cols_mut().zip(inputs.iter_cols()) {
+    for (dx, dz) in res.iter_rows_mut().zip(inputs.iter_rows()) {
         debug_assert_eq!(dx.len(), dz.len());
         for i in 0..dx.len() {
             if dz[i] <= 0.0 {
@@ -67,14 +67,14 @@ pub fn softmax(inp: &NdArray<f64>) -> DuResult<NdArray<f64>> {
         });
 
     let mut norm_base: NdArray<f64> = expvalues
-        .iter_cols()
+        .iter_rows()
         .map(|col| col.iter().cloned().sum())
         .collect();
 
     norm_base.reshape([norm_base.shape().span() as u32, 1]);
 
     let mut res = expvalues;
-    for (norm, col) in norm_base.iter_cols().zip(res.iter_cols_mut()) {
+    for (norm, col) in norm_base.iter_rows().zip(res.iter_rows_mut()) {
         debug_assert_eq!(norm.len(), 1);
         col.iter_mut().for_each(|v| *v /= norm[0]);
     }
@@ -90,7 +90,7 @@ pub fn dsoftmax(output: &NdArray<f64>, dvalues: &NdArray<f64>) -> DuResult<NdArr
     let mut jacobian_matrix = NdArray::new([collen, collen]);
     let mut dotcache = NdArray::new([collen, collen]);
 
-    for (i, (output, dvalues)) in output.iter_cols().zip(dvalues.iter_cols()).enumerate() {
+    for (i, (output, dvalues)) in output.iter_rows().zip(dvalues.iter_rows()).enumerate() {
         diagflat(output, &mut jacobian_matrix);
         matmul_impl([collen, 1, collen], output, output, dotcache.as_mut_slice())?;
 

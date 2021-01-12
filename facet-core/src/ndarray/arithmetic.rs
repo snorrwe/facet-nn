@@ -81,7 +81,7 @@ macro_rules! arithimpl {
                 let mut res = $rhs.clone();
                 #[cfg(feature="rayon")]
                 {
-                    res.par_iter_cols_mut().for_each(|col|{
+                    res.par_iter_rows_mut().for_each(|col|{
                         for (a, b) in col.iter_mut().zip($lhs.values.iter()) {
                             *a $opeq *b;
                         }
@@ -89,7 +89,7 @@ macro_rules! arithimpl {
                 }
                 #[cfg(not(feature="rayon"))]
                 {
-                    for col in res.iter_cols_mut() {
+                    for col in res.iter_rows_mut() {
                         for (a, b) in col.iter_mut().zip($lhs.values.iter()) {
                             *a $opeq *b;
                         }
@@ -108,7 +108,7 @@ macro_rules! arithimpl {
                 let mut res = $lhs.clone();
                 #[cfg(feautre="rayon")]
                 {
-                    res.par_iter_cols_mut().for_each(|col|{
+                    res.par_iter_rows_mut().for_each(|col|{
                         for (a, b) in col.iter_mut().zip($rhs.values.iter()) {
                             *a $opeq *b;
                         }
@@ -116,7 +116,7 @@ macro_rules! arithimpl {
                 }
                 #[cfg(not(feautre="rayon"))]
                 {
-                    for col in res.iter_cols_mut() {
+                    for col in res.iter_rows_mut() {
                         for (a, b) in col.iter_mut().zip($rhs.values.iter()) {
                             *a $opeq *b;
                         }

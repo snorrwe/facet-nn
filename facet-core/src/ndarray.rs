@@ -160,8 +160,8 @@ where
                 if s.last()? != r {
                     return None;
                 }
-                let num_cols: u32 = s[..s.len() - 1].iter().product();
-                if num_cols != *c {
+                let num_rows: u32 = s[..s.len() - 1].iter().product();
+                if num_rows != *c {
                     return None;
                 }
             }
@@ -170,9 +170,9 @@ where
                 if sa.last()? != sb.last()? {
                     return None;
                 }
-                let num_cols_a: u32 = sa[..sa.len() - 1].iter().product();
-                let num_cols_b: u32 = sb[..sb.len() - 1].iter().product();
-                if num_cols_a != num_cols_b {
+                let num_rows_a: u32 = sa[..sa.len() - 1].iter().product();
+                let num_rows_b: u32 = sb[..sb.len() - 1].iter().product();
+                if num_rows_a != num_rows_b {
                     // number of columns mismatch
                     return None;
                 }
@@ -180,7 +180,7 @@ where
         }
 
         let res = other
-            .iter_cols()
+            .iter_rows()
             .map(|col| {
                 // dot product result
                 self.values
@@ -461,32 +461,32 @@ impl<T> NdArray<T> {
         self.values.iter()
     }
 
-    pub fn iter_cols(&self) -> impl Iterator<Item = &[T]> {
+    pub fn iter_rows(&self) -> impl Iterator<Item = &[T]> {
         ColumnIter::new(&self.values, self.shape.last().unwrap_or(1) as usize)
     }
 
-    pub fn iter_cols_mut(&mut self) -> impl Iterator<Item = &mut [T]> {
+    pub fn iter_rows_mut(&mut self) -> impl Iterator<Item = &mut [T]> {
         ColumnIterMut::new(&mut self.values, self.shape.last().unwrap_or(1) as usize)
     }
 
     #[cfg(feature = "rayon")]
-    pub fn par_iter_cols(&self) -> impl rayon::prelude::ParallelIterator<Item = &[T]> + '_
+    pub fn par_iter_rows(&self) -> impl rayon::prelude::ParallelIterator<Item = &[T]> + '_
     where
         T: Sync,
     {
-        let cols = self.shape.last().unwrap_or(1) as usize;
-        self.values.as_slice().par_chunks(cols)
+        let rows = self.shape.last().unwrap_or(1) as usize;
+        self.values.as_slice().par_chunks(rows)
     }
 
     #[cfg(feature = "rayon")]
-    pub fn par_iter_cols_mut(
+    pub fn par_iter_rows_mut(
         &mut self,
     ) -> impl rayon::prelude::ParallelIterator<Item = &mut [T]> + '_
     where
         T: Sync + Send,
     {
-        let cols = self.shape.last().unwrap_or(1) as usize;
-        self.values.as_mut_slice().par_chunks_mut(cols)
+        let rows = self.shape.last().unwrap_or(1) as usize;
+        self.values.as_mut_slice().par_chunks_mut(rows)
     }
 
     pub fn len(&self) -> usize {
@@ -550,7 +550,7 @@ where
         for _ in 0..depth - 1 {
             f.write_char('[')?;
         }
-        let mut it = self.iter_cols();
+        let mut it = self.iter_rows();
         if let Some(col) = it.next() {
             write!(f, "{:.5?}", col).unwrap();
         }

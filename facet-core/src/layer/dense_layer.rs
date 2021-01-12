@@ -83,7 +83,7 @@ impl DenseLayer {
 
         assert_eq!(self.output.shape().last(), self.biases.shape().last());
 
-        self.output.iter_cols_mut().for_each(|col| {
+        self.output.iter_rows_mut().for_each(|col| {
             col.iter_mut()
                 .zip(biases.iter())
                 .for_each(|(out, bias)| *out += bias)

@@ -1,6 +1,7 @@
 import progressbar
 
 import pyfacet as pf
+from pyfacet.layer import DropoutLayer
 from pyfacet.optimizer import Adam
 
 import random
@@ -30,7 +31,7 @@ inp = pf.DenseLayer(1, 8)
 acti1 = pf.Activation(pf.relu, pf.drelu_dz)
 hidden = pf.DenseLayer(8, 8)
 acti2 = pf.Activation(pf.relu, pf.drelu_dz)
-dropout = pf.DropoutLayer(0.3)
+dropout = DropoutLayer(0.3)
 out = pf.DenseLayer(8, 1)
 acti3 = pf.Activation(pf.sigmoid, pf.dsigmoid)
 

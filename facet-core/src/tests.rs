@@ -79,7 +79,7 @@ fn test_f32_vec_norm_accuracy() {
 
     crate::normalize_f32_vectors(&inp, &mut out);
 
-    for y in out.iter_cols() {
+    for y in out.iter_rows() {
         let len = y.iter().map(|x| x * x).sum::<f32>().sqrt();
         let err = (len - 1.0).abs();
         assert!(err < 0.002, "len {} err {}", len, err);
@@ -153,7 +153,7 @@ fn test_f64_vec_norm_accuracy() {
 
     crate::normalize_f64_vectors(&inp, &mut out);
 
-    for y in out.iter_cols() {
+    for y in out.iter_rows() {
         let len = y.iter().map(|x| x * x).sum::<f64>().sqrt();
         let err = (len - 1.0).abs();
         assert!(err < 0.002, "len {} err {}", len, err);
