@@ -17,15 +17,15 @@ pub enum GpuNdArrayError {
 
 #[allow(unused)]
 pub struct GpuExecutor {
-    pub(crate) instance: Arc<Instance>,
-    pub(crate) device: Arc<Device>,
-    pub(crate) queue: Arc<Queue>,
-    pub(crate) buffer_pool_f64: CpuBufferPool<f64>,
+    pub instance: Arc<Instance>,
+    pub device: Arc<Device>,
+    pub queue: Arc<Queue>,
+    pub buffer_pool_f64: CpuBufferPool<f64>,
 }
 
 lazy_static::lazy_static! {
-    pub (crate) static ref EXECUTOR: Option<GpuExecutor> = init();
-    pub (crate) static ref MATMUL: Option<self::matmul::Shader> = {
+    pub static ref EXECUTOR: Option<GpuExecutor> = init();
+    pub static ref MATMUL: Option<self::matmul::Shader> = {
         EXECUTOR.as_ref().and_then(|exc|{ self::matmul::Shader::load(exc.device.clone()).ok() })
     };
 }
