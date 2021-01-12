@@ -28,16 +28,6 @@ class BinaryCrossentropy:
         t1 = scalar(1) - target
         t2 = pf.log(scalar(1) - pred_clipped)
 
-        print(
-            "??????????????????",
-            tp,
-            t1,
-            t2,
-            pred_clipped,
-            scalar(1) - pred_clipped,
-            sep="\n",
-        )
-
         sample_losses = scalar(-1) * (tp + t1 * t2)
 
         sample_losses = pf.mean(sample_losses)
@@ -58,8 +48,23 @@ class BinaryCrossentropy:
             / scalar(outputs)
         )
 
-        print("1", self.dinputs)
         self.dinputs = self.dinputs / scalar(samples)
 
-        print(dvalues, dvalues.shape, samples, outputs)
-        print("2", self.dinputs)
+
+class MeanSquaredError:
+    def forward(self, pred, target):
+        sample_losses = pf.mean((target - pred) ** 2)
+        # flatten
+        sample_losses = sample_losses.reshape([pred.shape[0]])
+        self.output = sample_losses
+        return self.output
+
+    def backward(self, dvalues, target):
+        samples, outputs = dvalues.shape
+
+        self.dinputs = scalar(-2) * (target - dvalues) / scalar(outputs)
+        self.dinputs /= scalar(samples)
+
+    def calculate(self):
+        losses = self.output
+        return pf.mean(losses)

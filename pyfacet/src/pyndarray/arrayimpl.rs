@@ -214,7 +214,7 @@ macro_rules! impl_ndarray {
                     mut this: PyRefMut<Self>,
                     new_shape: Vec<u32>,
                 ) -> PyResult<PyRefMut<Self>> {
-                    this.inner.reshape(Shape::from(new_shape));
+                    this.inner.reshape(new_shape);
                     Ok(this)
                 }
 

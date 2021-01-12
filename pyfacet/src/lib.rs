@@ -35,17 +35,17 @@ pub fn argmax(py: Python, inp: PyObject) -> PyResult<NdArrayI> {
     let res: Vec<i64> = inp
         .inner
         .par_iter_rows()
-        .map(|col| {
-            col.iter()
+        .map(|row| {
+            row.iter()
                 .enumerate()
-                .fold(0, |mi, (i, x)| if &col[mi] < x { i } else { mi }) as i64
+                .fold(0, |mi, (i, x)| if &row[mi] < x { i } else { mi }) as i64
         })
         .collect();
 
     let shape = inp.inner.shape();
 
     let mut res = NdArray::new_vector(res);
-    res.reshape(&shape.as_slice()[..shape.as_slice().len() - 1]);
+    res.reshape(shape.truncate());
 
     Ok(NdArrayI { inner: res })
 }
@@ -72,7 +72,7 @@ pub fn argmin(py: Python, inp: PyObject) -> PyResult<NdArrayI> {
     let shape = inp.inner.shape();
 
     let mut res = NdArray::new_vector(res);
-    res.reshape(&shape.as_slice()[..shape.as_slice().len() - 1]);
+    res.reshape(shape.truncate());
 
     Ok(NdArrayI { inner: res })
 }

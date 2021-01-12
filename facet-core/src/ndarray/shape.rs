@@ -101,6 +101,15 @@ impl Shape {
             Shape::Tensor(s) => s,
         }
     }
+
+    /// 'cut' the last dimension from the shape
+    pub fn truncate(&self) -> Self {
+        match self {
+            Shape::Scalar(_) | Shape::Vector(_) => Self::Scalar([0]),
+            Shape::Matrix([n, _]) => Shape::Vector([*n]),
+            Shape::Tensor(s) => s.as_slice()[..s.len() - 1].into(),
+        }
+    }
 }
 
 impl From<Box<[u32]>> for Shape {
