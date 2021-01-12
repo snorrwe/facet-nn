@@ -78,11 +78,6 @@ pub fn matmul_f64_impl<'a>(
         .expect("failed to create compute pipeline"),
     );
 
-    // force larger allocations
-    exc.buffer_pool_f64
-        .reserve((values0.len() + values1.len() + out.len()).max(256 * 1024 * 1024)) // 256 MiB
-        .unwrap();
-
     let ((a_buffer, b_buffer), c_buffer) = rayon::join(
         || {
             rayon::join(
