@@ -10,7 +10,7 @@ use vulkano::{
     descriptor::PipelineLayoutAbstract,
 };
 
-pub const LOCAL_SIZE_X: u32 = 16;
+pub const LOCAL_SIZE_X: u32 = 8;
 pub const LOCAL_SIZE_Y: u32 = 8;
 
 // naive impl
@@ -21,7 +21,10 @@ vulkano_shaders::shader! {
     src: r#"
 #version 450
 
-layout(local_size_x = 16, local_size_y = 8, local_size_z = 1) in;
+// tile size
+#define TS 8
+
+layout(local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
 
 layout(set = 0, binding = 0) readonly  buffer Data_a { double A[]; };
 layout(set = 0, binding = 1) readonly  buffer Data_b { double B[]; };
@@ -33,20 +36,42 @@ layout(push_constant) uniform Shape {
     uint P;
 };
 
+// 8 by 8 tiles
+shared double Asub[TS][TS];
+shared double Bsub[TS][TS];
+
 void main()
 {
-    uint i = gl_GlobalInvocationID.x; // [0..n)
-    uint j = gl_GlobalInvocationID.y; // [0..p)
+    uint col = gl_LocalInvocationID.x; // [0..TS)
+    uint row = gl_LocalInvocationID.y; // [0..TS)
+    uint globalCol = TS * gl_WorkGroupID.x + col; // [0..n)
+    uint globalRow = TS * gl_WorkGroupID.y + row; // [0..p)
 
     double value = 0.0;
-    for(uint k = 0; k < M; k++)
+    const uint numTiles = P/TS;
+    for(uint t = 0; t < numTiles; ++t)
     {
-        double a = A[i * M + k];
-        double b = B[k * P + j];
-        value += a * b;
+        const uint tiledRow = TS*t + row;
+        const uint tiledCol = TS*t + col;
+
+        // load the local tile
+        Asub[col][row] = A[tiledCol * N + globalRow];
+        Bsub[col][row] = B[globalCol * P + tiledRow];
+
+        // wait for Asub and Bsub to be completely filled
+        barrier();
+
+        // calculate the value using the pre-loaded tile
+        for (uint k=0; k < TS; ++k)
+        {
+            value += Asub[k][row] * Bsub[col][k];
+        }
+
+        // sync before loading the next tile  
+        barrier();
     }
 
-    C[i * P + j] = value;
+    C[globalCol * P + globalRow] = value;
 }"#
 }
 
@@ -77,11 +102,6 @@ pub fn matmul_f64_impl<'a>(
         )
         .expect("failed to create compute pipeline"),
     );
-
-    // force larger allocations
-    exc.buffer_pool_f64
-        .reserve((values0.len() + values1.len() + out.len()).max(256 * 1024 * 1024)) // 256 MiB
-        .unwrap();
 
     let ((a_buffer, b_buffer), c_buffer) = rayon::join(
         || {
