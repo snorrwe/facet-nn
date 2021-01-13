@@ -10,7 +10,7 @@ crate-type = ["cdylib"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 [dependencies]
-facet-core = { path = "../facet-core" }
+facet-core = { path = "../facet-core", features = ["rayon", "gpu"] }
 pyo3 = { version = "0.12", features = ["extension-module"] }
 uuid = { version = "*", features = ["v4"] }
 rand = "0.7"

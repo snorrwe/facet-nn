@@ -99,7 +99,7 @@ macro_rules! impl_ndarray {
             }
 
             #[pyclass]
-            pub struct ColIter {
+            pub struct RowIter {
                 iter: ColumnIter<'static, $ty>,
                 /// hold a reference to the original array to prevent the GC from collecting it
                 arr: Option<Py<$name>>,
@@ -113,7 +113,7 @@ macro_rules! impl_ndarray {
             }
 
             #[pyproto]
-            impl PyGCProtocol for ColIter {
+            impl PyGCProtocol for RowIter {
                 fn __traverse__(
                     &'p self,
                     visit: pyo3::PyVisit,
@@ -127,7 +127,7 @@ macro_rules! impl_ndarray {
             }
 
             #[pyproto]
-            impl PyIterProtocol for ColIter {
+            impl PyIterProtocol for RowIter {
                 fn __iter__(this: PyRef<Self>) -> PyRef<Self> {
                     this
                 }
@@ -233,14 +233,14 @@ macro_rules! impl_ndarray {
                     }
                 }
 
-                pub fn iter_rows<'py>(this: Py<Self>, py: Python<'py>) -> PyResult<Py<ColIter>> {
+                pub fn iter_rows<'py>(this: Py<Self>, py: Python<'py>) -> PyResult<Py<RowIter>> {
                     let s = this.borrow(py);
                     let it = s.inner.iter_rows();
                     // transmute the lifetime, we know this is safe because the iterator will hold
                     // a reference to this array, and Python is single threaded, so no mutations
                     // _should_ occur during iteration
                     let it = unsafe { std::mem::transmute(it) };
-                    let it = ColIter {
+                    let it = RowIter {
                         iter: it,
                         arr: Some(this.clone()),
                     };

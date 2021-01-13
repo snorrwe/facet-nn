@@ -3,24 +3,43 @@ from .pyfacet import scalar
 
 
 class Loss:
-    def __init__(self, lossfn, dlossfn=None):
-        assert callable(lossfn)
+    def __init__(self, lossfn=None, dlossfn=None):
+        if lossfn:
+            assert callable(lossfn)
         if dlossfn:
             assert callable(dlossfn)
         self.loss = lossfn
         self.dloss = dlossfn
+        self.trainable_layers = []
 
     def calculate(self, pred, target):
-        assert pred.shape == target.shape
+        losses = self.forward(pred, target)
+        return pf.mean(list(losses))[0], self.regularization_loss()
 
-        losses = self.loss(pred, target)
-        return pf.mean(losses)
+    def regularization_loss(self):
+        r_loss = 0
+        for l in self.trainable_layers:
+            if l.weight_regularizer_l1 is not None and l.weight_regularizer_l1 > 0:
+                r_loss += layer.weight_regularizer_l1 * pf.sum(pf.abs(l.weights))
+            if l.weight_regularizer_l2 is not None and l.weight_regularizer_l2 > 0:
+                r_loss += layer.weight_regularizer_l2 * pf.sum(l.weights * l.weights)
+            if l.bias_regularizer_l1 is not None and l.bias_regularizer_l1 > 0:
+                r_loss += layer.bias_regularizer_l1 * pf.sum(pf.abs(l.biases))
+            if l.bias_regularizer_l2 is not None and l.bias_regularizer_l2 > 0:
+                r_loss += layer.bias_regularizer_l2 * pf.sum(l.biases * l.biases)
+        return r_loss
+
+    def forward(self, pred, target):
+        assert pred.shape == target.shape
+        sample_losses = self.loss(pred, target)
+        self.output = sample_losses
+        return sample_losses
 
     def backward(self, dvalues, target):
         self.dinputs = self.dlossfn(dvalues, target)
 
 
-class BinaryCrossentropy:
+class BinaryCrossentropy(Loss):
     def forward(self, pred, target):
         pred_clipped = pf.clip(pred, 1e-7, 1 - 1e-7)
 
@@ -28,10 +47,9 @@ class BinaryCrossentropy:
         t1 = scalar(1) - target
         t2 = pf.log(scalar(1) - pred_clipped)
 
-        sample_losses = scalar(-1) * (tp + t1 * t2)
-
-        sample_losses = pf.mean(sample_losses)
-        return sample_losses
+        res = scalar(-1) * (tp + t1 * t2)
+        self.output = res
+        return res
 
     def backward(self, dvalues, target):
 
@@ -51,7 +69,7 @@ class BinaryCrossentropy:
         self.dinputs = self.dinputs / scalar(samples)
 
 
-class MeanSquaredError:
+class MeanSquaredError(Loss):
     def forward(self, pred, target):
         sample_losses = pf.mean((target - pred) ** 2)
         # flatten
@@ -64,7 +82,3 @@ class MeanSquaredError:
 
         self.dinputs = scalar(-2) * (target - dvalues) / scalar(outputs)
         self.dinputs /= scalar(samples)
-
-    def calculate(self):
-        losses = self.output
-        return pf.mean(losses)

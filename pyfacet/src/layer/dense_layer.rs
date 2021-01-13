@@ -35,6 +35,34 @@ impl DenseLayer {
             id: uuid::Uuid::new_v4(),
         })
     }
+    #[getter]
+    pub fn weight_regularizer_l1(&self) -> Option<f64> {
+        self.inner
+            .training
+            .as_ref()
+            .and_then(|t| t.weight_regularizer_l1)
+    }
+    #[getter]
+    pub fn weight_regularizer_l2(&self) -> Option<f64> {
+        self.inner
+            .training
+            .as_ref()
+            .and_then(|t| t.weight_regularizer_l2)
+    }
+    #[getter]
+    pub fn bias_regularizer_l1(&self) -> Option<f64> {
+        self.inner
+            .training
+            .as_ref()
+            .and_then(|t| t.bias_regularizer_l1)
+    }
+    #[getter]
+    pub fn bias_regularizer_l2(&self) -> Option<f64> {
+        self.inner
+            .training
+            .as_ref()
+            .and_then(|t| t.bias_regularizer_l2)
+    }
 
     /// Copies the output.
     ///

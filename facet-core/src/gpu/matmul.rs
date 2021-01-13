@@ -135,6 +135,9 @@ pub fn matmul_f64_impl<'a>(
         .then_signal_fence_and_flush()
         .expect("failed to flush");
 
+    // buffers can be reused, ensure 0 initial output value
+    out.par_iter_mut().for_each(|x| *x = 0.0);
+
     // process the remaning columns on the cpu while we await the gpu execution
     // note that the last block is calculated twice, the auther deems this ok for now
 

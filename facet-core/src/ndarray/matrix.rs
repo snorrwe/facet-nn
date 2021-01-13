@@ -65,7 +65,7 @@ pub fn matmul_impl_f64<'a>(
     out: &mut [f64],
 ) -> Result<(), NdArrayError> {
     #[cfg(feature = "gpu")]
-    if n * p > crate::gpu::matmul::LOCAL_SIZE_X * 2 {
+    if n >= crate::gpu::matmul::LOCAL_SIZE_X || p >= crate::gpu::matmul::LOCAL_SIZE_Y {
         return match crate::gpu::matmul::matmul_f64_impl([n, m, p], values0, values1, out) {
             Ok(()) => Ok(()),
             Err(crate::gpu::GpuNdArrayError::NdArrayError(err)) => Err(err),

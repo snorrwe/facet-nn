@@ -172,6 +172,43 @@ fn test_mat_mat_mul() {
 }
 
 #[test]
+fn test_mat_mat_mul_f64() {
+    let a = NdArray::new_with_values([2, 3], Data::from_slice(&[1.0, 2.0, -1.0, 2.0, 0.0, 1.0]))
+        .unwrap();
+    let b = NdArray::new_with_values([3, 2], Data::from_slice(&[3.0, 1.0, 0.0, -1.0, -2.0, 3.0]))
+        .unwrap();
+
+    let mut c = NdArray::new(0);
+    a.matmul(&b, &mut c).expect("matmul");
+    let mut d = NdArray::new(0);
+    a.matmul_f64(&b, &mut d).expect("matmul f64");
+
+    assert_eq!(c.shape, Shape::Matrix([2, 2]));
+    assert_eq!(d.shape, Shape::Matrix([2, 2]));
+    assert_eq!(c.as_slice(), &[5.0, -4.0, 4.0, 5.0]);
+    assert_eq!(c.as_slice(), d.as_slice());
+}
+
+/// regression test
+#[test]
+fn test_mat_mat_mul_f64_multi_call() {
+    let a = NdArray::new_with_values([2, 3], Data::from_slice(&[1.0, 2.0, -1.0, 2.0, 0.0, 1.0]))
+        .unwrap();
+    let b = NdArray::new_with_values([3, 2], Data::from_slice(&[3.0, 1.0, 0.0, -1.0, -2.0, 3.0]))
+        .unwrap();
+
+    let mut c = NdArray::new(0);
+    a.matmul_f64(&b, &mut c).expect("matmul");
+    a.matmul_f64(&b, &mut c).expect("matmul");
+    a.matmul_f64(&b, &mut c).expect("matmul");
+    a.matmul_f64(&b, &mut c).expect("matmul");
+    a.matmul_f64(&b, &mut c).expect("matmul");
+
+    assert_eq!(c.shape, Shape::Matrix([2, 2]));
+    assert_eq!(c.as_slice(), &[5.0, -4.0, 4.0, 5.0]);
+}
+
+#[test]
 fn test_mat_mat_mul_many() {
     let a = NdArray::new_with_values([2, 3], Data::from_slice(&[1, 2, -1, 2, 0, 1])).unwrap();
 

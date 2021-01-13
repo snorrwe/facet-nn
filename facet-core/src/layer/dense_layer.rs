@@ -1,4 +1,5 @@
 use crate::ndarray::{NdArray, NdArrayError};
+use rand::Rng;
 
 #[cfg(feature = "rayon")]
 use rayon::prelude::*;
@@ -41,7 +42,9 @@ impl DenseLayer {
     pub fn new(inputs: u32, outputs: u32) -> Self {
         let weights = NdArray::new_with_values(
             [inputs, outputs],
-            smallvec::smallvec![0.69; inputs as usize * outputs as usize ],
+            (0..inputs as usize * outputs as usize)
+                .map(|_| rand::thread_rng().gen_range(-1., 1.))
+                .collect(),
         )
         .unwrap();
 
@@ -74,8 +77,9 @@ impl DenseLayer {
     }
 
     pub fn forward(&mut self, inputs: NdArray<f64>) -> Result<(), DenseLayerError> {
+        self.output.reshape(0);
         inputs
-            .matmul(&self.weights, &mut self.output)
+            .matmul_f64(&self.weights, &mut self.output)
             .map_err(DenseLayerError::MatMulFail)?;
 
         assert_eq!(self.output.shape().last(), self.biases.shape().last());
@@ -107,7 +111,7 @@ impl DenseLayer {
 
         inputs
             .transpose()
-            .matmul(&dvalues, &mut training.dweights)
+            .matmul_f64(&dvalues, &mut training.dweights)
             .map_err(DenseLayerError::MatMulFail)?;
 
         let s = dvalues.clone().transpose();
@@ -130,7 +134,7 @@ impl DenseLayer {
 
         // Gradients
         dvalues
-            .matmul(&self.weights.clone().transpose(), &mut training.dinputs)
+            .matmul_f64(&self.weights.clone().transpose(), &mut training.dinputs)
             .map_err(DenseLayerError::MatMulFail)?;
 
         Ok(())

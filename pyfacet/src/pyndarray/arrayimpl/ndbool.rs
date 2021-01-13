@@ -1,5 +1,5 @@
 use facet_core::ndarray::NdArray;
-pub use ndarraybimpl::ColIter as ColIterB;
+pub use ndarraybimpl::RowIter as RowIterB;
 pub use ndarraybimpl::ItemIter as ItemIterB;
 pub use ndarraybimpl::*;
 

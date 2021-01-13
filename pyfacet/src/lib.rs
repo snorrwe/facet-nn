@@ -384,6 +384,27 @@ pub fn fast_inverse_sqrt(py: Python, inp: PyObject) -> PyResult<NdArrayD> {
     Ok(NdArrayD { inner: out })
 }
 
+#[pyfunction]
+pub fn abs(py: Python, inp: PyObject) -> PyResult<NdArrayD> {
+    let inp: Py<NdArrayD> = inp
+        .extract(py)
+        .or_else(|_| pyndarray::array(py, inp.extract(py)?)?.extract(py))?;
+    let inp: &PyCell<NdArrayD> = inp.into_ref(py);
+    let inp = inp.borrow();
+
+    let mut out = NdArray::new(inp.shape());
+
+    for (y, x) in out
+        .as_mut_slice()
+        .iter_mut()
+        .zip(inp.inner.as_slice().iter())
+    {
+        *y = x.abs();
+    }
+
+    Ok(NdArrayD { inner: out })
+}
+
 #[pymodule]
 fn pyfacet(py: Python, m: &PyModule) -> PyResult<()> {
     pyndarray::setup_module(py, &m)?;
@@ -412,6 +433,7 @@ fn pyfacet(py: Python, m: &PyModule) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(veclen_squared, m)?)?;
     m.add_function(wrap_pyfunction!(normalize_vectors, m)?)?;
     m.add_function(wrap_pyfunction!(fast_inverse_sqrt, m)?)?;
+    m.add_function(wrap_pyfunction!(abs, m)?)?;
 
     Ok(())
 }
