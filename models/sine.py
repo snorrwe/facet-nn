@@ -28,30 +28,27 @@ for (x, y) in generate(10000):
 X = pf.array(X)
 Y = pf.array(Y)
 
-# TODO !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-# changing layer sizes results in panic during mat mul
-
-inp = pf.DenseLayer(1, 8)
+inp = pf.DenseLayer(1, 64)
 acti1 = pf.Activation(pf.relu, pf.drelu_dz)
-hidden = pf.DenseLayer(8, 8)
+hidden = pf.DenseLayer(64, 64)
 acti2 = pf.Activation(pf.relu, pf.drelu_dz)
 dropout = DropoutLayer(0.3)
-out = pf.DenseLayer(8, 1)
+out = pf.DenseLayer(64, 1)
 acti3 = ActivationLinear()
 
 loss = MeanSquaredError()
 
 
-optim = Adam(learning_rate=5e-4, decay=5e-5)
+optim = Adam(learning_rate=1e-2, decay=1e-3)
 
 last = pf.scalar(0)
-for epoch in progressbar.progressbar(range(1000 + 1), redirect_stdout=True):
+for epoch in progressbar.progressbar(range(10000 + 1), redirect_stdout=True):
     # forward pass
     inp.forward(X)
     acti1.forward(inp.output)
     hidden.forward(acti1.output)
     acti2.forward(hidden.output)
-    dropout.forward(acti1.output)
+    dropout.forward(acti2.output)
     out.forward(dropout.output)
     acti3.forward(out.output)
     loss.forward(acti3.output, Y)
@@ -83,3 +80,8 @@ for epoch in progressbar.progressbar(range(1000 + 1), redirect_stdout=True):
     optim.update_params(inp)
     optim.update_params(hidden)
     optim.update_params(out)
+
+
+with open("out.txt", "w") as f:
+    for x, actual, expected in zip(X, out.output, Y):
+        f.write("{} {} {}\n".format(x, actual, expected))

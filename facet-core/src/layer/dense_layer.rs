@@ -41,13 +41,12 @@ impl DenseLayer {
     pub fn new(inputs: u32, outputs: u32) -> Self {
         let weights = NdArray::new_with_values(
             [inputs, outputs],
-            smallvec::smallvec![ 0.69; inputs as usize * outputs as usize ],
+            smallvec::smallvec![0.69; inputs as usize * outputs as usize ],
         )
         .unwrap();
 
         let biases =
-            NdArray::new_with_values(outputs, smallvec::smallvec![ 0.42;outputs as usize ])
-                .unwrap();
+            NdArray::new_with_values(outputs, smallvec::smallvec![0.42; outputs as usize]).unwrap();
 
         Self {
             weights,
@@ -75,14 +74,13 @@ impl DenseLayer {
     }
 
     pub fn forward(&mut self, inputs: NdArray<f64>) -> Result<(), DenseLayerError> {
-        let biases = self.biases.as_slice();
-
         inputs
             .matmul(&self.weights, &mut self.output)
             .map_err(DenseLayerError::MatMulFail)?;
 
         assert_eq!(self.output.shape().last(), self.biases.shape().last());
 
+        let biases = self.biases.as_slice();
         self.output.iter_rows_mut().for_each(|col| {
             col.iter_mut()
                 .zip(biases.iter())
