@@ -2,6 +2,11 @@ from .pyfacet import binomial, scalar
 from .pyfacet import DenseLayer  # reexport
 
 
+class InputLayer:
+    def forward(self, inputs):
+        self.output = inputs
+
+
 class DropoutLayer:
     def __init__(self, rate):
         self.rate = 1 - rate
