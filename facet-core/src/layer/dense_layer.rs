@@ -48,8 +48,13 @@ impl DenseLayer {
         )
         .unwrap();
 
-        let biases =
-            NdArray::new_with_values(outputs, smallvec::smallvec![0.42; outputs as usize]).unwrap();
+        let biases = NdArray::new_with_values(
+            outputs,
+            (0..outputs as usize)
+                .map(|_| rand::thread_rng().gen_range(-1., 1.))
+                .collect(),
+        )
+        .unwrap();
 
         Self {
             weights,
@@ -77,6 +82,10 @@ impl DenseLayer {
     }
 
     pub fn forward(&mut self, inputs: NdArray<f64>) -> Result<(), DenseLayerError> {
+        assert!(
+            matches!(inputs.shape(), crate::prelude::Shape::Matrix(_)),
+            "Forward input must be a matrix"
+        );
         self.output.reshape(0);
         inputs
             .matmul_f64(&self.weights, &mut self.output)

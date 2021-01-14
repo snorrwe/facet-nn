@@ -17,7 +17,7 @@ pub fn categorical_cross_entropy(
     }
 
     let mut out = Data::with_capacity(
-        predictions.shape().span() / predictions.shape().last().unwrap_or(1) as usize,
+        predictions.shape().span() / predictions.shape().last().max(1) as usize,
     );
     for (x, y) in predictions.iter_rows().zip(targets.iter_rows()) {
         let loss: f64 = x

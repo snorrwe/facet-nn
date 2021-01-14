@@ -31,9 +31,9 @@ Y = pf.array(Y)
 
 
 model = Model()
-model.add(pf.DenseLayer(1, 64))
+model.add(pf.DenseLayer(1, 128))
 model.add(Activation(pf.relu, df=pf.drelu_dz))
-model.add(pf.DenseLayer(64, 64))
+model.add(pf.DenseLayer(128, 64))
 #  model.add(DropoutLayer(0.2))
 model.add(Activation(pf.relu, df=pf.drelu_dz))
 model.add(pf.DenseLayer(64, 1))
@@ -42,7 +42,6 @@ model.add(ActivationLinear())
 for l in model.layers:
     if hasattr(l, 'weights'):
         l.weights *= pf.scalar(0.1) # flatten the weights
-        l.biases = pf.array([0.0]*len(l.biases))
 
 model.set(
     loss=MeanSquaredError(),

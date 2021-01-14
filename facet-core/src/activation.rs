@@ -102,7 +102,7 @@ pub fn softmax(inp: &NdArray<f64>) -> DuResult<NdArray<f64>> {
 pub fn dsoftmax(output: &NdArray<f64>, dvalues: &NdArray<f64>) -> DuResult<NdArray<f64>> {
     let mut res = NdArray::new(dvalues.shape().clone());
 
-    let collen = output.shape().last().unwrap();
+    let collen = output.shape().last();
 
     let mut jacobian_matrix = NdArray::new([collen, collen]);
     let mut dotcache = NdArray::new([collen, collen]);

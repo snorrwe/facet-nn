@@ -198,7 +198,7 @@ where
             ndarray::NdArray::new_vector(data)
         }
         _ => {
-            let n: u32 = inp.shape().last().unwrap();
+            let n: u32 = inp.shape().last();
             let win_sum = inp
                 .as_slice()
                 .windows(window * n as usize)
@@ -373,7 +373,7 @@ pub fn fast_inv_sqrt_f32(inp: &ndarray::NdArray<f32>, out: &mut ndarray::NdArray
 /// results. E.g. a vector might have a length slightly less than 1.
 pub fn normalize_f32_vectors(inp: &ndarray::NdArray<f32>, out: &mut ndarray::NdArray<f32>) {
     out.reshape(inp.shape().clone());
-    let collen = inp.shape().last().unwrap_or(0) as usize;
+    let collen = inp.shape().last() as usize;
     for (inp, out) in inp.iter_rows().zip(out.iter_rows_mut()) {
         let mut vec_len = 0.0;
         for i in inp.iter().take(collen) {
@@ -421,7 +421,7 @@ pub fn fast_inv_sqrt_f64(inp: &ndarray::NdArray<f64>, out: &mut ndarray::NdArray
 /// results. E.g. a vector might have a length slightly less than 1.
 pub fn normalize_f64_vectors(inp: &ndarray::NdArray<f64>, out: &mut ndarray::NdArray<f64>) {
     out.reshape(inp.shape().clone());
-    let collen = inp.shape().last().unwrap_or(0) as usize;
+    let collen = inp.shape().last() as usize;
     for (inp, out) in inp.iter_rows().zip(out.iter_rows_mut()) {
         let mut vec_len = 0.0;
         for i in inp.iter().take(collen) {

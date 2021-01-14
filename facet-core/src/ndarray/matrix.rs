@@ -28,16 +28,17 @@ where
     {
         let m = m as usize;
         let p = p as usize;
-        // iterate over the result's columns
-        out.par_chunks_mut(p).enumerate().for_each(|(i, out)| {
-            out.par_iter_mut().enumerate().for_each(|(j, valout)| {
-                *valout = Default::default();
+        // iterate over the result's rows
+        out.par_chunks_mut(p).enumerate().for_each(|(i, row)| {
+            for j in 0..row.len() {
+                let mut valout = Default::default();
                 for k in 0usize..m {
-                    let val0 = &values0[i * m + k];
-                    let val1 = &values1[k * p + j];
-                    *valout += *val0 * *val1
+                    let val0 = values0[i * m + k];
+                    let val1 = values1[k * p + j];
+                    valout += val0 * val1
                 }
-            });
+                row[j] = valout;
+            }
         });
     }
 

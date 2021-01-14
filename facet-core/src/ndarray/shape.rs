@@ -13,12 +13,12 @@ pub enum Shape {
 }
 
 impl Shape {
-    pub fn last(&self) -> Option<u32> {
+    pub fn last(&self) -> u32 {
         match self {
-            Shape::Scalar(_) => None,
-            Shape::Matrix([_, n]) => Some(*n),
-            Shape::Vector(n) => Some(n[0]),
-            Shape::Tensor(s) => s.last().cloned(),
+            Shape::Scalar(_) => 0,
+            Shape::Matrix([_, n]) => *n,
+            Shape::Vector([n]) => *n,
+            Shape::Tensor(s) => *s.last().unwrap(),
         }
     }
 

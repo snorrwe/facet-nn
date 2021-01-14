@@ -25,7 +25,7 @@ use rayon::prelude::*;
 pub enum NdArrayError {
     #[error("DimensionMismatch error, expected: {expected}, actual: {actual}")]
     DimensionMismatch { expected: usize, actual: usize },
-    #[error("DimensionMismatch error, expected: {expected:?}, actual: {actual:?}")]
+    #[error("ShapeMismatch error, expected: {expected:?}, actual: {actual:?}")]
     ShapeMismatch { expected: Shape, actual: Shape },
     #[error("Binary operation between the given shapes is not supported. Shape A: {shape_a:?} Shape B: {shape_b:?}")]
     BinaryOpNotSupported { shape_a: Shape, shape_b: Shape },
@@ -203,6 +203,7 @@ impl<T> NdArray<T> {
     {
         let shape = shape.into();
         let len: usize = shape.span();
+        #[allow(clippy::uninit_assumed_init)]
         let values = (0..len)
             .map(|_| unsafe { MaybeUninit::uninit().assume_init() })
             .collect();
@@ -427,7 +428,7 @@ impl<T> NdArray<T> {
                     &self.stride[..shape.len() - 1],
                     index,
                 )?;
-                let w = self.shape.last().unwrap() as usize;
+                let w = self.shape.last() as usize;
                 Some(&self.as_slice()[i..i + w])
             }
         }
@@ -462,11 +463,11 @@ impl<T> NdArray<T> {
     }
 
     pub fn iter_rows(&self) -> impl Iterator<Item = &[T]> {
-        ColumnIter::new(&self.values, self.shape.last().unwrap_or(1) as usize)
+        ColumnIter::new(&self.values, self.shape.last().max(1) as usize)
     }
 
     pub fn iter_rows_mut(&mut self) -> impl Iterator<Item = &mut [T]> {
-        ColumnIterMut::new(&mut self.values, self.shape.last().unwrap_or(1) as usize)
+        ColumnIterMut::new(&mut self.values, self.shape.last().max(1) as usize)
     }
 
     #[cfg(feature = "rayon")]
@@ -474,7 +475,7 @@ impl<T> NdArray<T> {
     where
         T: Sync,
     {
-        let rows = self.shape.last().unwrap_or(1) as usize;
+        let rows = self.shape.last().max(1) as usize;
         self.values.as_slice().par_chunks(rows)
     }
 
@@ -485,7 +486,7 @@ impl<T> NdArray<T> {
     where
         T: Sync + Send,
     {
-        let rows = self.shape.last().unwrap_or(1) as usize;
+        let rows = self.shape.last().max(1) as usize;
         self.values.as_mut_slice().par_chunks_mut(rows)
     }
 
