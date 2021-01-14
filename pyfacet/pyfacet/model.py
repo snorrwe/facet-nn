@@ -59,6 +59,8 @@ class Model:
         return l.output
 
     def backward(self, output, y):
+        assert self.baked
+
         self.loss.backward(output, y)
         for l in reversed(self.layers):
             l.backward(self.nextlayer[l.id].dinputs)
