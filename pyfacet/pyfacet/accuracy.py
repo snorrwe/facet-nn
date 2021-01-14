@@ -19,3 +19,16 @@ class Accuracy_Regression(Accuracy):
 
     def compare(self, pred, y):
         return pf.abs(pred - y) < self.precision
+
+
+class Accuracy_Categorical(Accuracy):
+    def __init__(self, *, binary=False):
+        self.binary = binary
+
+    def init(self):
+        pass
+
+    def compare(self, pred, y):
+        if not self.binary and len(y.shape) == 2:
+            y = pf.argmax(y)
+        return pred == y

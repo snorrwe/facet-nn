@@ -65,7 +65,7 @@ class Model:
         for l in reversed(self.layers):
             l.backward(self.nextlayer[l.id].dinputs)
 
-    def train(self, X, y, *, epochs=1, print_every=1):
+    def train(self, X, y, *, epochs=1, print_every=1, validation=None):
         assert self.baked
 
         last = 0.0
@@ -73,19 +73,31 @@ class Model:
         self.accuracy.init(y)
         for epoch in progressbar.progressbar(range(epochs + 1), redirect_stdout=True):
             output = self.forward(X)
-            data_loss, reg_loss = self.loss.calculate(output, y)
-
-            if print_every and epoch % print_every == 0:
-                assert data_loss != last, "something's wrong i can feel it"
-                last = data_loss
-                lr = self.optimizer.lr[0]
-                acc = self.accuracy.calculate(output, y)
-                print(
-                    f"epoch {epoch:05} Loss: {data_loss:.16f} Accuracy: {acc:.16f} Learning Rate: {lr:.16f}"
-                )
+            data_loss, reg_loss = self.loss.calculate(
+                output, y, include_regularization=True
+            )
 
             self.backward(output, y)
 
             self.optimizer.pre_update()
             for l in self.trainable:
                 self.optimizer.update_params(l)
+
+            if print_every and epoch % print_every == 0:
+                assert data_loss != last, "something's wrong i can feel it"
+                last = data_loss
+                lr = self.optimizer.lr[0]
+                pred = self.output_activation.predictions()
+                acc = self.accuracy.calculate(pred, y)
+                print(
+                    f"Epoch {epoch:05} Loss: {data_loss:.16f} Accuracy: {acc:.16f} Learning Rate: {lr:.16f}"
+                )
+                if validation is not None:
+                    X_val, y_val = validation
+                    output_val = self.forward(X_val)
+                    data_loss, _ = self.loss.calculate(output_val, y_val)
+                    pred = self.output_activation.predictions()
+                    accuracy = self.accuracy.calculate(pred, y_val)
+                    print(
+                        f"Validation  Loss: {data_loss:.16f} Accuracy: {accuracy:.16f}"
+                    )

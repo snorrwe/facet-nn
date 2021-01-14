@@ -19,15 +19,23 @@ def generate(n):
 
 
 X = []
-Y = []
+y = []
 
-for (x, y) in generate(10000):
-    X.append([x])
-    Y.append([y])
+for (a, b) in generate(10000):
+    X.append([a])
+    y.append([b])
+
+X_val = []
+y_val = []
+for (a, b) in generate(100):
+    X_val.append([a])
+    y_val.append([b])
 
 
 X = pf.array(X)
-Y = pf.array(Y)
+y = pf.array(y)
+X_val = pf.array(X_val)
+y_val = pf.array(y_val)
 
 
 model = Model()
@@ -40,8 +48,8 @@ model.add(pf.DenseLayer(64, 1))
 model.add(ActivationLinear())
 
 for l in model.layers:
-    if hasattr(l, 'weights'):
-        l.weights *= pf.scalar(0.1) # flatten the weights
+    if hasattr(l, "weights"):
+        l.weights *= pf.scalar(0.1)  # flatten the weights
 
 model.set(
     loss=MeanSquaredError(),
@@ -51,8 +59,10 @@ model.set(
 
 model.bake()
 
-model.train(X, Y, epochs=10000, print_every=100)
+model.train(X, y, epochs=10000, print_every=100, validation=(X_val, y_val))
+
+output = model.forward(X_val)
 
 with open("out.txt", "w") as f:
-    for x, actual, expected in zip(X, model.layers[-1].output, Y):
+    for x, actual, expected in zip(X_val, output, y_val):
         f.write("{} {} {}\n".format(x, actual, expected))
