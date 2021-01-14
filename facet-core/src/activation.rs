@@ -11,8 +11,8 @@ use rayon::prelude::*;
 #[cfg(feature = "rayon")]
 pub fn relu(inp: &NdArray<f64>) -> NdArray<f64> {
     let mut out = inp.clone();
-    out.par_iter_rows_mut().for_each(|col| {
-        for v in col {
+    out.par_iter_rows_mut().for_each(|row| {
+        for v in row {
             *v = v.max(0.0);
         }
     });
@@ -25,17 +25,34 @@ pub fn relu(inp: &NdArray<f64>) -> NdArray<f64> {
 }
 
 /// ReLU derivative
+#[cfg(feature = "rayon")]
+pub fn drelu_dz(inputs: &NdArray<f64>, dvalues: &NdArray<f64>) -> NdArray<f64> {
+    let mut res = dvalues.clone();
+    res.iter_rows_mut()
+        .zip(inputs.iter_rows())
+        .par_bridge()
+        .for_each(|(dx, dz)| _drelu(dx, dz));
+    res
+}
+
+fn _drelu(dx: &mut [f64], dz: &[f64]) {
+    debug_assert_eq!(dx.len(), dz.len());
+    for i in 0..dx.len() {
+        if dz[i] <= 0.0 {
+            dx[i] = 0.0;
+        }
+    }
+}
+
+/// ReLU derivative
+#[cfg(not(feature = "rayon"))]
 pub fn drelu_dz(inputs: &NdArray<f64>, dvalues: &NdArray<f64>) -> NdArray<f64> {
     // #[cfg(feature = "rayon")]
     let mut res = dvalues.clone();
-    for (dx, dz) in res.iter_rows_mut().zip(inputs.iter_rows()) {
-        debug_assert_eq!(dx.len(), dz.len());
-        for i in 0..dx.len() {
-            if dz[i] <= 0.0 {
-                dx[i] = 0.0;
-            }
-        }
-    }
+    res.iter_rows_mut()
+        .zip(inputs.iter_rows())
+        .for_each(|(dx, dz)| _drelu(dx, dz));
+
     res
 }
 
@@ -68,15 +85,15 @@ pub fn softmax(inp: &NdArray<f64>) -> DuResult<NdArray<f64>> {
 
     let mut norm_base: NdArray<f64> = expvalues
         .iter_rows()
-        .map(|col| col.iter().cloned().sum())
+        .map(|row| row.iter().cloned().sum())
         .collect();
 
     norm_base.reshape([norm_base.shape().span() as u32, 1]);
 
     let mut res = expvalues;
-    for (norm, col) in norm_base.iter_rows().zip(res.iter_rows_mut()) {
+    for (norm, row) in norm_base.iter_rows().zip(res.iter_rows_mut()) {
         debug_assert_eq!(norm.len(), 1);
-        col.iter_mut().for_each(|v| *v /= norm[0]);
+        row.iter_mut().for_each(|v| *v /= norm[0]);
     }
     Ok(res)
 }
