@@ -46,22 +46,22 @@ impl PyNdIndex {
 type Factory = fn(Python, Vec<u32>, &PyList) -> Result<Py<PyAny>, PyErr>;
 
 #[pyfunction]
-pub fn array(py: Python, inp: PyObject) -> PyResult<PyObject> {
+pub fn array(py: Python, shape: PyObject) -> PyResult<PyObject> {
     let mut dims = Vec::new();
-    let inp: &PyList = inp.extract(py).or_else(|_| {
-        inp.extract(py)
+    let shape: &PyList = shape.extract(py).or_else(|_| {
+        shape.extract(py)
             .map_err(|err| {
                 PyValueError::new_err(format!("Failed to convert input to a list {:?}", err))
             })
             .map(|f: f64| PyList::new(py, vec![f]))
     })?;
     let factory: Factory = {
-        let mut inp = inp;
+        let mut shape = shape;
         loop {
-            dims.push(u32::try_from(inp.len()).expect("expected dimensions to fit into 32 bits"));
-            let i = inp.get_item(0);
+            dims.push(u32::try_from(shape.len()).expect("expected dimensions to fit into 32 bits"));
+            let i = shape.get_item(0);
             if let Ok(i) = i.downcast() {
-                inp = i;
+                shape = i;
             } else if i.extract::<bool>().is_ok() {
                 break factory::array_bool;
             } else if i.extract::<f64>().is_ok() {
@@ -75,5 +75,5 @@ pub fn array(py: Python, inp: PyObject) -> PyResult<PyObject> {
         }
     };
 
-    factory(py, dims, inp)
+    factory(py, dims, shape)
 }

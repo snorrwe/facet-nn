@@ -74,19 +74,15 @@ class Adam:
             scalar(1.0 - self.beta_1) * layer.dbiases
         )
 
-        weight_momentum_corrected = self.weight_momentums[lid] / scalar(
-            1 - (self.beta_1 ** self.iters)
+        beta1_inv = scalar( 1 - (self.beta_1 ** self.iters))
+        beta2_inv = scalar(
+            1 - self.beta_2
         )
-        bias_momentum_corrected = self.bias_momentums[lid] / scalar(
-            1 - (self.beta_1 ** self.iters)
-        )
+        weight_momentum_corrected = self.weight_momentums[lid] / beta1_inv
+        bias_momentum_corrected = self.bias_momentums[lid] / beta1_inv
 
-        self.weight_cache[lid] = scalar(self.beta_2) * self.weight_cache[lid] + scalar(
-            1 - self.beta_2
-        ) * (layer.dweights ** 2)
-        self.bias_cache[lid] = scalar(self.beta_2) * self.bias_cache[lid] + scalar(
-            1 - self.beta_2
-        ) * (layer.dbiases ** 2)
+        self.weight_cache[lid] = scalar(self.beta_2) * self.weight_cache[lid] + beta2_inv * (layer.dweights ** 2)
+        self.bias_cache[lid] = scalar(self.beta_2) * self.bias_cache[lid] + beta2_inv * (layer.dbiases ** 2)
 
         weight_cache_corrected = self.weight_cache[lid] / scalar(
             1 - self.beta_2 ** self.iters

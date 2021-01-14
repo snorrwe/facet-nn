@@ -3,8 +3,8 @@ use pyo3::{exceptions::PyValueError, prelude::*, types::PyList};
 
 use super::{NdArrayB, NdArrayD};
 
-pub fn array_f64(py: Python, dims: Vec<u32>, inp: &PyList) -> PyResult<PyObject> {
-    let shape = Shape::from(dims);
+pub fn array_f64(py: Python, shape: Vec<u32>, inp: &PyList) -> PyResult<PyObject> {
+    let shape = Shape::from(shape);
     let mut values: Vec<f64> = Vec::with_capacity(shape.span());
     flatten(inp, &mut values)?;
     let arr = NdArray::<f64>::new_with_values(shape, values.into()).map_err(|err| {
@@ -18,8 +18,8 @@ pub fn array_f64(py: Python, dims: Vec<u32>, inp: &PyList) -> PyResult<PyObject>
     Ok(res)
 }
 
-pub fn array_bool(py: Python, dims: Vec<u32>, inp: &PyList) -> PyResult<PyObject> {
-    let shape = Shape::from(dims);
+pub fn array_bool(py: Python, shape: Vec<u32>, inp: &PyList) -> PyResult<PyObject> {
+    let shape = Shape::from(shape);
     let mut values: Vec<bool> = Vec::with_capacity(shape.span());
     flatten(inp, &mut values)?;
     let arr = NdArray::<bool>::new_with_values(shape, values.into()).map_err(|err| {

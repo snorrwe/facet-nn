@@ -98,6 +98,12 @@ macro_rules! impl_ndarray {
                 }
             }
 
+            impl<'a> Into<&'a NdArray<$ty>> for &'a $name {
+                fn into(self) -> &'a NdArray<$ty> {
+                    &self.inner
+                }
+            }
+
             #[pyclass]
             pub struct RowIter {
                 iter: ColumnIter<'static, $ty>,

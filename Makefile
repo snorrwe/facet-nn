@@ -3,10 +3,6 @@
 foo:
 	echo "boooo"
 
-check-rust:
-	cargo clippy
-	cargo check
-
 test-rust:
 	cargo test
 
@@ -21,4 +17,4 @@ nd:
 test-py: nd-dev
 	pytest tests -v
 
-test: check-rust test-rust test-py
+test: test-rust test-py

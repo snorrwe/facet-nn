@@ -23,14 +23,30 @@ pub fn eye(dims: u32) -> NdArrayD {
     }
 }
 
+fn pyobj_to_arrayd(py: Python, inp: PyObject) -> PyResult<Py<NdArrayD>> {
+    let inp: Py<NdArrayD> = inp
+        .extract(py)
+        .or_else(|_| pyndarray::array(py, inp.extract(py)?)?.extract(py))
+        .or_else(|_| inp.extract(py).and_then(|inp| Py::new(py, scalar(inp))))?;
+    Ok(inp)
+}
+
+macro_rules! unwrap_obj {
+    ($py: ident, $inp: ident) => {
+        let $inp = pyobj_to_arrayd($py, $inp)?;
+        let $inp = $inp.borrow($py);
+    };
+
+    (mut $py: ident, $inp: ident) => {
+        let $inp = pyobj_to_arrayd($py, $inp)?;
+        let mut $inp = $inp.borrow_mut($py);
+    };
+}
+
 /// Collapses the last colun into a single index. The index of the largest item
 #[pyfunction]
 pub fn argmax(py: Python, inp: PyObject) -> PyResult<NdArrayI> {
-    let inp: Py<NdArrayD> = inp
-        .extract(py)
-        .or_else(|_| pyndarray::array(py, inp.extract(py)?)?.extract(py))?;
-    let inp: &PyCell<NdArrayD> = inp.into_ref(py);
-    let inp = inp.borrow();
+    unwrap_obj!(py, inp);
 
     let res: Vec<i64> = inp
         .inner
@@ -53,11 +69,7 @@ pub fn argmax(py: Python, inp: PyObject) -> PyResult<NdArrayI> {
 /// Collapses the last colun into a single index. The index of the largest item
 #[pyfunction]
 pub fn argmin(py: Python, inp: PyObject) -> PyResult<NdArrayI> {
-    let inp: Py<NdArrayD> = inp
-        .extract(py)
-        .or_else(|_| pyndarray::array(py, inp.extract(py)?)?.extract(py))?;
-    let inp: &PyCell<NdArrayD> = inp.into_ref(py);
-    let inp = inp.borrow();
+    unwrap_obj!(py, inp);
 
     let res: Vec<i64> = inp
         .inner
@@ -108,11 +120,7 @@ pub fn ones(py: Python, inp: PyObject) -> PyResult<NdArrayD> {
 /// values are 0
 #[pyfunction]
 pub fn diagflat(py: Python, inp: PyObject) -> PyResult<NdArrayD> {
-    let inp: Py<NdArrayD> = inp
-        .extract(py)
-        .or_else(|_| pyndarray::array(py, inp.extract(py)?)?.extract(py))?;
-    let inp: &PyCell<NdArrayD> = inp.into_ref(py);
-    let mut inp = inp.borrow_mut();
+    unwrap_obj!(mut py, inp);
     let n = inp.inner.shape().span();
     let n = u32::try_from(n).map_err(|err| {
         PyValueError::new_err(format!("Failed to convert inp len to u32 {:?}", err))
@@ -129,22 +137,10 @@ pub fn diagflat(py: Python, inp: PyObject) -> PyResult<NdArrayD> {
 
 #[pyfunction]
 pub fn sum(py: Python, inp: PyObject) -> PyResult<NdArrayD> {
-    let inp: Py<NdArrayD> = inp
-        .extract(py)
-        .or_else(|_| pyndarray::array(py, inp.extract(py)?)?.extract(py))?;
-
-    let inp: &PyCell<NdArrayD> = inp.into_ref(py);
-    let inp = inp.borrow();
+    unwrap_obj!(py, inp);
 
     let res = facet_core::sum(&inp.inner);
     Ok(NdArrayD { inner: res })
-}
-
-pub fn object2ndarrayd(py: Python, inp: PyObject) -> PyResult<Py<NdArrayD>> {
-    let inp: Py<NdArrayD> = inp
-        .extract(py)
-        .or_else(|_| pyndarray::array(py, inp.extract(py)?)?.extract(py))?;
-    Ok(inp)
 }
 
 /// Scrate a single-value nd-array
@@ -157,12 +153,7 @@ pub fn scalar(s: f64) -> NdArrayD {
 
 #[pyfunction]
 pub fn mean(py: Python, inp: PyObject) -> PyResult<NdArrayD> {
-    let inp: Py<NdArrayD> = inp
-        .extract(py)
-        .or_else(|_| pyndarray::array(py, inp.extract(py)?)?.extract(py))?;
-    let inp: &PyCell<NdArrayD> = inp.into_ref(py);
-
-    let inp = inp.borrow();
+    unwrap_obj!(py, inp);
     facet_core::mean(&inp.inner)
         .map(|inner| NdArrayD { inner })
         .map_err(|err| PyValueError::new_err::<String>(format!("{}", err)))
@@ -170,12 +161,7 @@ pub fn mean(py: Python, inp: PyObject) -> PyResult<NdArrayD> {
 
 #[pyfunction]
 pub fn sqrt(py: Python, inp: PyObject) -> PyResult<NdArrayD> {
-    let inp: Py<NdArrayD> = inp
-        .extract(py)
-        .or_else(|_| pyndarray::array(py, inp.extract(py)?)?.extract(py))?;
-    let inp: &PyCell<NdArrayD> = inp.into_ref(py);
-
-    let inp = inp.borrow();
+    unwrap_obj!(py, inp);
 
     let mut res = inp.clone();
 
@@ -227,12 +213,7 @@ pub fn binomial(py: Python, n: u64, p: f64, size: Option<PyObject>) -> PyResult<
 pub fn clip(py: Python, inp: PyObject, min: f64, max: f64) -> PyResult<NdArrayD> {
     // maybe throw a python exception?
     debug_assert!(min <= max);
-    let inp: Py<NdArrayD> = inp
-        .extract(py)
-        .or_else(|_| pyndarray::array(py, inp.extract(py)?)?.extract(py))?;
-
-    let inp: &PyCell<NdArrayD> = inp.into_ref(py);
-    let inp = inp.borrow();
+    unwrap_obj!(py, inp);
 
     let mut res = inp.inner.clone();
     facet_core::clip(&mut res, min, max);
@@ -243,12 +224,7 @@ pub fn clip(py: Python, inp: PyObject, min: f64, max: f64) -> PyResult<NdArrayD>
 
 #[pyfunction]
 pub fn log(py: Python, inp: PyObject, base: Option<f64>) -> PyResult<NdArrayD> {
-    let inp: Py<NdArrayD> = inp
-        .extract(py)
-        .or_else(|_| pyndarray::array(py, inp.extract(py)?)?.extract(py))?;
-
-    let inp: &PyCell<NdArrayD> = inp.into_ref(py);
-    let inp = inp.borrow();
+    unwrap_obj!(py, inp);
 
     let base = base.unwrap_or(std::f64::consts::E);
     let res = inp.inner.as_slice().iter().map(|x| x.log(base)).collect();
@@ -260,50 +236,27 @@ pub fn log(py: Python, inp: PyObject, base: Option<f64>) -> PyResult<NdArrayD> {
 
 #[pyfunction]
 pub fn std_squared(py: Python, inp: PyObject, mean: Option<PyObject>) -> PyResult<NdArrayD> {
-    let inp: Py<NdArrayD> = inp
-        .extract(py)
-        .or_else(|_| pyndarray::array(py, inp.extract(py)?)?.extract(py))?;
+    unwrap_obj!(py, inp);
 
-    let mean: Option<Py<NdArrayD>> = mean.and_then(|m| {
-        m.extract(py)
-            .or_else(|_| pyndarray::array(py, inp.extract(py)?)?.extract(py))
-            .ok()
-    });
+    let mean: Option<Py<NdArrayD>> = mean.and_then(|m| m.extract(py).ok());
+    let mean = mean.as_ref().map(|m| m.borrow(py));
 
-    let inp: &PyCell<NdArrayD> = inp.into_ref(py);
-    let inp = inp.borrow();
-
-    let mean: Option<&PyCell<NdArrayD>> = mean.map(|m| m.into_ref(py));
-    let mean = mean.map(|m| m.borrow());
-    let mean = mean.as_ref().map(|m| &m.inner);
-
-    let res = facet_core::std_squared(&inp.inner, mean).map_err(|e| {
-        PyValueError::new_err(format!("Failed to perform std squared calculation {:?}", e))
-    })?;
+    let res =
+        facet_core::std_squared(&inp.inner, mean.as_ref().map(|m| &(&*m).inner)).map_err(|e| {
+            PyValueError::new_err(format!("Failed to perform std squared calculation {:?}", e))
+        })?;
 
     Ok(NdArrayD { inner: res })
 }
 
 #[pyfunction]
 pub fn std(py: Python, inp: PyObject, mean: Option<PyObject>) -> PyResult<NdArrayD> {
-    let inp: Py<NdArrayD> = inp
-        .extract(py)
-        .or_else(|_| pyndarray::array(py, inp.extract(py)?)?.extract(py))?;
+    unwrap_obj!(py, inp);
 
-    let mean: Option<Py<NdArrayD>> = mean.and_then(|m| {
-        m.extract(py)
-            .or_else(|_| pyndarray::array(py, inp.extract(py)?)?.extract(py))
-            .ok()
-    });
+    let mean: Option<Py<NdArrayD>> = mean.and_then(|m| m.extract(py).ok());
+    let mean = mean.as_ref().map(|m| m.borrow(py));
 
-    let inp: &PyCell<NdArrayD> = inp.into_ref(py);
-    let inp = inp.borrow();
-
-    let mean: Option<&PyCell<NdArrayD>> = mean.map(|m| m.into_ref(py));
-    let mean = mean.map(|m| m.borrow());
-    let mean = mean.as_ref().map(|m| &m.inner);
-
-    let res = facet_core::std(&inp.inner, mean)
+    let res = facet_core::std(&inp.inner, mean.as_ref().map(|m| &(&*m).inner))
         .map_err(|e| PyValueError::new_err(format!("Failed to perform std calculation {:?}", e)))?;
 
     Ok(NdArrayD { inner: res })
@@ -311,12 +264,7 @@ pub fn std(py: Python, inp: PyObject, mean: Option<PyObject>) -> PyResult<NdArra
 
 #[pyfunction]
 pub fn moving_average(py: Python, inp: PyObject, window: u64) -> PyResult<NdArrayD> {
-    let inp: Py<NdArrayD> = inp
-        .extract(py)
-        .or_else(|_| pyndarray::array(py, inp.extract(py)?)?.extract(py))?;
-
-    let inp: &PyCell<NdArrayD> = inp.into_ref(py);
-    let inp = inp.borrow();
+    unwrap_obj!(py, inp);
 
     facet_core::moving_average(&inp.inner, window as usize)
         .map_err(|err| PyValueError::new_err::<String>(format!("{}", err)))
@@ -325,12 +273,7 @@ pub fn moving_average(py: Python, inp: PyObject, window: u64) -> PyResult<NdArra
 
 #[pyfunction]
 pub fn veclen(py: Python, inp: PyObject) -> PyResult<NdArrayD> {
-    let inp: Py<NdArrayD> = inp
-        .extract(py)
-        .or_else(|_| pyndarray::array(py, inp.extract(py)?)?.extract(py))?;
-
-    let inp: &PyCell<NdArrayD> = inp.into_ref(py);
-    let inp = inp.borrow();
+    unwrap_obj!(py, inp);
 
     let mut out = NdArray::new(0);
 
@@ -341,12 +284,7 @@ pub fn veclen(py: Python, inp: PyObject) -> PyResult<NdArrayD> {
 
 #[pyfunction]
 pub fn veclen_squared(py: Python, inp: PyObject) -> PyResult<NdArrayD> {
-    let inp: Py<NdArrayD> = inp
-        .extract(py)
-        .or_else(|_| pyndarray::array(py, inp.extract(py)?)?.extract(py))?;
-
-    let inp: &PyCell<NdArrayD> = inp.into_ref(py);
-    let inp = inp.borrow();
+    unwrap_obj!(py, inp);
 
     let mut out = NdArray::new(0);
     facet_core::veclen_squared(&inp.inner, &mut out);
@@ -356,12 +294,7 @@ pub fn veclen_squared(py: Python, inp: PyObject) -> PyResult<NdArrayD> {
 
 #[pyfunction]
 pub fn normalize_vectors(py: Python, inp: PyObject) -> PyResult<NdArrayD> {
-    let inp: Py<NdArrayD> = inp
-        .extract(py)
-        .or_else(|_| pyndarray::array(py, inp.extract(py)?)?.extract(py))?;
-
-    let inp: &PyCell<NdArrayD> = inp.into_ref(py);
-    let inp = inp.borrow();
+    unwrap_obj!(py, inp);
 
     let mut out = NdArray::new(0);
     facet_core::normalize_f64_vectors(&inp.inner, &mut out);
@@ -371,12 +304,7 @@ pub fn normalize_vectors(py: Python, inp: PyObject) -> PyResult<NdArrayD> {
 
 #[pyfunction]
 pub fn fast_inverse_sqrt(py: Python, inp: PyObject) -> PyResult<NdArrayD> {
-    let inp: Py<NdArrayD> = inp
-        .extract(py)
-        .or_else(|_| pyndarray::array(py, inp.extract(py)?)?.extract(py))?;
-
-    let inp: &PyCell<NdArrayD> = inp.into_ref(py);
-    let inp = inp.borrow();
+    unwrap_obj!(py, inp);
 
     let mut out = NdArray::new(0);
     facet_core::fast_inv_sqrt_f64(&inp.inner, &mut out);
@@ -386,11 +314,7 @@ pub fn fast_inverse_sqrt(py: Python, inp: PyObject) -> PyResult<NdArrayD> {
 
 #[pyfunction]
 pub fn abs(py: Python, inp: PyObject) -> PyResult<NdArrayD> {
-    let inp: Py<NdArrayD> = inp
-        .extract(py)
-        .or_else(|_| pyndarray::array(py, inp.extract(py)?)?.extract(py))?;
-    let inp: &PyCell<NdArrayD> = inp.into_ref(py);
-    let inp = inp.borrow();
+    unwrap_obj!(py, inp);
 
     let mut out = NdArray::new(inp.shape());
 
