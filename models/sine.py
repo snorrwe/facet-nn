@@ -39,10 +39,10 @@ y_val = pf.array(y_val)
 
 
 model = Model()
-model.add(pf.DenseLayer(1, 128))
+model.add(pf.DenseLayer(1, 32))
 model.add(Activation(pf.relu, df=pf.drelu_dz))
-model.add(pf.DenseLayer(128, 64))
-#  model.add(DropoutLayer(0.2))
+model.add(pf.DenseLayer(32, 64))
+#  model.add(DropoutLayer(0.3))
 model.add(Activation(pf.relu, df=pf.drelu_dz))
 model.add(pf.DenseLayer(64, 1))
 model.add(ActivationLinear())
@@ -53,7 +53,7 @@ for l in model.layers:
 
 model.set(
     loss=MeanSquaredError(),
-    optimizer=Adam(learning_rate=1e-3, decay=1e-3),
+    optimizer=Adam(learning_rate=5e-3, decay=1e-3),
     accuracy=Accuracy_Regression(),
 )
 

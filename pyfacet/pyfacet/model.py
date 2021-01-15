@@ -54,6 +54,16 @@ class Model:
         assert self.baked
 
         self.input_layer.forward(X)
+        for l in (
+            l for l in self.layers if not hasattr(l, "training_only") or l.training_only
+        ):
+            l.forward(self.prevlayer[l.id].output)
+        return l.output
+
+    def forward_train(self, X):
+        assert self.baked
+
+        self.input_layer.forward(X)
         for l in self.layers:
             l.forward(self.prevlayer[l.id].output)
         return l.output
@@ -72,7 +82,7 @@ class Model:
 
         self.accuracy.init(y)
         for epoch in progressbar.progressbar(range(epochs + 1), redirect_stdout=True):
-            output = self.forward(X)
+            output = self.forward_train(X)
             data_loss, reg_loss = self.loss.calculate(
                 output, y, include_regularization=True
             )

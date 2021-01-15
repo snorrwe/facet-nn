@@ -10,6 +10,7 @@ class InputLayer:
 class DropoutLayer:
     def __init__(self, rate):
         self.rate = 1 - rate
+        self.training_only = True
 
     def forward(self, inputs):
         self.inputs = inputs
