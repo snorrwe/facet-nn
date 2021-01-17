@@ -44,11 +44,43 @@ fn test_correctness() {
     let a = NdArray::new_with_values([N, M], (0..N * M).map(|_| rng.gen_range(0., 10.)).collect())
         .unwrap();
 
-    let b = NdArray::new_with_values(
-        &[M, P][..],
-        (0..M * P).map(|_| rng.gen_range(0., 10.)).collect(),
+    let b = NdArray::new_with_values([M, P], (0..M * P).map(|_| rng.gen_range(0., 10.)).collect())
+        .unwrap();
+
+    let mut c_gpu = NdArray::new(N * P);
+    matmul_f64_impl([N, M, P], a.as_slice(), b.as_slice(), c_gpu.as_mut_slice()).unwrap();
+
+    let mut c_cpu = NdArray::new(N * P);
+    crate::ndarray::matrix::matmul_impl(
+        [N, M, P],
+        a.as_slice(),
+        b.as_slice(),
+        c_cpu.as_mut_slice(),
     )
     .unwrap();
+
+    for (i, (a, b)) in c_gpu
+        .as_slice()
+        .iter()
+        .zip(c_cpu.as_slice().iter())
+        .enumerate()
+    {
+        assert!((a - b).abs() < 0.000001, "{}: {} != {}", i, a, b)
+    }
+}
+
+#[test]
+fn test_larger_matrix() {
+    const N: u32 = ROW_SPLIT_THRESHOLD * 2; // force combined GPU+CPU computation
+    const M: u32 = 700;
+    const P: u32 = LOCAL_SIZE_Y + 1;
+
+    let mut rng = rand::thread_rng();
+    let a = NdArray::new_with_values([N, M], (0..N * M).map(|_| rng.gen_range(0., 10.)).collect())
+        .unwrap();
+
+    let b = NdArray::new_with_values([M, P], (0..M * P).map(|_| rng.gen_range(0., 10.)).collect())
+        .unwrap();
 
     let mut c_gpu = NdArray::new(N * P);
     matmul_f64_impl([N, M, P], a.as_slice(), b.as_slice(), c_gpu.as_mut_slice()).unwrap();

@@ -1,4 +1,3 @@
-# TODO: register dependency
 import progressbar
 from uuid import uuid4
 

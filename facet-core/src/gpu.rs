@@ -13,6 +13,8 @@ pub enum GpuNdArrayError {
     NdArrayError(crate::ndarray::NdArrayError),
     #[error("Could not load shader")]
     NoShader,
+    #[error("Could not load GPU executor")]
+    NoExecutor,
 }
 
 #[allow(unused)]
@@ -20,7 +22,6 @@ pub struct GpuExecutor {
     pub instance: Arc<Instance>,
     pub device: Arc<Device>,
     pub queue: Arc<Queue>,
-    pub buffer_pool_f64: CpuBufferPool<f64>,
 }
 
 lazy_static::lazy_static! {
@@ -55,7 +56,6 @@ pub fn init() -> Option<GpuExecutor> {
     let queue = queues.next().unwrap();
 
     let exc = GpuExecutor {
-        buffer_pool_f64: CpuBufferPool::new(device.clone(), vulkano::buffer::BufferUsage::all()),
         instance,
         queue,
         device,

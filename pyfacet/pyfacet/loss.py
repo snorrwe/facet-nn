@@ -39,7 +39,7 @@ class Loss:
         return sample_losses
 
     def backward(self, dvalues, y):
-        self.dinputs = self.dlossfn(dvalues, y)
+        self.dinputs = self.dloss(dvalues, y)
 
 
 class BinaryCrossentropy(Loss):

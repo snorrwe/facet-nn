@@ -87,6 +87,7 @@ impl DenseLayer {
             "Forward input must be a matrix"
         );
         self.output.reshape(0);
+
         inputs
             .matmul_f64(&self.weights, &mut self.output)
             .map_err(DenseLayerError::MatMulFail)?;

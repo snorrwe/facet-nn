@@ -14,6 +14,8 @@ use vulkano::{
 
 pub const LOCAL_SIZE_X: u32 = 16;
 pub const LOCAL_SIZE_Y: u32 = 16;
+/// Number of rows in the left matrix to process at a time
+pub const ROW_SPLIT_THRESHOLD: u32 = 1024;
 
 // naive impl
 // TODO optimize
@@ -52,25 +54,15 @@ void main()
 }"#
 }
 
-pub fn matmul_f64_impl<'a>(
-    [n, m, p]: [u32; 3],
-    values0: &'a [f64],
-    values1: &'a [f64],
-    out: &mut [f64],
-) -> Result<(), GpuNdArrayError> {
-    debug_assert_eq!((n as usize * m as usize), values0.len());
-    debug_assert_eq!((p as usize * m as usize), values1.len());
-    debug_assert_eq!(out.len(), n as usize * p as usize);
-
-    let shape = [n, m, p];
-
-    let shader = match MATMUL.as_ref() {
-        Some(shader) => shader,
-        None => return Err(GpuNdArrayError::NoShader),
-    };
+lazy_static::lazy_static! {
+    pub static ref PIPELINE: Arc<vulkano::pipeline::ComputePipeline<PipelineLayout<Layout>>> = {
     let exc = EXECUTOR.as_ref().unwrap();
     let device = exc.device.clone();
-    let compute_pipeline = Arc::new(
+    let shader = match MATMUL.as_ref() {
+        Some(shader) => shader,
+        None => panic!("{}",GpuNdArrayError::NoShader),
+    };
+    Arc::new(
         vulkano::pipeline::ComputePipeline::new(
             device.clone(),
             &shader.main_entry_point(),
@@ -78,28 +70,86 @@ pub fn matmul_f64_impl<'a>(
             None,
         )
         .expect("failed to create compute pipeline"),
-    );
+    )
+    };
+}
+
+pub fn matmul_f64_impl<'a>(
+    [n, m, p]: [u32; 3],
+    values0: &'a [f64],
+    values1: &'a [f64],
+    out: &mut [f64],
+) -> Result<(), GpuNdArrayError> {
+    assert!(n as usize * m as usize <= values0.len());
+    assert!(p as usize * m as usize <= values1.len());
+    assert!(n as usize * p as usize <= out.len());
+
+    let exc = match EXECUTOR.as_ref() {
+        Some(e) => e,
+        None => return Err(GpuNdArrayError::NoExecutor),
+    };
+    let device = exc.device.clone();
+    let compute_pipeline = PIPELINE.clone();
+
+    let res = if n > ROW_SPLIT_THRESHOLD {
+        // iterate over some of the rows at a time
+        let device = device.clone();
+        out.par_chunks_mut(p as usize * ROW_SPLIT_THRESHOLD as usize)
+            .enumerate()
+            .try_for_each(move |(subi, submatrix)| {
+                let offset = subi * ROW_SPLIT_THRESHOLD as usize;
+                let n = submatrix.len() / p as usize; // 1..ROW_SPLIT
+                debug_assert!(n >= 1);
+                debug_assert!(values0[offset * m as usize..].len() >= n * m as usize);
+                _matmul_f64_impl(
+                    exc,
+                    device.clone(),
+                    compute_pipeline.clone(),
+                    [n as u32, m, p],
+                    &values0[offset * m as usize..],
+                    values1,
+                    submatrix,
+                )
+            })
+    } else {
+        _matmul_f64_impl(
+            exc,
+            device.clone(),
+            compute_pipeline,
+            [n, m, p],
+            values0,
+            values1,
+            out,
+        )
+    };
+
+    // we should periodically clean up the gpu resources, for now let's do that in every call
+    let mut finish = vulkano::sync::now(device);
+    finish.cleanup_finished();
+
+    res
+}
+
+pub fn _matmul_f64_impl<'a>(
+    exc: &super::GpuExecutor,
+    device: Arc<Device>,
+    compute_pipeline: Arc<vulkano::pipeline::ComputePipeline<PipelineLayout<Layout>>>,
+    // matmul params
+    [n, m, p]: [u32; 3],
+    values0: &'a [f64],
+    values1: &'a [f64],
+    out: &mut [f64],
+) -> Result<(), GpuNdArrayError> {
+    let shape = [n, m, p];
 
     let ((a_buffer, b_buffer), c_buffer) = rayon::join(
         || {
-            (
-                exc.buffer_pool_f64
-                    .chunk(values0.iter().cloned())
-                    .expect("buffer a"),
-                exc.buffer_pool_f64
-                    .chunk(values1.iter().cloned())
-                    .expect("buffer b"),
+            rayon::join(
+                || matrix_buffer(device.clone(), false, values0.iter().cloned()),
+                || matrix_buffer(device.clone(), false, values1.iter().cloned()),
             )
         },
-        || {
-            CpuAccessibleBuffer::from_iter(
-                device.clone(),
-                BufferUsage::all(),
-                true,
-                (0..out.len()).map(|_| 0.0f64),
-            )
-            .expect("failed to create buffer c")
-        },
+        || matrix_buffer(device.clone(), true, (0..out.len()).map(|_| 0.0f64)),
     );
 
     // Descriptor sets
@@ -188,14 +238,21 @@ pub fn matmul_f64_impl<'a>(
             }
         });
 
-    // we should periodically clean up the gpu resources, for now let's do that in every call
-    let mut finish = finish;
-    finish.cleanup_finished();
-
     Ok(())
 }
 
 #[inline(always)]
 fn at(values: &[f64], i: usize, cols: usize, j: usize) -> f64 {
     unsafe { *values.as_ptr().add(i * cols + j) }
+}
+
+#[inline]
+fn matrix_buffer(
+    device: Arc<Device>,
+    host_cached: bool,
+    data: impl Iterator<Item = f64> + std::iter::ExactSizeIterator,
+) -> Arc<CpuAccessibleBuffer<[f64]>> {
+    // use CPU accessible buffers (shared buffers) because I found that dedicated GPU memory runs
+    // out fast
+    CpuAccessibleBuffer::from_iter(device, BufferUsage::all(), host_cached, data).unwrap()
 }

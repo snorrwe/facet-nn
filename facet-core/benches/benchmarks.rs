@@ -28,47 +28,11 @@ fn mat_mul(c: &mut Criterion) {
             },
         );
         g.bench_with_input(
-            BenchmarkId::new("cpu - tensor", size),
-            &size,
-            move |bencher, &size| {
-                let mut rng = rand::thread_rng();
-                let mut a = NdArray::new(&[size, 1, size][..]);
-                let mut b = NdArray::new([size, size]);
-                let mut c = NdArray::new([size, size]);
-                for i in 0..size as usize * size as usize {
-                    a.as_mut_slice()[i] = rng.gen_range(-1.2f64, 1.2);
-                    b.as_mut_slice()[i] = rng.gen_range(-1.2f64, 1.2);
-                }
-
-                bencher.iter(move || {
-                    matmul_impl([size; 3], a.as_slice(), b.as_slice(), c.as_mut_slice())
-                })
-            },
-        );
-        g.bench_with_input(
             BenchmarkId::new("gpu", size),
             &size,
             move |bencher, &size| {
                 let mut rng = rand::thread_rng();
                 let mut a = NdArray::new([size, size]);
-                let mut b = NdArray::new([size, size]);
-                let mut c = NdArray::new([size, size]);
-                for i in 0..size as usize * size as usize {
-                    a.as_mut_slice()[i] = rng.gen_range(-1.2f64, 1.2);
-                    b.as_mut_slice()[i] = rng.gen_range(-1.2f64, 1.2);
-                }
-
-                bencher.iter(move || {
-                    matmul_f64_impl([size; 3], a.as_slice(), b.as_slice(), c.as_mut_slice())
-                })
-            },
-        );
-        g.bench_with_input(
-            BenchmarkId::new("gpu - tensor", size),
-            &size,
-            move |bencher, &size| {
-                let mut rng = rand::thread_rng();
-                let mut a = NdArray::new(&[size, 1, size][..]);
                 let mut b = NdArray::new([size, size]);
                 let mut c = NdArray::new([size, size]);
                 for i in 0..size as usize * size as usize {

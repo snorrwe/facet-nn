@@ -5,6 +5,7 @@ foo:
 
 test-rust:
 	cargo test
+	cargo test --benches
 
 nd-dev:
 	cd pyfacet && maturin develop

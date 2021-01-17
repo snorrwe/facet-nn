@@ -39,10 +39,10 @@ y_val = pf.array(y_val)
 
 
 model = Model()
-model.add(pf.DenseLayer(1, 32))
+model.add(pf.DenseLayer(1, 128))
 model.add(Activation(pf.relu, df=pf.drelu_dz))
-model.add(pf.DenseLayer(32, 64))
-#  model.add(DropoutLayer(0.3))
+model.add(pf.DenseLayer(128, 64))
+model.add(DropoutLayer(0.1))
 model.add(Activation(pf.relu, df=pf.drelu_dz))
 model.add(pf.DenseLayer(64, 1))
 model.add(ActivationLinear())

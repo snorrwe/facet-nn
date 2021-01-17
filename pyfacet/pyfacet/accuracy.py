@@ -25,10 +25,11 @@ class Accuracy_Categorical(Accuracy):
     def __init__(self, *, binary=False):
         self.binary = binary
 
-    def init(self):
+    def init(self, force=False):
         pass
 
     def compare(self, pred, y):
         if not self.binary and len(y.shape) == 2:
             y = pf.argmax(y)
+            pred = pf.argmax(pred)
         return pred == y

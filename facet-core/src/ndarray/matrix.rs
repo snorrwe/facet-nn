@@ -363,7 +363,9 @@ impl<T> NdArray<T> {
                 let [a, b] = shp.last_two().unwrap();
                 let [c, d] = [*c, *d];
 
-                let it = ColumnIter::new(&self.values, c as usize * d as usize);
+                assert_eq!(b, c);
+
+                let it = ColumnIter::new(&self.values, a as usize * b as usize);
                 out.reshape(vec![(self.len() / (c as usize * d as usize)) as u32, a, d]);
                 for (mat, out) in
                     it.zip(ColumnIterMut::new(&mut out.values, a as usize * d as usize))
