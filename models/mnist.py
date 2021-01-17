@@ -14,16 +14,16 @@ dataset = pf.load_csv(
 )
 
 X = dataset["data"]
-y = pf.labels_to_once_hot(dataset["labels"])
+y = pf.labels_to_one_hot(dataset["labels"])
 
 model = Model()
 
 model.add(pf.DenseLayer(X.shape[1], 32))
 model.add(Activation(pf.relu, df=pf.drelu_dz))
-model.add(pf.DenseLayer(32, 64, weight_regularizer_l2=5e-4, bias_regularizer_l2=5e-4))
+model.add(pf.DenseLayer(32, 100, weight_regularizer_l2=5e-4, bias_regularizer_l2=5e-4))
 model.add(Activation(pf.relu, df=pf.drelu_dz))
 model.add(DropoutLayer(0.1))
-model.add(pf.DenseLayer(64, 10))
+model.add(pf.DenseLayer(100, 10))
 model.add(Activation(pf.softmax, df=pf.dsoftmax))
 
 model.set(

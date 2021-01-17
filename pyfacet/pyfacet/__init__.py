@@ -5,7 +5,7 @@ import string
 from .pyfacet import *
 
 
-def labels_to_once_hot(labels):
+def labels_to_one_hot(labels):
     """
     convert a list of labels to a one-hot dense target matrix
     """

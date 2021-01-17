@@ -21,7 +21,7 @@ make test
 ```
 
 
-## Code layout
+## Project layout
 
 ```txt
 |- facet-core  # Core, Rust-only linalg / nn code
