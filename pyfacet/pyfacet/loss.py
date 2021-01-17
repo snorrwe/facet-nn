@@ -22,19 +22,19 @@ class Loss:
     def regularization_loss(self):
         r_loss = 0
         for l in self.trainable_layers:
-            if l.weight_regularizer_l1 is not None and l.weight_regularizer_l1 > 0:
+            if l.weight_regularizer_l1 is not None:
                 s = pf.sum(list(pf.abs(l.weights)))
                 assert s.shape == [], s.shape
                 r_loss += l.weight_regularizer_l1 * s[0]
-            if l.weight_regularizer_l2 is not None and l.weight_regularizer_l2 > 0:
+            if l.weight_regularizer_l2 is not None:
                 s = pf.sum(list(l.weights * l.weights))
                 assert s.shape == [], s.shape
                 r_loss += l.weight_regularizer_l2 * s[0]
-            if l.bias_regularizer_l1 is not None and l.bias_regularizer_l1 > 0:
+            if l.bias_regularizer_l1 is not None:
                 s = pf.sum(pf.abs(l.biases))
                 assert s.shape == [], s.shape
                 r_loss += l.bias_regularizer_l1 * s[0]
-            if l.bias_regularizer_l2 is not None and l.bias_regularizer_l2 > 0:
+            if l.bias_regularizer_l2 is not None:
                 s = pf.sum(l.biases * l.biases)
                 assert s.shape == [], s.shape
                 r_loss += l.bias_regularizer_l2 * s[0]
