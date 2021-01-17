@@ -3,12 +3,12 @@ use pyo3::{exceptions::PyValueError, prelude::*, types::PyList};
 
 use super::{NdArrayB, NdArrayD};
 
-pub fn array_f64(py: Python, shape: Vec<u32>, inp: &PyList) -> PyResult<PyObject> {
+pub fn array_f32(py: Python, shape: Vec<u32>, inp: &PyList) -> PyResult<PyObject> {
     let shape = Shape::from(shape);
-    let mut values: Vec<f64> = Vec::with_capacity(shape.span());
+    let mut values: Vec<f32> = Vec::with_capacity(shape.span());
     flatten(inp, &mut values)?;
-    let arr = NdArray::<f64>::new_with_values(shape, values.into()).map_err(|err| {
-        PyValueError::new_err::<String>(format!("Failed to create nd-array of f64: {}", err))
+    let arr = NdArray::<f32>::new_with_values(shape, values.into()).map_err(|err| {
+        PyValueError::new_err::<String>(format!("Failed to create nd-array of f32: {}", err))
     })?;
     let res = NdArrayD { inner: arr };
     let res = Py::new(py, res)?;

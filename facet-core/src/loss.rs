@@ -1,4 +1,4 @@
-use std::f64::consts::E;
+use std::f32::consts::E;
 
 use crate::{ndarray::Data, ndarray::NdArray, DuError, DuResult};
 
@@ -6,9 +6,9 @@ use crate::{ndarray::Data, ndarray::NdArray, DuError, DuResult};
 ///
 /// Expect the predictions to be in the interval [0, 1]
 pub fn categorical_cross_entropy(
-    predictions: &NdArray<f64>,
-    targets: &NdArray<f64>,
-) -> DuResult<NdArray<f64>> {
+    predictions: &NdArray<f32>,
+    targets: &NdArray<f32>,
+) -> DuResult<NdArray<f32>> {
     if predictions.shape() != targets.shape() {
         return Err(DuError::MismatchedShapes(
             predictions.shape().clone(),
@@ -20,15 +20,15 @@ pub fn categorical_cross_entropy(
         predictions.shape().span() / predictions.shape().last().max(1) as usize,
     );
     for (x, y) in predictions.iter_rows().zip(targets.iter_rows()) {
-        let loss: f64 = x
+        let loss: f32 = x
             .iter()
             .cloned()
             .zip(y.iter().cloned())
-            .map(|(mut x, y)| -> f64 {
+            .map(|(mut x, y)| -> f32 {
                 // clamp x to prevent division by 0
                 // and prevent the dragging of the mean error later
-                const MAX: f64 = 1.0 - 1e-7;
-                const MIN: f64 = 1e-7;
+                const MAX: f32 = 1.0 - 1e-7;
+                const MIN: f32 = 1e-7;
                 x = if x < MAX { x } else { MAX };
                 x = if x > MIN { x } else { MIN };
                 x.log(E) * y

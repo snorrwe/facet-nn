@@ -91,8 +91,8 @@ impl AsNumArray for NdArrayI {
 #[pymethods]
 impl NdArrayI {
     /// Convert self into float representation
-    pub fn as_f64(&self) -> NdArrayD {
-        let values = self.inner.as_slice().iter().map(|x| *x as f64).collect();
+    pub fn as_f32(&self) -> NdArrayD {
+        let values = self.inner.as_slice().iter().map(|x| *x as f32).collect();
         let res = NdArray::new_with_values(self.inner.shape().clone(), values).unwrap();
         NdArrayD { inner: res }
     }

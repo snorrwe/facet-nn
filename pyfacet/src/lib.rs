@@ -145,7 +145,7 @@ pub fn sum(py: Python, inp: PyObject) -> PyResult<NdArrayD> {
 
 /// Scrate a single-value nd-array
 #[pyfunction]
-pub fn scalar(s: f64) -> NdArrayD {
+pub fn scalar(s: f32) -> NdArrayD {
     NdArrayD {
         inner: NdArray::new_with_values(0, (0..1).map(|_| s).collect()).unwrap(),
     }
@@ -174,10 +174,10 @@ pub fn sqrt(py: Python, inp: PyObject) -> PyResult<NdArrayD> {
 }
 
 #[pyfunction]
-pub fn binomial(py: Python, n: u64, p: f64, size: Option<PyObject>) -> PyResult<NdArrayD> {
+pub fn binomial(py: Python, n: u64, p: f32, size: Option<PyObject>) -> PyResult<NdArrayD> {
     use rand::prelude::*;
 
-    let dist = rand_distr::Binomial::new(n, p).map_err(|err| {
+    let dist = rand_distr::Binomial::new(n, p.into()).map_err(|err| {
         PyAssertionError::new_err(format!(
             "Failed to create binomial distribution from the given arguments {}",
             err
@@ -197,12 +197,12 @@ pub fn binomial(py: Python, n: u64, p: f64, size: Option<PyObject>) -> PyResult<
         .unwrap_or_else(|| Shape::from(1));
 
     let len = shape.span();
-    let mut res = NdArray::<f64>::new(shape);
+    let mut res = NdArray::<f32>::new(shape);
 
     let mut rng = rand::thread_rng();
     for i in 0..len {
         let x = dist.sample(&mut rng);
-        res.as_mut_slice()[i as usize] = x as f64;
+        res.as_mut_slice()[i as usize] = x as f32;
     }
 
     let res = NdArrayD { inner: res };
@@ -210,7 +210,7 @@ pub fn binomial(py: Python, n: u64, p: f64, size: Option<PyObject>) -> PyResult<
 }
 
 #[pyfunction]
-pub fn clip(py: Python, inp: PyObject, min: f64, max: f64) -> PyResult<NdArrayD> {
+pub fn clip(py: Python, inp: PyObject, min: f32, max: f32) -> PyResult<NdArrayD> {
     // maybe throw a python exception?
     debug_assert!(min <= max);
     unwrap_obj!(py, inp);
@@ -223,10 +223,10 @@ pub fn clip(py: Python, inp: PyObject, min: f64, max: f64) -> PyResult<NdArrayD>
 }
 
 #[pyfunction]
-pub fn log(py: Python, inp: PyObject, base: Option<f64>) -> PyResult<NdArrayD> {
+pub fn log(py: Python, inp: PyObject, base: Option<f32>) -> PyResult<NdArrayD> {
     unwrap_obj!(py, inp);
 
-    let base = base.unwrap_or(std::f64::consts::E);
+    let base = base.unwrap_or(std::f32::consts::E);
     let res = inp.inner.as_slice().iter().map(|x| x.log(base)).collect();
 
     let inner = NdArray::new_with_values(inp.shape(), res).unwrap();
@@ -297,7 +297,7 @@ pub fn normalize_vectors(py: Python, inp: PyObject) -> PyResult<NdArrayD> {
     unwrap_obj!(py, inp);
 
     let mut out = NdArray::new(0);
-    facet_core::normalize_f64_vectors(&inp.inner, &mut out);
+    facet_core::normalize_f32_vectors(&inp.inner, &mut out);
 
     Ok(NdArrayD { inner: out })
 }
@@ -307,7 +307,7 @@ pub fn fast_inverse_sqrt(py: Python, inp: PyObject) -> PyResult<NdArrayD> {
     unwrap_obj!(py, inp);
 
     let mut out = NdArray::new(0);
-    facet_core::fast_inv_sqrt_f64(&inp.inner, &mut out);
+    facet_core::fast_inv_sqrt_f32(&inp.inner, &mut out);
 
     Ok(NdArrayD { inner: out })
 }

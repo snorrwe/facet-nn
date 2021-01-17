@@ -58,16 +58,16 @@ where
     Ok(())
 }
 
-/// f64 specialized method
-pub fn matmul_impl_f64<'a>(
+/// f32 specialized method
+pub fn matmul_impl_f32<'a>(
     [n, m, p]: [u32; 3],
-    values0: &'a [f64],
-    values1: &'a [f64],
-    out: &mut [f64],
+    values0: &'a [f32],
+    values1: &'a [f32],
+    out: &mut [f32],
 ) -> Result<(), NdArrayError> {
     #[cfg(feature = "gpu")]
     if n >= crate::gpu::matmul::LOCAL_SIZE_X || p >= crate::gpu::matmul::LOCAL_SIZE_Y {
-        return match crate::gpu::matmul::matmul_f64_impl([n, m, p], values0, values1, out) {
+        return match crate::gpu::matmul::matmul_f32_impl([n, m, p], values0, values1, out) {
             Ok(()) => Ok(()),
             Err(crate::gpu::GpuNdArrayError::NdArrayError(err)) => Err(err),
             err @ Err(_) => panic!("{:?}", err),
@@ -130,10 +130,10 @@ pub fn rotate_mat_cw<T: Clone>(col: usize, inp: &[T], out: &mut [T]) {
     flip_mat_horizontal([col, col], intermediate.as_slice(), out);
 }
 
-impl NdArray<f64> {
+impl NdArray<f32> {
     /// specialized matmul
-    pub fn matmul_f64<'a>(&'a self, other: &'a Self, out: &mut Self) -> Result<(), NdArrayError> {
-        self._matmul(other, out, matmul_impl_f64)
+    pub fn matmul_f32<'a>(&'a self, other: &'a Self, out: &mut Self) -> Result<(), NdArrayError> {
+        self._matmul(other, out, matmul_impl_f32)
     }
 }
 

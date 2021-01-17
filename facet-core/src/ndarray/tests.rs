@@ -181,7 +181,7 @@ fn test_mat_mat_mul_f64() {
     let mut c = NdArray::new(0);
     a.matmul(&b, &mut c).expect("matmul");
     let mut d = NdArray::new(0);
-    a.matmul_f64(&b, &mut d).expect("matmul f64");
+    a.matmul_f32(&b, &mut d).expect("matmul f64");
 
     assert_eq!(c.shape, Shape::Matrix([2, 2]));
     assert_eq!(d.shape, Shape::Matrix([2, 2]));
@@ -198,11 +198,11 @@ fn test_mat_mat_mul_f64_multi_call() {
         .unwrap();
 
     let mut c = NdArray::new(0);
-    a.matmul_f64(&b, &mut c).expect("matmul");
-    a.matmul_f64(&b, &mut c).expect("matmul");
-    a.matmul_f64(&b, &mut c).expect("matmul");
-    a.matmul_f64(&b, &mut c).expect("matmul");
-    a.matmul_f64(&b, &mut c).expect("matmul");
+    a.matmul_f32(&b, &mut c).expect("matmul");
+    a.matmul_f32(&b, &mut c).expect("matmul");
+    a.matmul_f32(&b, &mut c).expect("matmul");
+    a.matmul_f32(&b, &mut c).expect("matmul");
+    a.matmul_f32(&b, &mut c).expect("matmul");
 
     assert_eq!(c.shape, Shape::Matrix([2, 2]));
     assert_eq!(c.as_slice(), &[5.0, -4.0, 4.0, 5.0]);

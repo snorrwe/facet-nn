@@ -6,7 +6,7 @@ class Accuracy:
         comparisions = self.compare(pred, y)
         # global mean is a scalar
         # flatten the output and return the inner scalar value
-        return pf.mean(list(comparisions.as_f64()))[0]
+        return pf.mean(list(comparisions.as_f32()))[0]
 
 
 class Accuracy_Regression(Accuracy):

@@ -29,7 +29,7 @@ impl NdArrayB {
     }
 
     /// Convert self into float representation, where True becomes 1.0 and False becomes 0.0
-    pub fn as_f64(&self) -> NdArrayD {
+    pub fn as_f32(&self) -> NdArrayD {
         let values = self
             .inner
             .as_slice()
@@ -49,7 +49,7 @@ impl<T> PyObjectProtocol for NdArrayB {
 
     fn __repr__(&self) -> String {
         format!(
-            "NdArray of f64, shape: {:?}, data:\n{}",
+            "NdArray of bools, shape: {:?}, data:\n{}",
             self.inner.shape(),
             self.to_string()
         )

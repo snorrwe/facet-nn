@@ -1,4 +1,3 @@
-import sys
 from pyfacet import categorical_cross_entropy, array
 from pyfacet.loss import MeanSquaredError
 
@@ -10,8 +9,8 @@ def test_cce_simple():
     res = categorical_cross_entropy(x, y)
 
     assert len(res) == 2
-    assert abs(res[0] - 0.35667494393873245) < sys.float_info.epsilon
-    assert abs(res[1] - 11.512925464970229) < sys.float_info.epsilon
+    assert abs(res[0] - 0.35667) < 0.01
+    assert abs(res[1] - 11.51293) < 0.01
 
 
 def test_mse_simple():
@@ -25,7 +24,7 @@ def test_mse_simple():
     exp = (0.3 ** 2 + 0.1 ** 2 + 0.2 ** 2) / 3.0
 
     for l in res:
-        assert abs(exp - l) < sys.float_info.epsilon
+        assert abs(exp - l) < 0.01
 
     loss.backward(array([[1] * 3] * 2), y)
 

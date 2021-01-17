@@ -53,7 +53,7 @@ pub fn array(py: Python, shape: PyObject) -> PyResult<PyObject> {
             .map_err(|err| {
                 PyValueError::new_err(format!("Failed to convert input to a list {:?}", err))
             })
-            .map(|f: f64| PyList::new(py, vec![f]))
+            .map(|f: f32| PyList::new(py, vec![f]))
     })?;
     let factory: Factory = {
         let mut shape = shape;
@@ -64,8 +64,8 @@ pub fn array(py: Python, shape: PyObject) -> PyResult<PyObject> {
                 shape = i;
             } else if i.extract::<bool>().is_ok() {
                 break factory::array_bool;
-            } else if i.extract::<f64>().is_ok() {
-                break factory::array_f64;
+            } else if i.extract::<f32>().is_ok() {
+                break factory::array_f32;
             } else {
                 return Err(PyNotImplementedError::new_err(format!(
                     "Value with unexpected type: {:?}",

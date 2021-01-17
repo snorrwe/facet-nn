@@ -20,10 +20,10 @@ impl DenseLayer {
     pub fn new(
         inputs: u32,
         outputs: u32,
-        weight_regularizer_l1: Option<f64>,
-        weight_regularizer_l2: Option<f64>,
-        bias_regularizer_l1: Option<f64>,
-        bias_regularizer_l2: Option<f64>,
+        weight_regularizer_l1: Option<f32>,
+        weight_regularizer_l2: Option<f32>,
+        bias_regularizer_l1: Option<f32>,
+        bias_regularizer_l2: Option<f32>,
     ) -> PyResult<Self> {
         Ok(Self {
             inner: CoreLayer::new(inputs, outputs).with_training(
@@ -36,28 +36,28 @@ impl DenseLayer {
         })
     }
     #[getter]
-    pub fn weight_regularizer_l1(&self) -> Option<f64> {
+    pub fn weight_regularizer_l1(&self) -> Option<f32> {
         self.inner
             .training
             .as_ref()
             .and_then(|t| t.weight_regularizer_l1)
     }
     #[getter]
-    pub fn weight_regularizer_l2(&self) -> Option<f64> {
+    pub fn weight_regularizer_l2(&self) -> Option<f32> {
         self.inner
             .training
             .as_ref()
             .and_then(|t| t.weight_regularizer_l2)
     }
     #[getter]
-    pub fn bias_regularizer_l1(&self) -> Option<f64> {
+    pub fn bias_regularizer_l1(&self) -> Option<f32> {
         self.inner
             .training
             .as_ref()
             .and_then(|t| t.bias_regularizer_l1)
     }
     #[getter]
-    pub fn bias_regularizer_l2(&self) -> Option<f64> {
+    pub fn bias_regularizer_l2(&self) -> Option<f32> {
         self.inner
             .training
             .as_ref()

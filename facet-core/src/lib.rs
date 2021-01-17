@@ -88,14 +88,15 @@ where
 /// use facet_core::prelude::*;
 ///
 /// let a = NdArray::new_with_values(&[2u32, 2, 3][..], smallvec![
-///  1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12
+///  1.0f32, 2.0f32, 3.0f32, 4.0f32, 5.0f32, 6.0f32, 7.0f32, 8.0f32, 9.0f32, 10.0f32, 11.0f32,
+///  12.0f32
 /// ]).unwrap();
 ///
 /// let m = mean(&a).unwrap();
 ///
 /// assert_eq!(a.shape(), &Shape::from(&[2, 2, 3][..]));
 /// assert_eq!(m.shape(), &Shape::from(&[2, 2, 1][..]));
-/// assert_eq!(m.as_slice(), &[2, 5, 8, 11]);
+/// assert_eq!(m.as_slice(), &[2.0, 5.0, 8.0, 11.0]);
 ///
 /// ```
 ///
@@ -104,25 +105,24 @@ where
 /// ```
 /// use facet_core::prelude::*;
 ///
-/// let a = NdArray::new_vector(smallvec![ 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12 ]);
+/// let a = NdArray::new_vector(smallvec![ 1.0f32, 2.0f32, 3.0f32, 4.0f32, 5.0f32, 6.0f32, 7.0f32, 8.0f32, 9.0f32, 10.0f32, 11.0f32, 12.0 ]);
 ///
 /// let m = mean(&a).unwrap();
 ///
 /// assert_eq!(a.shape(), &Shape::from(&[12][..]));
 /// assert_eq!(m.shape(), &Shape::from(&[0][..]));
-/// assert_eq!(m.as_slice(), &[6]);
+/// assert_eq!(m.as_slice(), &[6.5]);
 ///
 /// ```
 pub fn mean<T>(inp: &ndarray::NdArray<T>) -> Result<ndarray::NdArray<T>, NdArrayError>
 where
-    T: Copy + Default + std::iter::Sum + std::ops::Div<Output = T> + std::convert::TryFrom<u32>,
+    T: Copy + Default + std::iter::Sum + std::ops::Div<f32, Output = T>,
 {
     match inp.shape() {
         Shape::Scalar(_) => Ok(inp.clone()),
         Shape::Vector([n]) => {
             let s: T = inp.as_slice().iter().cloned().sum();
-            let res = s / T::try_from(*n)
-                .map_err(|_| NdArrayError::ConversionError(format!("{:?}", n)))?;
+            let res = s / *n as f32;
             let mut values = ndarray::Data::new();
             values.push(res);
             ndarray::NdArray::new_with_values(0, values)
@@ -131,9 +131,7 @@ where
             let mut values = Vec::with_capacity(inp.shape().col_span());
             for col in inp.iter_rows() {
                 let s: T = col.iter().cloned().sum();
-                let res = s
-                    / (T::try_from(col.len() as u32))
-                        .map_err(|_| NdArrayError::ConversionError(format!("{:?}", col.len())))?;
+                let res = s / (col.len() as f32);
                 values.push(res)
             }
             let mut res = ndarray::NdArray::new_vector(values);
@@ -167,12 +165,7 @@ pub fn moving_average<T>(
     window: usize,
 ) -> Result<ndarray::NdArray<T>, NdArrayError>
 where
-    T: Copy
-        + Default
-        + std::iter::Sum
-        + std::ops::Div<Output = T>
-        + std::convert::From<u32>
-        + std::fmt::Debug,
+    T: Copy + Default + std::iter::Sum + std::ops::Div<f32, Output = T> + std::fmt::Debug,
 {
     use crate::prelude::*;
     if window == 0 {
@@ -180,6 +173,7 @@ where
             "window must be non-negative".to_string(),
         ));
     }
+    let winf = f64::from(window as u32) as f32;
     let arr = match inp.shape() {
         Shape::Scalar(_) => return Err(NdArrayError::UnsupportedShape(inp.shape().clone())),
         Shape::Vector(_) => {
@@ -188,7 +182,7 @@ where
                 .windows(window)
                 .map(|window| {
                     let sum: T = window.iter().cloned().sum();
-                    sum / T::from(window.len() as u32)
+                    sum / winf
                 })
                 .fold(prelude::Data::default(), |mut res, mean| {
                     res.push(mean);
@@ -206,7 +200,7 @@ where
                 .fold(Data::default(), |mut res, x| {
                     for i in 0..n {
                         let s: T = x.iter().skip(i as usize).step_by(n as usize).cloned().sum();
-                        let mean = s / T::from(window as u32);
+                        let mean = s / winf;
                         res.push(mean);
                     }
                     res
@@ -236,7 +230,7 @@ where
 ///
 /// let b = facet_core::std(&a, None).expect("Failed to perform std");
 ///
-/// assert_eq!(b.as_slice(), &[2.9832867780352594]);
+/// assert_eq!(b.as_slice(), &[2.9832866]);
 /// ```
 pub fn std<'a, T>(
     inp: &'a ndarray::NdArray<T>,
@@ -246,9 +240,8 @@ where
     T: Copy
         + Default
         + std::iter::Sum
-        + std::ops::Div<Output = T>
+        + std::ops::Div<f32, Output = T>
         + std::ops::Mul<Output = T>
-        + std::convert::TryFrom<u32>
         + std::ops::Sub<T, Output = T>
         + SquareRoot,
 {
@@ -286,9 +279,8 @@ where
     T: Copy
         + Default
         + std::iter::Sum
-        + std::ops::Div<Output = T>
         + std::ops::Mul<Output = T>
-        + std::convert::TryFrom<u32>
+        + std::ops::Div<f32, Output = T>
         + std::ops::Sub<T, Output = T>,
 {
     if matches!(inp.shape(), Shape::Scalar(_)) {
@@ -312,8 +304,7 @@ where
     T: Copy
         + std::ops::Mul<Output = T>
         + std::iter::Sum
-        + std::convert::TryFrom<u32>
-        + std::ops::Div<Output = T>
+        + std::ops::Div<f32, Output = T>
         + Default
         + std::ops::Sub<T, Output = T>,
 {
@@ -332,11 +323,7 @@ where
                 })
                 .sum();
 
-            let res = T::try_from(col.len() as u32)
-                .map(move |len| s / len)
-                .unwrap_or_else(|_| T::default());
-
-            res
+            s / col.len() as f32
         })
         .collect::<prelude::Data<T>>();
 

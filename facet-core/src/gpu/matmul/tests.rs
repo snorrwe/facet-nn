@@ -20,7 +20,7 @@ fn test_identity_returns_the_og_matrix() {
     }
 
     let mut c_gpu = NdArray::new([N, N]);
-    matmul_f64_impl([N, N, N], a.as_slice(), b.as_slice(), c_gpu.as_mut_slice()).unwrap();
+    matmul_f32_impl([N, N, N], a.as_slice(), b.as_slice(), c_gpu.as_mut_slice()).unwrap();
 
     println!("{}", c_gpu);
 
@@ -30,7 +30,7 @@ fn test_identity_returns_the_og_matrix() {
         .zip(a.as_slice().iter())
         .map(|(c, a)| (*c, *a))
     {
-        assert!((a - c).abs() < 0.000001)
+        assert!((a - c).abs() < 0.001)
     }
 }
 
@@ -48,7 +48,7 @@ fn test_correctness() {
         .unwrap();
 
     let mut c_gpu = NdArray::new(N * P);
-    matmul_f64_impl([N, M, P], a.as_slice(), b.as_slice(), c_gpu.as_mut_slice()).unwrap();
+    matmul_f32_impl([N, M, P], a.as_slice(), b.as_slice(), c_gpu.as_mut_slice()).unwrap();
 
     let mut c_cpu = NdArray::new(N * P);
     crate::ndarray::matrix::matmul_impl(
@@ -65,7 +65,7 @@ fn test_correctness() {
         .zip(c_cpu.as_slice().iter())
         .enumerate()
     {
-        assert!((a - b).abs() < 0.000001, "{}: {} != {}", i, a, b)
+        assert!((a - b).abs() < 0.001, "{}: {} != {}", i, a, b)
     }
 }
 
@@ -83,7 +83,7 @@ fn test_larger_matrix() {
         .unwrap();
 
     let mut c_gpu = NdArray::new(N * P);
-    matmul_f64_impl([N, M, P], a.as_slice(), b.as_slice(), c_gpu.as_mut_slice()).unwrap();
+    matmul_f32_impl([N, M, P], a.as_slice(), b.as_slice(), c_gpu.as_mut_slice()).unwrap();
 
     let mut c_cpu = NdArray::new(N * P);
     crate::ndarray::matrix::matmul_impl(
@@ -100,6 +100,6 @@ fn test_larger_matrix() {
         .zip(c_cpu.as_slice().iter())
         .enumerate()
     {
-        assert!((a - b).abs() < 0.000001, "{}: {} != {}", i, a, b)
+        assert!((a - b).abs() < 0.01, "{}: {} != {}", i, a, b)
     }
 }

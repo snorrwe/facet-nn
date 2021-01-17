@@ -7,9 +7,9 @@ use rayon::prelude::*;
 #[derive(Clone)]
 pub struct DenseLayer {
     // core attributes
-    pub weights: NdArray<f64>,
-    pub biases: NdArray<f64>,
-    pub output: NdArray<f64>,
+    pub weights: NdArray<f32>,
+    pub biases: NdArray<f32>,
+    pub output: NdArray<f32>,
 
     pub training: Option<Box<DenseLayerTraining>>,
 }
@@ -18,16 +18,16 @@ pub struct DenseLayer {
 #[derive(Clone, Default)]
 pub struct DenseLayerTraining {
     // memoization for training purposes
-    pub inputs: NdArray<f64>,
+    pub inputs: NdArray<f32>,
     // training data
-    pub dweights: NdArray<f64>,
-    pub dbiases: NdArray<f64>,
-    pub dinputs: NdArray<f64>,
+    pub dweights: NdArray<f32>,
+    pub dbiases: NdArray<f32>,
+    pub dinputs: NdArray<f32>,
     // hyperparameters
-    pub weight_regularizer_l1: Option<f64>,
-    pub weight_regularizer_l2: Option<f64>,
-    pub bias_regularizer_l1: Option<f64>,
-    pub bias_regularizer_l2: Option<f64>,
+    pub weight_regularizer_l1: Option<f32>,
+    pub weight_regularizer_l2: Option<f32>,
+    pub bias_regularizer_l1: Option<f32>,
+    pub bias_regularizer_l2: Option<f32>,
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -66,10 +66,10 @@ impl DenseLayer {
 
     pub fn with_training(
         mut self,
-        weight_regularizer_l1: Option<f64>,
-        weight_regularizer_l2: Option<f64>,
-        bias_regularizer_l1: Option<f64>,
-        bias_regularizer_l2: Option<f64>,
+        weight_regularizer_l1: Option<f32>,
+        weight_regularizer_l2: Option<f32>,
+        bias_regularizer_l1: Option<f32>,
+        bias_regularizer_l2: Option<f32>,
     ) -> Self {
         self.training = Some(Box::new(DenseLayerTraining {
             weight_regularizer_l1,
@@ -81,7 +81,7 @@ impl DenseLayer {
         self
     }
 
-    pub fn forward(&mut self, inputs: NdArray<f64>) -> Result<(), DenseLayerError> {
+    pub fn forward(&mut self, inputs: NdArray<f32>) -> Result<(), DenseLayerError> {
         assert!(
             matches!(inputs.shape(), crate::prelude::Shape::Matrix(_)),
             "Forward input must be a matrix"
@@ -89,7 +89,7 @@ impl DenseLayer {
         self.output.reshape(0);
 
         inputs
-            .matmul_f64(&self.weights, &mut self.output)
+            .matmul_f32(&self.weights, &mut self.output)
             .map_err(DenseLayerError::MatMulFail)?;
 
         assert_eq!(self.output.shape().last(), self.biases.shape().last());
@@ -109,7 +109,7 @@ impl DenseLayer {
     }
 
     /// Consumes the last `inputs` replacing it with an empty array.
-    pub fn backward(&mut self, dvalues: NdArray<f64>) -> Result<(), DenseLayerError> {
+    pub fn backward(&mut self, dvalues: NdArray<f32>) -> Result<(), DenseLayerError> {
         let inputs = self
             .training
             .as_mut()
@@ -121,7 +121,7 @@ impl DenseLayer {
 
         inputs
             .transpose()
-            .matmul_f64(&dvalues, &mut training.dweights)
+            .matmul_f32(&dvalues, &mut training.dweights)
             .map_err(DenseLayerError::MatMulFail)?;
 
         let s = dvalues.clone().transpose();
@@ -144,14 +144,14 @@ impl DenseLayer {
 
         // Gradients
         dvalues
-            .matmul_f64(&self.weights.clone().transpose(), &mut training.dinputs)
+            .matmul_f32(&self.weights.clone().transpose(), &mut training.dinputs)
             .map_err(DenseLayerError::MatMulFail)?;
 
         Ok(())
     }
 }
 
-fn regularize_l1(l1: f64, to_regulate: &mut NdArray<f64>, inp: &NdArray<f64>) {
+fn regularize_l1(l1: f32, to_regulate: &mut NdArray<f32>, inp: &NdArray<f32>) {
     let mut d_l1 = NdArray::new_with_values(
         inp.shape().clone(),
         smallvec::smallvec![
@@ -178,7 +178,7 @@ fn regularize_l1(l1: f64, to_regulate: &mut NdArray<f64>, inp: &NdArray<f64>) {
     *to_regulate = to_regulate.add(&d_l1).unwrap();
 }
 
-fn regularize_l2(l2: f64, to_regulate: &mut NdArray<f64>, inp: &NdArray<f64>) {
+fn regularize_l2(l2: f32, to_regulate: &mut NdArray<f32>, inp: &NdArray<f32>) {
     let mul = inp.mul(&NdArray::new_scalar(l2)).unwrap();
     *to_regulate = to_regulate.add(&mul).unwrap();
 }

@@ -3,13 +3,13 @@ use crate::{
     ndarray::{matrix::matmul_impl, shape::Shape},
     DuResult,
 };
-use std::f64::consts::E;
+use std::f32::consts::E;
 
 #[cfg(feature = "rayon")]
 use rayon::prelude::*;
 
 #[cfg(feature = "rayon")]
-pub fn relu(inp: &NdArray<f64>) -> NdArray<f64> {
+pub fn relu(inp: &NdArray<f32>) -> NdArray<f32> {
     let mut out = inp.clone();
     out.par_iter_rows_mut().for_each(|row| {
         for v in row {
@@ -20,13 +20,13 @@ pub fn relu(inp: &NdArray<f64>) -> NdArray<f64> {
 }
 
 #[cfg(not(feature = "rayon"))]
-pub fn relu(inp: &NdArray<f64>) -> NdArray<f64> {
+pub fn relu(inp: &NdArray<f32>) -> NdArray<f32> {
     inp.map(|v| v.max(0.0))
 }
 
 /// ReLU derivative
 #[cfg(feature = "rayon")]
-pub fn drelu_dz(inputs: &NdArray<f64>, dvalues: &NdArray<f64>) -> NdArray<f64> {
+pub fn drelu_dz(inputs: &NdArray<f32>, dvalues: &NdArray<f32>) -> NdArray<f32> {
     let mut res = dvalues.clone();
     res.iter_rows_mut()
         .zip(inputs.iter_rows())
@@ -35,7 +35,7 @@ pub fn drelu_dz(inputs: &NdArray<f64>, dvalues: &NdArray<f64>) -> NdArray<f64> {
     res
 }
 
-fn _drelu(dx: &mut [f64], dz: &[f64]) {
+fn _drelu(dx: &mut [f32], dz: &[f32]) {
     debug_assert_eq!(dx.len(), dz.len());
     for i in 0..dx.len() {
         if dz[i] <= 0.0 {
@@ -46,7 +46,7 @@ fn _drelu(dx: &mut [f64], dz: &[f64]) {
 
 /// ReLU derivative
 #[cfg(not(feature = "rayon"))]
-pub fn drelu_dz(inputs: &NdArray<f64>, dvalues: &NdArray<f64>) -> NdArray<f64> {
+pub fn drelu_dz(inputs: &NdArray<f32>, dvalues: &NdArray<f32>) -> NdArray<f32> {
     // #[cfg(feature = "rayon")]
     let mut res = dvalues.clone();
     res.iter_rows_mut()
@@ -60,7 +60,7 @@ pub fn drelu_dz(inputs: &NdArray<f64>, dvalues: &NdArray<f64>) -> NdArray<f64> {
 /// single vector.
 ///
 /// Scalars will always return 1
-pub fn softmax(inp: &NdArray<f64>) -> DuResult<NdArray<f64>> {
+pub fn softmax(inp: &NdArray<f32>) -> DuResult<NdArray<f32>> {
     // softmax of a scalar value is always 1.
     if matches!(inp.shape(), Shape::Scalar(_)) {
         return Ok(NdArray::new_with_values(0, [1.0][..].into())?);
@@ -68,12 +68,12 @@ pub fn softmax(inp: &NdArray<f64>) -> DuResult<NdArray<f64>> {
     // else treat the input as a collection of vectors
     let mut it = inp.as_slice().iter().cloned();
     let first = it.next().expect("no value");
-    let max: f64 = it.fold(first, |max, value| value.max(max));
+    let max: f32 = it.fold(first, |max, value| value.max(max));
 
     let expvalues = inp
         .sub(&NdArray::from(max))
         .expect("Failed to sub max from the input")
-        .map(|v: &f64| {
+        .map(|v: &f32| {
             let res = E.powf(*v);
             if res.is_nan() || res == 0.0 {
                 // very large V's will produce an output of 0 which will be bad down the line
@@ -83,7 +83,7 @@ pub fn softmax(inp: &NdArray<f64>) -> DuResult<NdArray<f64>> {
             }
         });
 
-    let mut norm_base: NdArray<f64> = expvalues
+    let mut norm_base: NdArray<f32> = expvalues
         .iter_rows()
         .map(|row| row.iter().cloned().sum())
         .collect();
@@ -99,7 +99,7 @@ pub fn softmax(inp: &NdArray<f64>) -> DuResult<NdArray<f64>> {
 }
 
 /// Softmax backwards pass, calculating gradient
-pub fn dsoftmax(output: &NdArray<f64>, dvalues: &NdArray<f64>) -> DuResult<NdArray<f64>> {
+pub fn dsoftmax(output: &NdArray<f32>, dvalues: &NdArray<f32>) -> DuResult<NdArray<f32>> {
     let mut res = NdArray::new(dvalues.shape().clone());
 
     let collen = output.shape().last();
@@ -124,18 +124,18 @@ pub fn dsoftmax(output: &NdArray<f64>, dvalues: &NdArray<f64>) -> DuResult<NdArr
     Ok(res)
 }
 
-fn diagflat(output: &[f64], mat: &mut NdArray<f64>) {
+fn diagflat(output: &[f32], mat: &mut NdArray<f32>) {
     for i in 0..output.len() {
         for j in 0..output.len() {
             let i = i as u32;
             let j = j as u32;
             // branchless setter, if the item is not in the diagonal set it to 0
-            *mat.get_mut(&[i, j]).unwrap() = output[i as usize] * (i == j) as u32 as f64;
+            *mat.get_mut(&[i, j]).unwrap() = output[i as usize] * (i == j) as u32 as f32;
         }
     }
 }
 
-pub fn sigmoid(input: &NdArray<f64>, output: &mut NdArray<f64>) -> DuResult<()> {
+pub fn sigmoid(input: &NdArray<f32>, output: &mut NdArray<f32>) -> DuResult<()> {
     output.reshape(input.shape().clone());
     for (x, y) in input
         .as_slice()
@@ -150,7 +150,7 @@ pub fn sigmoid(input: &NdArray<f64>, output: &mut NdArray<f64>) -> DuResult<()> 
 /// Derivative of sigmoid function
 ///
 /// dvalues * (1-output) * output
-pub fn dsigmoid(output: &NdArray<f64>, dvalues: &NdArray<f64>) -> DuResult<NdArray<f64>> {
+pub fn dsigmoid(output: &NdArray<f32>, dvalues: &NdArray<f32>) -> DuResult<NdArray<f32>> {
     let v = dvalues.mul(&(NdArray::new_scalar(1.).sub(output)?))?;
     Ok(v.mul(output)?)
 }

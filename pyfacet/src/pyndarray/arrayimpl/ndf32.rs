@@ -15,12 +15,12 @@ use pyo3::{
 use super::AsNumArray;
 use super::NdArrayB;
 
-impl_ndarray!(f64, NdArrayD, inner, ndarraydimpl);
+impl_ndarray!(f32, NdArrayD, inner, ndarraydimpl);
 
 #[pyclass]
 #[derive(Debug, Clone)]
 pub struct NdArrayD {
-    pub inner: NdArray<f64>,
+    pub inner: NdArray<f32>,
 }
 
 #[pyproto]
@@ -41,7 +41,7 @@ impl<T> PyNumberProtocol for NdArrayD {
         <Self as AsNumArray>::truediv(lhs, rhs).map(|inner| Self { inner })
     }
 
-    fn __pow__(lhs: PyRef<'p, Self>, rhs: f64, _modulo: Option<f64>) -> PyResult<Self> {
+    fn __pow__(lhs: PyRef<'p, Self>, rhs: f32, _modulo: Option<f32>) -> PyResult<Self> {
         <Self as AsNumArray>::pow(lhs, rhs).map(|inner| Self { inner })
     }
 }
@@ -54,7 +54,7 @@ impl PyObjectProtocol for NdArrayD {
 
     fn __repr__(&self) -> String {
         format!(
-            "NdArray of f64, shape: {:?}, data:\n{}",
+            "NdArray of f32, shape: {:?}, data:\n{}",
             self.inner.shape(),
             self.to_string()
         )
@@ -69,11 +69,11 @@ impl PyObjectProtocol for NdArrayD {
     /// Returns an NdArray where each element is 1 if true 0 if false for the given pair of
     /// elements.
     fn __richcmp__(&'p self, other: PyRef<'p, Self>, op: CompareOp) -> PyResult<NdArrayB> {
-        let op: fn(&f64, &f64) -> bool = match op {
+        let op: fn(&f32, &f32) -> bool = match op {
             CompareOp::Lt => |a, b| a < b,
             CompareOp::Le => |a, b| a <= b,
-            CompareOp::Eq => |a, b| (a - b).abs() < std::f64::EPSILON,
-            CompareOp::Ne => |a, b| (a - b).abs() >= std::f64::EPSILON,
+            CompareOp::Eq => |a, b| (a - b).abs() < std::f32::EPSILON,
+            CompareOp::Ne => |a, b| (a - b).abs() >= std::f32::EPSILON,
             CompareOp::Gt => |a, b| a > b,
             CompareOp::Ge => |a, b| a >= b,
         };
@@ -82,13 +82,13 @@ impl PyObjectProtocol for NdArrayD {
 }
 
 impl AsNumArray for NdArrayD {
-    type T = f64;
+    type T = f32;
 
     fn cast(&self) -> &NdArray<Self::T> {
         &self.inner
     }
 
-    fn pow(lhs: PyRef<Self>, rhs: Self::T) -> PyResult<NdArray<f64>> {
+    fn pow(lhs: PyRef<Self>, rhs: Self::T) -> PyResult<NdArray<f32>> {
         let lhs: &NdArray<Self::T> = lhs.cast();
         let res = lhs.map(|x| x.powf(rhs));
         Ok(res)
@@ -105,7 +105,7 @@ impl NdArrayD {
         let mut _out = NdArray::new(0);
         let outref = out.as_mut().map(|m| &mut m.inner).unwrap_or(&mut _out);
         this.inner
-            .matmul_f64(&other.inner, outref)
+            .matmul_f32(&other.inner, outref)
             .map_err(|err| PyValueError::new_err::<String>(format!("{}", err)))?;
         let py = this.py();
         let out = out.map(|m| m.into_py(py)).unwrap_or_else(|| {
@@ -116,7 +116,7 @@ impl NdArrayD {
         Ok(out)
     }
 
-    pub fn clip(mut this: PyRefMut<Self>, min: f64, max: f64) -> PyResult<PyRefMut<Self>> {
+    pub fn clip(mut this: PyRefMut<Self>, min: f32, max: f32) -> PyResult<PyRefMut<Self>> {
         this.inner
             .as_mut_slice()
             .iter_mut()

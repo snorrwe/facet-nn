@@ -1,14 +1,14 @@
 use criterion::{criterion_group, Criterion};
 use criterion::{criterion_main, BenchmarkId};
 
-use facet_core::gpu::matmul::matmul_f64_impl;
+use facet_core::gpu::matmul::matmul_f32_impl;
 use facet_core::ndarray::matrix::matmul_impl;
 use facet_core::ndarray::NdArray;
 use rand::Rng;
 
 fn mat_mul(c: &mut Criterion) {
     let mut g = c.benchmark_group("matrix multiplication");
-    for size in (256..=542).step_by(27) {
+    for size in (16..=1242).step_by(257) {
         g.bench_with_input(
             BenchmarkId::new("cpu", size),
             &size,
@@ -18,8 +18,8 @@ fn mat_mul(c: &mut Criterion) {
                 let mut b = NdArray::new([size, size]);
                 let mut c = NdArray::new([size, size]);
                 for i in 0..size as usize * size as usize {
-                    a.as_mut_slice()[i] = rng.gen_range(-1.2f64, 1.2);
-                    b.as_mut_slice()[i] = rng.gen_range(-1.2f64, 1.2);
+                    a.as_mut_slice()[i] = rng.gen_range(-1.2f32, 1.2);
+                    b.as_mut_slice()[i] = rng.gen_range(-1.2f32, 1.2);
                 }
 
                 bencher.iter(move || {
@@ -36,12 +36,12 @@ fn mat_mul(c: &mut Criterion) {
                 let mut b = NdArray::new([size, size]);
                 let mut c = NdArray::new([size, size]);
                 for i in 0..size as usize * size as usize {
-                    a.as_mut_slice()[i] = rng.gen_range(-1.2f64, 1.2);
-                    b.as_mut_slice()[i] = rng.gen_range(-1.2f64, 1.2);
+                    a.as_mut_slice()[i] = rng.gen_range(-1.2f32, 1.2);
+                    b.as_mut_slice()[i] = rng.gen_range(-1.2f32, 1.2);
                 }
 
                 bencher.iter(move || {
-                    matmul_f64_impl([size; 3], a.as_slice(), b.as_slice(), c.as_mut_slice())
+                    matmul_f32_impl([size; 3], a.as_slice(), b.as_slice(), c.as_mut_slice())
                 })
             },
         );

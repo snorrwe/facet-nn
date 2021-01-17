@@ -27,9 +27,9 @@ vulkano_shaders::shader! {
 
 layout(local_size_x = 16, local_size_y = 16, local_size_z = 1) in;
 
-layout(set = 0, binding = 0) readonly  buffer Data_a { double A[]; };
-layout(set = 0, binding = 1) readonly  buffer Data_b { double B[]; };
-layout(set = 0, binding = 2) writeonly buffer Data_c { double C[]; };
+layout(set = 0, binding = 0) readonly  buffer Data_a { float A[]; };
+layout(set = 0, binding = 1) readonly  buffer Data_b { float B[]; };
+layout(set = 0, binding = 2) writeonly buffer Data_c { float C[]; };
 
 layout(push_constant) uniform Shape {
     uint N;
@@ -42,11 +42,11 @@ void main()
     uint i = gl_GlobalInvocationID.x; // [0..n)
     uint j = gl_GlobalInvocationID.y; // [0..p)
 
-    double value = 0.0;
+    float value = 0.0;
     for(uint k = 0; k < M; k++)
     {
-        double a = A[i * M + k];
-        double b = B[k * P + j];
+        float a = A[i * M + k];
+        float b = B[k * P + j];
         value += a * b;
     }
 
@@ -74,11 +74,11 @@ lazy_static::lazy_static! {
     };
 }
 
-pub fn matmul_f64_impl<'a>(
+pub fn matmul_f32_impl<'a>(
     [n, m, p]: [u32; 3],
-    values0: &'a [f64],
-    values1: &'a [f64],
-    out: &mut [f64],
+    values0: &'a [f32],
+    values1: &'a [f32],
+    out: &mut [f32],
 ) -> Result<(), GpuNdArrayError> {
     assert!(n as usize * m as usize <= values0.len());
     assert!(p as usize * m as usize <= values1.len());
@@ -101,7 +101,7 @@ pub fn matmul_f64_impl<'a>(
                 let n = submatrix.len() / p as usize; // 1..ROW_SPLIT
                 debug_assert!(n >= 1);
                 debug_assert!(values0[offset * m as usize..].len() >= n * m as usize);
-                _matmul_f64_impl(
+                _matmul_f32_impl(
                     exc,
                     device.clone(),
                     compute_pipeline.clone(),
@@ -112,7 +112,7 @@ pub fn matmul_f64_impl<'a>(
                 )
             })
     } else {
-        _matmul_f64_impl(
+        _matmul_f32_impl(
             exc,
             device.clone(),
             compute_pipeline,
@@ -130,15 +130,15 @@ pub fn matmul_f64_impl<'a>(
     res
 }
 
-pub fn _matmul_f64_impl<'a>(
+pub fn _matmul_f32_impl<'a>(
     exc: &super::GpuExecutor,
     device: Arc<Device>,
     compute_pipeline: Arc<vulkano::pipeline::ComputePipeline<PipelineLayout<Layout>>>,
     // matmul params
     [n, m, p]: [u32; 3],
-    values0: &'a [f64],
-    values1: &'a [f64],
-    out: &mut [f64],
+    values0: &'a [f32],
+    values1: &'a [f32],
+    out: &mut [f32],
 ) -> Result<(), GpuNdArrayError> {
     let shape = [n, m, p];
 
@@ -149,7 +149,7 @@ pub fn _matmul_f64_impl<'a>(
                 || matrix_buffer(device.clone(), false, values1.iter().cloned()),
             )
         },
-        || matrix_buffer(device.clone(), true, (0..out.len()).map(|_| 0.0f64)),
+        || matrix_buffer(device.clone(), true, (0..out.len()).map(|_| 0.0f32)),
     );
 
     // Descriptor sets
@@ -242,7 +242,7 @@ pub fn _matmul_f64_impl<'a>(
 }
 
 #[inline(always)]
-fn at(values: &[f64], i: usize, cols: usize, j: usize) -> f64 {
+fn at(values: &[f32], i: usize, cols: usize, j: usize) -> f32 {
     unsafe { *values.as_ptr().add(i * cols + j) }
 }
 
@@ -250,8 +250,8 @@ fn at(values: &[f64], i: usize, cols: usize, j: usize) -> f64 {
 fn matrix_buffer(
     device: Arc<Device>,
     host_cached: bool,
-    data: impl Iterator<Item = f64> + std::iter::ExactSizeIterator,
-) -> Arc<CpuAccessibleBuffer<[f64]>> {
+    data: impl Iterator<Item = f32> + std::iter::ExactSizeIterator,
+) -> Arc<CpuAccessibleBuffer<[f32]>> {
     // use CPU accessible buffers (shared buffers) because I found that dedicated GPU memory runs
     // out fast
     CpuAccessibleBuffer::from_iter(device, BufferUsage::all(), host_cached, data).unwrap()

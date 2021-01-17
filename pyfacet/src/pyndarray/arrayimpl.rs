@@ -1,10 +1,10 @@
 mod ndbool;
-mod ndf64;
+mod ndf32;
 mod ndi64;
 
 use facet_core::ndarray::NdArray;
 pub use ndbool::*;
-pub use ndf64::*;
+pub use ndf32::*;
 pub use ndi64::*;
 
 use pyo3::{exceptions::PyValueError, prelude::*, PyClass};
@@ -195,7 +195,7 @@ macro_rules! impl_ndarray {
                                 PyValueError::new_err::<String>(format!("{}", err).into())
                             })?
                         }
-                        None => NdArray::new(shape.inner),
+                        None => NdArray::new_default(shape.inner),
                     };
                     Ok(Self { inner })
                 }

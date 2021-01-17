@@ -86,7 +86,7 @@ pub fn load_csv<'a, 'py>(
                             rows, i, item, err
                         )));
                     }
-                    _ => data.push(f64::NAN),
+                    _ => data.push(f32::NAN),
                 }
             }
         }
