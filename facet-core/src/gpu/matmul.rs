@@ -15,7 +15,7 @@ use vulkano::{
 pub const LOCAL_SIZE_X: u32 = 32;
 pub const LOCAL_SIZE_Y: u32 = 16;
 /// Number of rows in the left matrix to process at a time
-pub const ROW_SPLIT_THRESHOLD: u32 = 1024;
+pub const ROW_SPLIT_THRESHOLD: u32 = 512;
 
 // naive impl
 // TODO optimize
