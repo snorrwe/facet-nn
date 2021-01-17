@@ -23,13 +23,13 @@ class Loss:
         r_loss = 0
         for l in self.trainable_layers:
             if l.weight_regularizer_l1 is not None and l.weight_regularizer_l1 > 0:
-                r_loss += layer.weight_regularizer_l1 * pf.sum(pf.abs(l.weights))
+                r_loss += l.weight_regularizer_l1 * pf.sum(pf.abs(l.weights))[0]
             if l.weight_regularizer_l2 is not None and l.weight_regularizer_l2 > 0:
-                r_loss += layer.weight_regularizer_l2 * pf.sum(l.weights * l.weights)
+                r_loss += l.weight_regularizer_l2 * pf.sum(l.weights * l.weights)[0]
             if l.bias_regularizer_l1 is not None and l.bias_regularizer_l1 > 0:
-                r_loss += layer.bias_regularizer_l1 * pf.sum(pf.abs(l.biases))
+                r_loss += l.bias_regularizer_l1 * pf.sum(pf.abs(l.biases))[0]
             if l.bias_regularizer_l2 is not None and l.bias_regularizer_l2 > 0:
-                r_loss += layer.bias_regularizer_l2 * pf.sum(l.biases * l.biases)
+                r_loss += l.bias_regularizer_l2 * pf.sum(l.biases * l.biases)[0]
         return r_loss
 
     def forward(self, pred, y):
@@ -40,6 +40,7 @@ class Loss:
 
     def backward(self, dvalues, y):
         self.dinputs = self.dloss(dvalues, y)
+        return self.dinputs
 
 
 class BinaryCrossentropy(Loss):

@@ -60,6 +60,9 @@ class Model:
         return l.output
 
     def forward_train(self, X):
+        """
+        `forward` to be used in training
+        """
         assert self.baked
 
         self.input_layer.forward(X)
@@ -77,7 +80,7 @@ class Model:
     def train(self, X, y, *, epochs=1, print_every=1, validation=None):
         assert self.baked
 
-        last = 0.0
+        last = -1.0
 
         self.accuracy.init(y)
         for epoch in progressbar.progressbar(range(epochs + 1), redirect_stdout=True):
@@ -85,6 +88,7 @@ class Model:
             data_loss, reg_loss = self.loss.calculate(
                 output, y, include_regularization=True
             )
+            loss = data_loss + reg_loss
 
             self.backward(output, y)
 
@@ -93,13 +97,13 @@ class Model:
                 self.optimizer.update_params(l)
 
             if print_every and epoch % print_every == 0:
-                assert data_loss != last, "something's wrong i can feel it"
-                last = data_loss
+                #  assert data_loss != last, "something's wrong i can feel it"
+                last = loss
                 lr = self.optimizer.lr[0]
                 pred = self.output_activation.predictions()
                 acc = self.accuracy.calculate(pred, y)
                 print(
-                    f"Epoch {epoch:05} Loss: {data_loss:.16f} Accuracy: {acc:.16f} Learning Rate: {lr:.16f}"
+                    f"Epoch {epoch:05} Loss: {loss:.16f} Accuracy: {acc:.16f} Learning Rate: {lr:.16f}"
                 )
                 if validation is not None:
                     X_val, y_val = validation

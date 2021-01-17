@@ -1,7 +1,7 @@
-.PHONY: test nd
+.PHONY: test
 
 foo:
-	echo "boooo"
+	@echo "boooo, don't just type `make` into an unknown repository booo"
 
 test-rust:
 	cargo test
@@ -10,7 +10,10 @@ test-rust:
 nd-dev:
 	cd pyfacet && maturin develop
 
-nd:
+nd-release:
+	cd pyfacet && maturin develop --release
+
+install:
 	cd pyfacet && maturin build --release
 	pip install target/wheels/pyfacet-0.1.0-cp39-none-win_amd64.whl --upgrade
 

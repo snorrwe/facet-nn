@@ -2,7 +2,6 @@ pub mod matmul;
 
 use std::sync::Arc;
 use vulkano::{
-    buffer::CpuBufferPool,
     device::{Device, DeviceExtensions, Features, Queue},
     instance::{Instance, InstanceExtensions, PhysicalDevice},
 };

@@ -5,9 +5,9 @@ import string
 from .pyfacet import *
 
 
-def labels_to_y(labels):
+def labels_to_once_hot(labels):
     """
-    convert a list of labels to a dense target matrix
+    convert a list of labels to a one-hot dense target matrix
     """
     lset = set(labels)
     label_pos = {label: i for (i, label) in enumerate(lset)}
@@ -55,7 +55,6 @@ def reduce(op, arr, init):
 
 def cce_backward(z, y):
     samples = reduce(mul, z.shape[:-1], 1)
-
-    gradient = (y / z) * pyfacet.array([-1.0]).reshape([0])
+    gradient = (y / z) * pyfacet.scalar(-1.0)
     # Normalize gradient
-    return gradient / pyfacet.array([samples]).reshape([0])
+    return gradient / pyfacet.scalar(samples)
