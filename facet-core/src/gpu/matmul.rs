@@ -12,7 +12,7 @@ use vulkano::{
     descriptor::PipelineLayoutAbstract,
 };
 
-pub const LOCAL_SIZE_X: u32 = 16;
+pub const LOCAL_SIZE_X: u32 = 32;
 pub const LOCAL_SIZE_Y: u32 = 16;
 /// Number of rows in the left matrix to process at a time
 pub const ROW_SPLIT_THRESHOLD: u32 = 1024;
@@ -25,7 +25,7 @@ vulkano_shaders::shader! {
     src: r#"
 #version 450
 
-layout(local_size_x = 16, local_size_y = 16, local_size_z = 1) in;
+layout(local_size_x = 32, local_size_y = 16, local_size_z = 1) in;
 
 layout(set = 0, binding = 0) readonly  buffer Data_a { float A[]; };
 layout(set = 0, binding = 1) readonly  buffer Data_b { float B[]; };
