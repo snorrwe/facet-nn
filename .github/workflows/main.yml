@@ -44,5 +44,14 @@ jobs:
           # Version range or exact version of a Python version to use, using SemVer's version range syntax.
           python-version: 3.9
           
-      - name: Run tests
-        run: make test
+      - name: Run Rust tests
+        run: cargo test
+        
+      - name: Install pyfacet
+        run: |
+          cd pyfacet
+          maturin develop --cargo-extra-args="--no-default-features"
+          
+      - name: Run Python tests
+        run: |
+          pytest tests/
