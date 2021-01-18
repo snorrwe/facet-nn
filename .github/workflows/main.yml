@@ -28,7 +28,10 @@ jobs:
         with:
           python-version: 3.9
           
-      - run: which python
+      - run: |
+          which python
+          ls -al /opt/hostedtoolcache/Python/3.9.1/x64/lib
+          
       - run: pip install -r requirements.txt
           
       - name: Run Rust tests
