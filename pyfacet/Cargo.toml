@@ -10,14 +10,17 @@ requires-dist = ["progressbar2~=3.53.1"]
 [lib]
 name = "pyfacet"
 crate-type = ["cdylib"]
+bench = false
+
+[features]
+default = ["facet-core/gpu"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 [dependencies]
 facet-core = { path = "../facet-core", features = [
     "rayon",
-    "gpu"
 ], default-features = false }
-pyo3 = { version = "0.12", features = ["extension-module"] }
-uuid = { version = "*", features = ["v4"] }
+pyo3 = { version = "0.13", features = ["extension-module", "abi3"] }
+uuid = { version = "0.8", features = ["v4"] }
 rand = "0.7"
 rand_distr = "0.3"
