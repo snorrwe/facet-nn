@@ -8,4 +8,5 @@ setup(
     packages=["pyfacet"],
     # rust extensions are not zip safe, just like C-extensions.
     zip_safe=False,
+    install_requires=["progressbar"],
 )
