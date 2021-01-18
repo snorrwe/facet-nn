@@ -29,16 +29,16 @@ jobs:
       - run: |
           which python
           
-      - run: pip install -r requirements.txt
+      - run: pip install pytest tox setuptools setuptools-rust
           
       - name: Run Rust tests
         run: cargo test
         
-      - name: Install pyfacet
+      - name: Install
         run: |
-          cd pyfacet
-          maturin develop --cargo-extra-args="--no-default-features"
+          make install
           
       - name: Run Python tests
         run: |
-          pytest tests/
+          cd pyfacet
+          tox
