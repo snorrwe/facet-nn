@@ -28,7 +28,8 @@ jobs:
         with:
           python-version: 3.9
           
-      - run: which python  
+      - run: which python
+      - run: pip install -r requirements.txt
           
       - name: Run Rust tests
         run: cargo test
