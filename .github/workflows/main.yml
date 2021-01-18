@@ -45,6 +45,7 @@ jobs:
         run: |
           cd pyfacet
           pip3 install -e.
+          pip3 install pytest
           
       - name: Run Python tests
         run: pytest tests
