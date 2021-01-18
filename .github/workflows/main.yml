@@ -39,7 +39,7 @@ jobs:
         # we don't have a GPU in CI so disable the gpu feature
         run: |
           cd facet-core
-          cargo test --no-default-features --features=rayon
+          cargo test
         
       - name: Install
         run: |
