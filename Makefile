@@ -8,15 +8,10 @@ test-rust:
 	cargo test --benches
 
 nd-dev:
-	cd pyfacet && maturin develop
-
-nd-release:
-	cd pyfacet && maturin develop --release
+	cd pyfacet && pip install -e.
 
 install:
-	cd pyfacet && maturin build --release
-	pip install target/wheels/pyfacet-0.1.0-cp39-none-win_amd64.whl --upgrade
-
+	cd pyfacet && pip install .
 
 test-py: nd-dev
 	pytest tests -v

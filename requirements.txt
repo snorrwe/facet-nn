@@ -1,4 +1,0 @@
-maturin
-pytest
-cffi
-virtualenv
