@@ -1,3 +1,5 @@
+![Build and Test](https://github.com/snorrwe/facet-nn/workflows/Build%20and%20Test/badge.svg)
+
 ## Install deps
 
 ```sh
