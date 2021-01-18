@@ -14,7 +14,7 @@ fn get_column() {
         .enumerate()
         .for_each(|(i, x)| *x = i as i32);
 
-    let col = arr.get_column(&[1, 1]).unwrap();
+    let col = arr.get_row(&[1, 1]).unwrap();
 
     assert_eq!(col, &[9, 10, 11]);
 }

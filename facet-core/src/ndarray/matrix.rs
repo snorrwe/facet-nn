@@ -68,6 +68,7 @@ pub fn matmul_impl_f32<'a>(
     #[cfg(feature = "gpu")]
     // heuristics determining if we should run on the gpu
     if (n >= 256 || p >= 256) && crate::gpu::EXECUTOR.is_some() {
+
         return match crate::gpu::matmul::matmul_f32_impl([n, m, p], values0, values1, out) {
             Ok(()) => Ok(()),
             Err(crate::gpu::GpuNdArrayError::NdArrayError(err)) => Err(err),
@@ -78,7 +79,7 @@ pub fn matmul_impl_f32<'a>(
 }
 
 pub fn transpose_mat<T: Clone>([n, m]: [usize; 2], inp: &[T], out: &mut [T]) {
-    assert!(inp.len() == n * m);
+    assert!(inp.len() >= n * m);
     assert!(inp.len() <= out.len());
     for (i, col) in ColumnIter::new(inp, m).enumerate() {
         for (j, v) in col.iter().cloned().enumerate() {

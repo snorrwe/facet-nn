@@ -130,7 +130,7 @@ where
                 return Some(val);
             }
 
-            // sum over the columns, vector products
+            // sum over the rows, vector products
             (Shape::Matrix([c, _]), Shape::Vector([n]))
             | (Shape::Vector([n]), Shape::Matrix([c, _])) => {
                 if *c != *n {
@@ -166,14 +166,14 @@ where
                 }
             }
             (Shape::Tensor(sa), Shape::Tensor(sb)) => {
-                // column size mismatch
+                // row size mismatch
                 if sa.last()? != sb.last()? {
                     return None;
                 }
                 let num_rows_a: u32 = sa[..sa.len() - 1].iter().product();
                 let num_rows_b: u32 = sb[..sb.len() - 1].iter().product();
                 if num_rows_a != num_rows_b {
-                    // number of columns mismatch
+                    // number of rows mismatch
                     return None;
                 }
             }
@@ -392,8 +392,8 @@ impl<T> NdArray<T> {
 
     /// Index must be N-1 long. Will return a vector
     ///
-    /// E.g for a 1D array the column is the array itself
-    /// for a 2D array, with shape (2, 5) the column is a 5D vector
+    /// E.g for a 1D array the row is the array itself
+    /// for a 2D array, with shape (2, 5) the row is a 5D vector
     ///
     /// Returns `None` on invalid index.
     ///
@@ -406,11 +406,11 @@ impl<T> NdArray<T> {
     ///     .enumerate()
     ///     .for_each(|(i, x)| *x = i as i32);
     ///
-    /// let col = arr.get_column(&[1, 1]).unwrap();
+    /// let col = arr.get_row(&[1, 1]).unwrap();
     ///
     /// assert_eq!(col, &[9, 10, 11]);
     /// ```
-    pub fn get_column(&self, index: &[u32]) -> Option<&[T]> {
+    pub fn get_row(&self, index: &[u32]) -> Option<&[T]> {
         match &self.shape {
             Shape::Scalar(_) | Shape::Vector(_) => Some(&self.values),
             Shape::Matrix([n, m]) => {
@@ -434,7 +434,7 @@ impl<T> NdArray<T> {
         }
     }
 
-    pub fn get_column_mut(&mut self, index: &[u32]) -> Option<&mut [T]> {
+    pub fn get_row_mut(&mut self, index: &[u32]) -> Option<&mut [T]> {
         match &self.shape {
             Shape::Scalar(_) | Shape::Vector(_) => Some(&mut self.values),
             Shape::Matrix([n, m]) => {
