@@ -1,0 +1,44 @@
+name: Build and Test
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Setup Rust
+        uses: actions-rs/toolchain@v1
+        id: rustup
+        with:
+          profile: minimal
+          toolchain: stable
+          override: true
+            
+      - name: Setup Python
+        run: sudo apt install -y python3-dev python3-pip
+        
+      - run: pip3 install tox pytest setuptools setuptools-rust
+          
+          # TODO: this can be moved into a separate file
+      - name: Run Core library tests
+        # we don't have a GPU in CI so disable the gpu feature
+        run: |
+          cd facet-core
+          cargo test --no-default-features --features=rayon
+        
+      - name: Install
+        run: |
+          cd pyfacet
+          pip3 install -e.
+          
+      - name: Run Python tests
+        run: python3 -m pytest tests

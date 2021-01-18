@@ -1,0 +1,4 @@
+include Cargo.toml
+recursive-include src *.rs
+include ../facet-core/Cargo.toml
+recursive-include ../facet-core *.rs
