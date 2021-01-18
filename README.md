@@ -7,10 +7,10 @@ source env/scripts/activate
 pip install -r requirements.txt
 ```
 
-## Build & Install the library
+## Build & Install the library in the current Python (virtual) environment
 
 ```sh
-make nd
+make install
 ```
 
 
