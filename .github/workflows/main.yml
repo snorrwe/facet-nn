@@ -28,6 +28,7 @@ jobs:
           
       - run: |
           which python
+          which pip
           
       - run: pip install pytest tox setuptools setuptools-rust
           
