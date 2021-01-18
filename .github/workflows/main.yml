@@ -32,7 +32,7 @@ jobs:
           pip --version
           python --version
         
-      - run: pip install tox
+      - run: pip3 install tox pytest setuptools setuptools-rust
           
           # TODO: this can be moved into a separate file
       - name: Run Core library tests
@@ -43,7 +43,7 @@ jobs:
       - name: Install
         run: |
           cd pyfacet
-          pip install -e.
+          pip3 install -e.
           
       - name: Run Python tests
         run: pytest tests
