@@ -36,9 +36,10 @@ jobs:
           
           # TODO: this can be moved into a separate file
       - name: Run Core library tests
+        # we don't have a GPU in CI so disable the gpu feature
         run: |
           cd facet-core
-          cargo test
+          cargo test --no-default-features --features=rayon
         
       - name: Install
         run: |
