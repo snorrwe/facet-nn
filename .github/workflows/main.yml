@@ -25,12 +25,6 @@ jobs:
             
       - name: Setup Python
         run: sudo apt install -y python3-dev python3-pip
-  
-      - run: |
-          which python
-          which pip
-          pip --version
-          python --version
         
       - run: pip3 install tox pytest setuptools setuptools-rust
           
@@ -45,7 +39,6 @@ jobs:
         run: |
           cd pyfacet
           pip3 install -e.
-          pip3 install pytest
           
       - name: Run Python tests
-        run: pytest tests
+        run: python3 -m pytest tests
