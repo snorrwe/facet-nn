@@ -56,7 +56,7 @@ pub fn drelu_dz(inputs: &NdArray<f32>, dvalues: &NdArray<f32>) -> NdArray<f32> {
     res
 }
 
-/// Inp is interpreted as a either a collection of vectors, applying softmax to each column or as a
+/// Inp is interpreted as a either a collection of vectors, applying softmax to each row or as a
 /// single vector.
 ///
 /// Scalars will always return 1
@@ -99,27 +99,35 @@ pub fn softmax(inp: &NdArray<f32>) -> DuResult<NdArray<f32>> {
 }
 
 /// Softmax backwards pass, calculating gradient
+///
+///
+#[cfg(feature = "rayon")]
 pub fn dsoftmax(output: &NdArray<f32>, dvalues: &NdArray<f32>) -> DuResult<NdArray<f32>> {
     let mut res = NdArray::new(dvalues.shape().clone());
 
     let collen = output.shape().last();
 
-    let mut jacobian_matrix = NdArray::new([collen, collen]);
-    let mut dotcache = NdArray::new([collen, collen]);
+    res.as_mut_slice()
+        .par_chunks_mut(dvalues.shape().last() as usize)
+        .enumerate()
+        .try_for_each(|(i, row)| {
+            let output = output.get_row(&[i as u32]).unwrap();
+            let dvalues = dvalues.get_row(&[i as u32]).unwrap();
 
-    for (i, (output, dvalues)) in output.iter_rows().zip(dvalues.iter_rows()).enumerate() {
-        diagflat(output, &mut jacobian_matrix);
-        matmul_impl([collen, 1, collen], output, output, dotcache.as_mut_slice())?;
+            let mut jacobian_matrix = NdArray::new([collen, collen]);
+            let mut dotcache = NdArray::new([collen, collen]);
+            diagflat(output, &mut jacobian_matrix);
+            matmul_impl([collen, 1, collen], output, output, dotcache.as_mut_slice())?;
 
-        jacobian_matrix = jacobian_matrix.sub(&dotcache)?;
+            jacobian_matrix = jacobian_matrix.sub(&dotcache)?;
 
-        matmul_impl(
-            [collen, collen, 1],
-            jacobian_matrix.as_slice(),
-            dvalues,
-            res.get_column_mut(&[i as u32]).unwrap(),
-        )?;
-    }
+            matmul_impl(
+                [collen, collen, 1],
+                jacobian_matrix.as_slice(),
+                dvalues,
+                row,
+            )
+        })?;
 
     Ok(res)
 }
