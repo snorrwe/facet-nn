@@ -30,16 +30,12 @@ jobs:
           which python
           which pip
           
-      - run: pip install pytest tox setuptools setuptools-rust
+      - run: pip install tox
           
       - name: Run Rust tests
         run: cargo test
         
       - name: Install
-        run: |
-          make install
-          
-      - name: Run Python tests
         run: |
           cd pyfacet
           tox
