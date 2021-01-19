@@ -3,7 +3,7 @@
 #[cfg(test)]
 mod tests;
 
-use super::{GpuNdArrayError, EXECUTOR, MATMUL};
+use super::{GpuNdArrayError, EXECUTOR};
 
 use rayon::prelude::*;
 use vulkano::sync::GpuFuture;
@@ -19,7 +19,7 @@ pub const ROW_SPLIT_THRESHOLD: u32 = 512;
 
 // naive impl
 // TODO optimize
-// maybe something like this? https://www.ibiblio.org/e-notes/webgl/gpu/mul/sgemm6.htm
+// maybe something like this? https://www.ibiblio.org/e-notes/webgl/gpu/mul/sgem6.htm
 vulkano_shaders::shader! {
     ty: "compute",
     src: r#"
@@ -32,25 +32,25 @@ layout(set = 0, binding = 1) readonly  buffer Data_b { float B[]; };
 layout(set = 0, binding = 2) writeonly buffer Data_c { float C[]; };
 
 layout(push_constant) uniform Shape {
-    uint N;
     uint M;
-    uint P;
+    uint K;
+    uint N;
 };
 
 void main()
 {
-    uint i = gl_GlobalInvocationID.x; // [0..n)
-    uint j = gl_GlobalInvocationID.y; // [0..p)
+    uint i = gl_GlobalInvocationID.x; // [0..M)
+    uint j = gl_GlobalInvocationID.y; // [0..N)
 
     float value = 0.0;
-    for(uint k = 0; k < M; k++)
+    for(uint k = 0; k < K; k++)
     {
-        float a = A[i * M + k];
-        float b = B[k * P + j];
+        float a = A[i * K + k];
+        float b = B[k * N + j];
         value += a * b;
     }
 
-    C[i * P + j] = value;
+    C[i * N + j] = value;
 }"#
 }
 
@@ -72,17 +72,20 @@ lazy_static::lazy_static! {
         .expect("failed to create compute pipeline"),
     )
     };
+    pub static ref MATMUL: Option<Shader> = {
+        EXECUTOR.as_ref().and_then(|exc|{ Shader::load(exc.device.clone()).ok() })
+    };
 }
 
 pub fn matmul_f32_impl<'a>(
-    [n, m, p]: [u32; 3],
+    [m, k, n]: [u32; 3],
     values0: &'a [f32],
     values1: &'a [f32],
     out: &mut [f32],
 ) -> Result<(), GpuNdArrayError> {
-    assert!(n as usize * m as usize <= values0.len());
-    assert!(p as usize * m as usize <= values1.len());
-    assert!(n as usize * p as usize <= out.len());
+    assert!(m as usize * k as usize <= values0.len());
+    assert!(n as usize * k as usize <= values1.len());
+    assert!(m as usize * n as usize <= out.len());
 
     let exc = match EXECUTOR.as_ref() {
         Some(e) => e,
@@ -91,32 +94,32 @@ pub fn matmul_f32_impl<'a>(
     let device = exc.device.clone();
     let compute_pipeline = PIPELINE.clone();
 
-    let res = if n > ROW_SPLIT_THRESHOLD {
+    let res = if m > ROW_SPLIT_THRESHOLD {
         // iterate over some of the rows at a time
         let device = device.clone();
-        out.par_chunks_mut(p as usize * ROW_SPLIT_THRESHOLD as usize)
+        out.par_chunks_mut(n as usize * ROW_SPLIT_THRESHOLD as usize)
             .enumerate()
             .try_for_each(move |(subi, submatrix)| {
                 let offset = subi * ROW_SPLIT_THRESHOLD as usize;
-                let n = submatrix.len() / p as usize; // 1..ROW_SPLIT
-                debug_assert!(n >= 1);
-                debug_assert!(values0[offset * m as usize..].len() >= n * m as usize);
-                _matmul_f32_impl(
+                let m = submatrix.len() / n as usize; // 1..ROW_SPLIT
+                debug_assert!(m >= 1);
+                debug_assert!(values0[offset * k as usize..].len() >= m * k as usize);
+                gepp(
                     exc,
                     device.clone(),
                     compute_pipeline.clone(),
-                    [n as u32, m, p],
-                    &values0[offset * m as usize..],
+                    [m as u32, k, n],
+                    &values0[offset * k as usize..],
                     values1,
                     submatrix,
                 )
             })
     } else {
-        _matmul_f32_impl(
+        gepp(
             exc,
             device.clone(),
             compute_pipeline,
-            [n, m, p],
+            [m, k, n],
             values0,
             values1,
             out,
@@ -130,17 +133,20 @@ pub fn matmul_f32_impl<'a>(
     res
 }
 
-pub fn _matmul_f32_impl<'a>(
+/// Assumes large `m` and `n` and small `k`
+///
+/// multiplies m*k and k*n matrices, output m*n matrix
+fn gepp<'a>(
     exc: &super::GpuExecutor,
     device: Arc<Device>,
     compute_pipeline: Arc<vulkano::pipeline::ComputePipeline<PipelineLayout<Layout>>>,
     // matmul params
-    [n, m, p]: [u32; 3],
+    [m, k, n]: [u32; 3],
     values0: &'a [f32],
     values1: &'a [f32],
     out: &mut [f32],
 ) -> Result<(), GpuNdArrayError> {
-    let shape = [n, m, p];
+    let shape = [m, k, n];
 
     let ((a_buffer, b_buffer), c_buffer) = rayon::join(
         || {
@@ -173,14 +179,14 @@ pub fn _matmul_f32_impl<'a>(
     let mut builder =
         vulkano::command_buffer::AutoCommandBufferBuilder::new(device.clone(), exc.queue.family())
             .unwrap();
-    let workgroups = [n / LOCAL_SIZE_X, p / LOCAL_SIZE_Y, 1];
+    let workgroups = [m / LOCAL_SIZE_X, n / LOCAL_SIZE_Y, 1];
     builder
         .dispatch(workgroups, compute_pipeline, descriptor, shape)
         .unwrap();
-    let command_buffer = builder.build().unwrap();
+    let comand_buffer = builder.build().unwrap();
 
     let finish = vulkano::sync::now(device)
-        .then_execute(exc.queue.clone(), command_buffer)
+        .then_execute(exc.queue.clone(), comand_buffer)
         .unwrap()
         .then_signal_fence_and_flush()
         .expect("failed to flush");
@@ -192,33 +198,33 @@ pub fn _matmul_f32_impl<'a>(
     // note that the last block is calculated twice, the auther deems this ok for now
 
     // last columns
-    let remaining_n = n % LOCAL_SIZE_X;
-    let offset_n = (n - remaining_n) as usize;
-    (0..p).for_each(|j| {
+    let remaining_n = m % LOCAL_SIZE_X;
+    let offset_n = (m - remaining_n) as usize;
+    (0..n).for_each(|j| {
         let j = j as usize;
         for i in 0..remaining_n {
             let i = i as usize + offset_n;
             let mut val = 0.0;
-            for k in 0..m {
-                let k = k as usize;
-                val += at(values0, i, m as usize, k) * at(values1, k, p as usize, j);
+            for l in 0..k {
+                let l = l as usize;
+                val += at(values0, i, k as usize, l) * at(values1, l, n as usize, j);
             }
-            out[i * p as usize + j] = val;
+            out[i * n as usize + j] = val;
         }
     });
     // last rows
-    let remaining_p = p % LOCAL_SIZE_Y;
-    let offset_p = (p - remaining_p) as usize;
-    (0..n).for_each(|i| {
+    let remaining_p = n % LOCAL_SIZE_Y;
+    let offset_p = (n - remaining_p) as usize;
+    (0..m).for_each(|i| {
         let i = i as usize;
         for j in 0..remaining_p {
             let j = j as usize + offset_p;
             let mut val = 0.0;
-            for k in 0..m {
-                let k = k as usize;
-                val += at(values0, i, m as usize, k) * at(values1, k, p as usize, j);
+            for l in 0..k {
+                let l = l as usize;
+                val += at(values0, i, k as usize, l) * at(values1, l, n as usize, j);
             }
-            out[i * p as usize + j] = val;
+            out[i * n as usize + j] = val;
         }
     });
 
@@ -226,11 +232,11 @@ pub fn _matmul_f32_impl<'a>(
 
     // gpu finished processing, copy the result
     let content = c_buffer.read().unwrap();
-    out.par_chunks_mut(p as usize)
+    out.par_chunks_mut(n as usize)
         .enumerate()
         // only set the out values we haven't touched in the cpu-computations
         .for_each(|(i, b)| {
-            let offset = i * p as usize;
+            let offset = i * n as usize;
             for (i, v) in b.iter_mut().enumerate() {
                 // use add as we might touch values skipped by the gpu
                 // these values will be set to 0.

@@ -25,9 +25,6 @@ pub struct GpuExecutor {
 
 lazy_static::lazy_static! {
     pub static ref EXECUTOR: Option<GpuExecutor> = init();
-    pub static ref MATMUL: Option<self::matmul::Shader> = {
-        EXECUTOR.as_ref().and_then(|exc|{ self::matmul::Shader::load(exc.device.clone()).ok() })
-    };
 }
 
 pub fn init() -> Option<GpuExecutor> {

@@ -12,7 +12,7 @@ use rayon::prelude::*;
 /// Raw matrix multiplication method
 // this really should be optimized further...
 pub fn matmul_impl<'a, T>(
-    [n, m, p]: [u32; 3],
+    [m, k, n]: [u32; 3],
     values0: &'a [T],
     values1: &'a [T],
     out: &mut [T],
@@ -20,21 +20,21 @@ pub fn matmul_impl<'a, T>(
 where
     T: AddAssign + Add<Output = T> + Mul<Output = T> + Default + 'a + Copy + Send + Sync,
 {
-    debug_assert_eq!((n as usize * m as usize), values0.len());
-    debug_assert_eq!((p as usize * m as usize), values1.len());
-    debug_assert_eq!(out.len(), n as usize * p as usize);
+    debug_assert_eq!((m as usize * k as usize), values0.len());
+    debug_assert_eq!((n as usize * k as usize), values1.len());
+    debug_assert_eq!(out.len(), m as usize * n as usize);
 
     #[cfg(feature = "rayon")]
     {
-        let m = m as usize;
-        let p = p as usize;
+        let k = k as usize;
+        let n = n as usize;
         // iterate over the result's rows
-        out.par_chunks_mut(p).enumerate().for_each(|(i, row)| {
+        out.par_chunks_mut(n).enumerate().for_each(|(i, row)| {
             for j in 0..row.len() {
                 let mut valout = Default::default();
-                for k in 0usize..m {
-                    let val0 = values0[i * m + k];
-                    let val1 = values1[k * p + j];
+                for l in 0usize..k {
+                    let val0 = values0[i * k + l];
+                    let val1 = values1[l * n + j];
                     valout += val0 * val1
                 }
                 row[j] = valout;
@@ -43,15 +43,15 @@ where
     }
 
     #[cfg(not(feature = "rayon"))]
-    for i in 0..n {
-        for j in 0..p {
+    for i in 0..m {
+        for j in 0..n {
             let mut val = T::default();
-            for k in 0..m {
-                let val0 = values0[(i * m + k) as usize];
-                let val1 = values1[(k * p + j) as usize];
+            for l in 0..k {
+                let val0 = values0[(i * k + l) as usize];
+                let val1 = values1[(l * n + j) as usize];
                 val += val0 * val1
             }
-            out[(i * p + j) as usize] = val;
+            out[(i * n + j) as usize] = val;
         }
     }
 
@@ -60,54 +60,54 @@ where
 
 /// f32 specialized method
 pub fn matmul_impl_f32<'a>(
-    [n, m, p]: [u32; 3],
+    [m, k, n]: [u32; 3],
     values0: &'a [f32],
     values1: &'a [f32],
     out: &mut [f32],
 ) -> Result<(), NdArrayError> {
     #[cfg(feature = "gpu")]
     // heuristics determining if we should run on the gpu
-    if (n >= 256 || p >= 256) && crate::gpu::EXECUTOR.is_some() {
-        return match crate::gpu::matmul::matmul_f32_impl([n, m, p], values0, values1, out) {
+    if (m >= 256 || n >= 256) && crate::gpu::EXECUTOR.is_some() {
+        return match crate::gpu::matmul::matmul_f32_impl([m, k, n], values0, values1, out) {
             Ok(()) => Ok(()),
             Err(crate::gpu::GpuNdArrayError::NdArrayError(err)) => Err(err),
             err @ Err(_) => panic!("{:?}", err),
         };
     }
-    matmul_impl([n, m, p], values0, values1, out)
+    matmul_impl([m, k, n], values0, values1, out)
 }
 
-pub fn transpose_mat<T: Clone>([n, m]: [usize; 2], inp: &[T], out: &mut [T]) {
-    assert!(inp.len() >= n * m);
+pub fn transpose_mat<T: Clone>([m, n]: [usize; 2], inp: &[T], out: &mut [T]) {
+    assert!(inp.len() >= m * n);
     assert!(inp.len() <= out.len());
-    for (i, col) in ColumnIter::new(inp, m).enumerate() {
+    for (i, col) in ColumnIter::new(inp, n).enumerate() {
         for (j, v) in col.iter().cloned().enumerate() {
-            out[j * n + i] = v;
+            out[j * m + i] = v;
         }
     }
 }
 
-pub fn flip_mat_horizontal<T: Clone>([n, m]: [usize; 2], inp: &[T], out: &mut [T]) {
-    assert!(inp.len() == n * m);
+pub fn flip_mat_horizontal<T: Clone>([m, n]: [usize; 2], inp: &[T], out: &mut [T]) {
+    assert!(inp.len() == m * n);
     assert!(inp.len() <= out.len());
 
-    let mid = n / 2;
-    for (i, col) in ColumnIter::new(inp, m).enumerate() {
+    let mid = m / 2;
+    for (i, col) in ColumnIter::new(inp, n).enumerate() {
         for (j, v) in col.iter().cloned().enumerate() {
-            let col = (mid + i) % n;
-            let ind = col * m + j;
+            let col = (mid + i) % m;
+            let ind = col * n + j;
             out[ind] = v;
         }
     }
 }
 
-pub fn flip_mat_vertical<T: Clone>([n, m]: [usize; 2], inp: &[T], out: &mut [T]) {
-    assert!(inp.len() == n * m);
+pub fn flip_mat_vertical<T: Clone>([m, n]: [usize; 2], inp: &[T], out: &mut [T]) {
+    assert!(inp.len() == m * n);
     assert!(inp.len() <= out.len());
 
-    for (i, col) in ColumnIter::new(inp, m).enumerate() {
+    for (i, col) in ColumnIter::new(inp, n).enumerate() {
         for (j, v) in col.iter().rev().cloned().enumerate() {
-            let ind = i * m + j;
+            let ind = i * n + j;
             out[ind] = v;
         }
     }
@@ -159,18 +159,18 @@ impl<T> NdArray<T> {
     where
         T: Clone,
     {
-        let [n, m] = self
+        let [m, n] = self
             .shape
             .last_two()
             .ok_or_else(|| NdArrayError::UnsupportedShape(self.shape.clone()))?;
 
         let mut out = Data::new();
         out.resize(self.len(), self.values[0].clone());
-        let span = n as usize * m as usize;
+        let span = m as usize * n as usize;
         // broadcast tensors as a colection of matrices
         for (i, innermat) in ColumnIter::new(self.as_slice(), span).enumerate() {
             f(
-                [n as usize, m as usize],
+                [m as usize, n as usize],
                 innermat,
                 &mut out.as_mut_slice()[i * span..],
             );
@@ -211,24 +211,24 @@ impl<T> NdArray<T> {
     where
         T: Clone,
     {
-        let [n, m] = self
+        let [m, n] = self
             .shape
             .last_two()
             .ok_or_else(|| NdArrayError::UnsupportedShape(self.shape.clone()))?;
 
-        if n != m {
+        if m != n {
             return Err(NdArrayError::DimensionMismatch {
-                expected: n as usize,
-                actual: m as usize,
+                expected: m as usize,
+                actual: n as usize,
             });
         }
 
         let mut out = Data::new();
         out.resize(self.len(), self.values[0].clone());
-        let span = n as usize * m as usize;
+        let span = m as usize * n as usize;
         // broadcast tensors as a colection of matrices
         for (i, innermat) in ColumnIter::new(self.as_slice(), span).enumerate() {
-            rotate_mat_cw(n as usize, innermat, &mut out.as_mut_slice()[i * span..]);
+            rotate_mat_cw(m as usize, innermat, &mut out.as_mut_slice()[i * span..]);
         }
 
         let shape = self.shape.clone();
@@ -292,26 +292,26 @@ impl<T> NdArray<T> {
                 })
             }
 
-            (Shape::Vector([l]), Shape::Matrix([_, m])) => {
-                out.reshape(Shape::Matrix([1, *m]));
+            (Shape::Vector([l]), Shape::Matrix([_, n])) => {
+                out.reshape(Shape::Matrix([1, *n]));
                 f(
-                    [1, *l, *m],
+                    [1, *l, *n],
                     self.as_slice(),
                     other.as_slice(),
                     out.as_mut_slice(),
                 )?;
-                out.reshape(*m);
+                out.reshape(*n);
                 Ok(())
             }
-            (Shape::Matrix([n, m]), Shape::Vector([_])) => {
-                out.reshape(Shape::Matrix([*n, 1]));
+            (Shape::Matrix([m, n]), Shape::Vector([_])) => {
+                out.reshape(Shape::Matrix([*m, 1]));
                 f(
-                    [*n, *m, 1],
+                    [*m, *n, 1],
                     self.as_slice(),
                     other.as_slice(),
                     out.as_mut_slice(),
                 )?;
-                out.reshape(*m);
+                out.reshape(*n);
                 Ok(())
             }
             (Shape::Matrix([a, b]), Shape::Matrix([_, d])) => {
@@ -327,23 +327,23 @@ impl<T> NdArray<T> {
 
             // broadcast matrices
             (Shape::Vector([l]), shp @ Shape::Tensor(_)) => {
-                let [m, n] = shp.last_two().unwrap();
+                let [n, m] = shp.last_two().unwrap();
 
-                let it = ColumnIter::new(&other.values, n as usize * m as usize);
-                out.reshape([(other.len() / (n as usize * m as usize)) as u32, *l]);
+                let it = ColumnIter::new(&other.values, m as usize * n as usize);
+                out.reshape([(other.len() / (m as usize * n as usize)) as u32, *l]);
                 for (mat, out) in it.zip(ColumnIterMut::new(&mut out.values, *l as usize)) {
-                    f([1, *l, m], self.as_slice(), mat, out)?;
+                    f([1, *l, n], self.as_slice(), mat, out)?;
                 }
                 Ok(())
             }
             (shp @ Shape::Tensor(_), Shape::Vector([l])) => {
-                let [m, n] = shp.last_two().unwrap();
+                let [n, m] = shp.last_two().unwrap();
 
-                let it = ColumnIter::new(&self.values, n as usize * m as usize);
+                let it = ColumnIter::new(&self.values, m as usize * n as usize);
                 let l: u32 = *l;
-                out.reshape([(self.len() / (n as usize * m as usize)) as u32, l]);
+                out.reshape([(self.len() / (m as usize * n as usize)) as u32, l]);
                 for (mat, out) in it.zip(ColumnIterMut::new(&mut out.values, l as usize)) {
-                    f([n, m, 1], mat, other.as_slice(), out)?;
+                    f([m, n, 1], mat, other.as_slice(), out)?;
                 }
                 Ok(())
             }
