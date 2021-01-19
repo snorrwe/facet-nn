@@ -24,9 +24,24 @@ jobs:
           override: true
             
       - name: Setup Python
-        run: sudo apt install -y python3-dev python3-pip
+        uses: actions/setup-python@v2.2.1
+        with:
+          python-version: 3.9
+      - name: Setup Python
+        uses: actions/setup-python@v2.2.1
+        with:
+          python-version: 3.8
+      - name: Setup Python
+        uses: actions/setup-python@v2.2.1
+        with:
+          python-version: 3.7
+      - name: Setup Python
+        uses: actions/setup-python@v2.2.1
+        with:
+          python-version: 3.6
+
         
-      - run: pip3 install tox pytest setuptools setuptools-rust
+      - run: pip install tox
           
           # TODO: this can be moved into a separate file
       - name: Run Core library tests
@@ -34,11 +49,6 @@ jobs:
         run: |
           cd facet-core
           cargo test --no-default-features --features=rayon
-        
-      - name: Install
-        run: |
-          cd pyfacet
-          pip3 install -e.
           
       - name: Run Python tests
-        run: python3 -m pytest tests
+        run: tox
