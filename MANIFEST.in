@@ -1,0 +1,5 @@
+global-exclude *target/*
+global-exclude *.tox
+
+recursive-include pyfacet *.py *.rs Cargo.toml
+recursive-include facet-core *.rs Cargo.toml

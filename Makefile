@@ -8,10 +8,10 @@ test-rust:
 	cargo test --benches
 
 nd-dev:
-	cd pyfacet && pip install -e.
+	pip install -e.
 
 install:
-	cd pyfacet && pip install .
+	pip install .
 
 test-py: nd-dev
 	pytest tests -v

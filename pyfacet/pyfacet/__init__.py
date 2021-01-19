@@ -2,7 +2,8 @@ from operator import mul
 import random
 import string
 
-from .pyfacet import *
+#  from .pyfacet import *
+from pyfacet.pyfacet import *
 
 
 def labels_to_one_hot(labels):
