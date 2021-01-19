@@ -6,10 +6,12 @@ mod tests;
 use super::{GpuNdArrayError, EXECUTOR};
 
 use rayon::prelude::*;
-use vulkano::sync::GpuFuture;
+use std::sync::Arc;
 use vulkano::{
     buffer::{BufferUsage, CpuAccessibleBuffer},
-    descriptor::PipelineLayoutAbstract,
+    descriptor::{pipeline_layout::PipelineLayout, PipelineLayoutAbstract},
+    device::Device,
+    sync::GpuFuture,
 };
 
 pub const LOCAL_SIZE_X: u32 = 32;
@@ -17,12 +19,13 @@ pub const LOCAL_SIZE_Y: u32 = 16;
 /// Number of rows in the left matrix to process at a time
 pub const ROW_SPLIT_THRESHOLD: u32 = 512;
 
-// naive impl
+/// naive impl, assuming large M and N and small K
 // TODO optimize
 // maybe something like this? https://www.ibiblio.org/e-notes/webgl/gpu/mul/sgem6.htm
-vulkano_shaders::shader! {
-    ty: "compute",
-    src: r#"
+mod gepp {
+    vulkano_shaders::shader! {
+        ty: "compute",
+        src: r#"
 #version 450
 
 layout(local_size_x = 32, local_size_y = 16, local_size_z = 1) in;
@@ -52,39 +55,40 @@ void main()
 
     C[i * N + j] = value;
 }"#
+    }
 }
 
 lazy_static::lazy_static! {
-    pub static ref PIPELINE: Arc<vulkano::pipeline::ComputePipeline<PipelineLayout<Layout>>> = {
-    let exc = EXECUTOR.as_ref().unwrap();
-    let device = exc.device.clone();
-    let shader = match MATMUL.as_ref() {
-        Some(shader) => shader,
-        None => panic!("{}",GpuNdArrayError::NoShader),
-    };
-    Arc::new(
-        vulkano::pipeline::ComputePipeline::new(
-            device.clone(),
-            &shader.main_entry_point(),
-            &(),
-            None,
+    pub static ref GEPP_PIPE: Arc<vulkano::pipeline::ComputePipeline<PipelineLayout<gepp::Layout>>> = {
+        let exc = EXECUTOR.as_ref().unwrap();
+        let device = exc.device.clone();
+        let shader = match MATMUL.as_ref() {
+            Some(shader) => shader,
+            None => panic!("{}",GpuNdArrayError::NoShader),
+        };
+        Arc::new(
+            vulkano::pipeline::ComputePipeline::new(
+                device.clone(),
+                &shader.main_entry_point(),
+                &(),
+                None,
+            )
+            .expect("failed to create compute pipeline"),
         )
-        .expect("failed to create compute pipeline"),
-    )
     };
-    pub static ref MATMUL: Option<Shader> = {
-        EXECUTOR.as_ref().and_then(|exc|{ Shader::load(exc.device.clone()).ok() })
+    pub static ref MATMUL: Option<gepp::Shader> = {
+        EXECUTOR.as_ref().and_then(|exc|{ gepp::Shader::load(exc.device.clone()).ok() })
     };
 }
 
 pub fn matmul_f32_impl<'a>(
     [m, k, n]: [u32; 3],
-    values0: &'a [f32],
-    values1: &'a [f32],
+    in0: &'a [f32],
+    in1: &'a [f32],
     out: &mut [f32],
 ) -> Result<(), GpuNdArrayError> {
-    assert!(m as usize * k as usize <= values0.len());
-    assert!(n as usize * k as usize <= values1.len());
+    assert!(m as usize * k as usize <= in0.len());
+    assert!(n as usize * k as usize <= in1.len());
     assert!(m as usize * n as usize <= out.len());
 
     let exc = match EXECUTOR.as_ref() {
@@ -92,7 +96,7 @@ pub fn matmul_f32_impl<'a>(
         None => return Err(GpuNdArrayError::NoExecutor),
     };
     let device = exc.device.clone();
-    let compute_pipeline = PIPELINE.clone();
+    let compute_pipeline = GEPP_PIPE.clone();
 
     let res = if m > ROW_SPLIT_THRESHOLD {
         // iterate over some of the rows at a time
@@ -103,14 +107,14 @@ pub fn matmul_f32_impl<'a>(
                 let offset = subi * ROW_SPLIT_THRESHOLD as usize;
                 let m = submatrix.len() / n as usize; // 1..ROW_SPLIT
                 debug_assert!(m >= 1);
-                debug_assert!(values0[offset * k as usize..].len() >= m * k as usize);
+                debug_assert!(in0[offset * k as usize..].len() >= m * k as usize);
                 gepp(
                     exc,
                     device.clone(),
                     compute_pipeline.clone(),
                     [m as u32, k, n],
-                    &values0[offset * k as usize..],
-                    values1,
+                    &in0[offset * k as usize..],
+                    in1,
                     submatrix,
                 )
             })
@@ -120,8 +124,8 @@ pub fn matmul_f32_impl<'a>(
             device.clone(),
             compute_pipeline,
             [m, k, n],
-            values0,
-            values1,
+            in0,
+            in1,
             out,
         )
     };
@@ -139,11 +143,11 @@ pub fn matmul_f32_impl<'a>(
 fn gepp<'a>(
     exc: &super::GpuExecutor,
     device: Arc<Device>,
-    compute_pipeline: Arc<vulkano::pipeline::ComputePipeline<PipelineLayout<Layout>>>,
+    compute_pipeline: Arc<vulkano::pipeline::ComputePipeline<PipelineLayout<gepp::Layout>>>,
     // matmul params
     [m, k, n]: [u32; 3],
-    values0: &'a [f32],
-    values1: &'a [f32],
+    in0: &'a [f32],
+    in1: &'a [f32],
     out: &mut [f32],
 ) -> Result<(), GpuNdArrayError> {
     let shape = [m, k, n];
@@ -151,8 +155,8 @@ fn gepp<'a>(
     let ((a_buffer, b_buffer), c_buffer) = rayon::join(
         || {
             rayon::join(
-                || matrix_buffer(device.clone(), false, values0.iter().cloned()),
-                || matrix_buffer(device.clone(), false, values1.iter().cloned()),
+                || matrix_buffer(device.clone(), false, in0.iter().cloned()),
+                || matrix_buffer(device.clone(), false, in1.iter().cloned()),
             )
         },
         || matrix_buffer(device.clone(), true, (0..out.len()).map(|_| 0.0f32)),
@@ -207,7 +211,7 @@ fn gepp<'a>(
             let mut val = 0.0;
             for l in 0..k {
                 let l = l as usize;
-                val += at(values0, i, k as usize, l) * at(values1, l, n as usize, j);
+                val += at(in0, i, k as usize, l) * at(in1, l, n as usize, j);
             }
             out[i * n as usize + j] = val;
         }
@@ -222,7 +226,7 @@ fn gepp<'a>(
             let mut val = 0.0;
             for l in 0..k {
                 let l = l as usize;
-                val += at(values0, i, k as usize, l) * at(values1, l, n as usize, j);
+                val += at(in0, i, k as usize, l) * at(in1, l, n as usize, j);
             }
             out[i * n as usize + j] = val;
         }

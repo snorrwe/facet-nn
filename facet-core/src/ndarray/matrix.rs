@@ -10,18 +10,20 @@ use super::{
 use rayon::prelude::*;
 
 /// Raw matrix multiplication method
-// this really should be optimized further...
+///
+/// multiplies m*k and k*n matrices and outputs an m*n matrix
+// this really should be optimized...
 pub fn matmul_impl<'a, T>(
     [m, k, n]: [u32; 3],
-    values0: &'a [T],
-    values1: &'a [T],
+    in0: &'a [T],
+    in1: &'a [T],
     out: &mut [T],
 ) -> Result<(), NdArrayError>
 where
     T: AddAssign + Add<Output = T> + Mul<Output = T> + Default + 'a + Copy + Send + Sync,
 {
-    debug_assert_eq!((m as usize * k as usize), values0.len());
-    debug_assert_eq!((n as usize * k as usize), values1.len());
+    debug_assert_eq!((m as usize * k as usize), in0.len());
+    debug_assert_eq!((n as usize * k as usize), in1.len());
     debug_assert_eq!(out.len(), m as usize * n as usize);
 
     #[cfg(feature = "rayon")]
@@ -33,8 +35,8 @@ where
             for j in 0..row.len() {
                 let mut valout = Default::default();
                 for l in 0usize..k {
-                    let val0 = values0[i * k + l];
-                    let val1 = values1[l * n + j];
+                    let val0 = in0[i * k + l];
+                    let val1 = in1[l * n + j];
                     valout += val0 * val1
                 }
                 row[j] = valout;
@@ -47,8 +49,8 @@ where
         for j in 0..n {
             let mut val = T::default();
             for l in 0..k {
-                let val0 = values0[(i * k + l) as usize];
-                let val1 = values1[(l * n + j) as usize];
+                let val0 = in0[(i * k + l) as usize];
+                let val1 = in1[(l * n + j) as usize];
                 val += val0 * val1
             }
             out[(i * n + j) as usize] = val;
@@ -61,20 +63,20 @@ where
 /// f32 specialized method
 pub fn matmul_impl_f32<'a>(
     [m, k, n]: [u32; 3],
-    values0: &'a [f32],
-    values1: &'a [f32],
+    in0: &'a [f32],
+    in1: &'a [f32],
     out: &mut [f32],
 ) -> Result<(), NdArrayError> {
     #[cfg(feature = "gpu")]
     // heuristics determining if we should run on the gpu
     if (m >= 256 || n >= 256) && crate::gpu::EXECUTOR.is_some() {
-        return match crate::gpu::matmul::matmul_f32_impl([m, k, n], values0, values1, out) {
+        return match crate::gpu::matmul::matmul_f32_impl([m, k, n], in0, in1, out) {
             Ok(()) => Ok(()),
             Err(crate::gpu::GpuNdArrayError::NdArrayError(err)) => Err(err),
             err @ Err(_) => panic!("{:?}", err),
         };
     }
-    matmul_impl([m, k, n], values0, values1, out)
+    matmul_impl([m, k, n], in0, in1, out)
 }
 
 pub fn transpose_mat<T: Clone>([m, n]: [usize; 2], inp: &[T], out: &mut [T]) {
