@@ -1,7 +1,7 @@
 use crate::impl_ndarray;
 use facet_core::ndarray::NdArray;
-pub use implmod::RowIter as RowIterI;
 pub use implmod::ItemIter as ItemIterI;
+pub use implmod::RowIter as RowIterI;
 pub use implmod::*;
 
 use pyo3::{

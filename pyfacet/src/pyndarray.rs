@@ -49,7 +49,8 @@ type Factory = fn(Python, Vec<u32>, &PyList) -> Result<Py<PyAny>, PyErr>;
 pub fn array(py: Python, shape: PyObject) -> PyResult<PyObject> {
     let mut dims = Vec::new();
     let shape: &PyList = shape.extract(py).or_else(|_| {
-        shape.extract(py)
+        shape
+            .extract(py)
             .map_err(|err| {
                 PyValueError::new_err(format!("Failed to convert input to a list {:?}", err))
             })

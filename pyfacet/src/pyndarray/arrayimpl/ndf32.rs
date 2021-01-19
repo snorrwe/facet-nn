@@ -1,6 +1,6 @@
 use facet_core::ndarray::NdArray;
-pub use ndarraydimpl::RowIter as RowIterD;
 pub use ndarraydimpl::ItemIter as ItemIterD;
+pub use ndarraydimpl::RowIter as RowIterD;
 pub use ndarraydimpl::*;
 
 use crate::impl_ndarray;
