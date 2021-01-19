@@ -119,8 +119,8 @@ impl DenseLayer {
         // we know that training is some at this point
         let training = self.training.as_mut().unwrap();
 
+        let inputs = inputs.transpose();
         inputs
-            .transpose()
             .matmul_f32(&dvalues, &mut training.dweights)
             .map_err(DenseLayerError::MatMulFail)?;
 

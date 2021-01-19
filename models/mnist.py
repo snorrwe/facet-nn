@@ -20,16 +20,16 @@ model = Model()
 
 model.add(pf.DenseLayer(X.shape[1], 32))
 model.add(Activation(pf.relu, df=pf.drelu_dz))
-model.add(pf.DenseLayer(32, 100, weight_regularizer_l2=5e-4, bias_regularizer_l2=5e-4))
+model.add(pf.DenseLayer(32, 96, weight_regularizer_l2=5e-4, bias_regularizer_l2=5e-4))
 model.add(Activation(pf.relu, df=pf.drelu_dz))
 model.add(DropoutLayer(0.1))
-model.add(pf.DenseLayer(100, 10))
+model.add(pf.DenseLayer(96, 10))
 model.add(Activation(pf.softmax, df=pf.dsoftmax))
 
 model.set(
     loss=Loss(lossfn=categorical_cross_entropy, dlossfn=cce_backward),
     accuracy=Accuracy_Categorical(),
-    optimizer=Adam(learning_rate=1e-4, decay=1e-4),
+    optimizer=Adam(learning_rate=1e-5, decay=1e-4),
 )
 
 
