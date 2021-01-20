@@ -69,7 +69,7 @@ pub fn matmul_impl_f32<'a>(
 ) -> Result<(), NdArrayError> {
     #[cfg(feature = "gpu")]
     // heuristics determining if we should run on the gpu
-    if (m >= 256 || n >= 256) && crate::gpu::EXECUTOR.is_some() {
+    if m * k * n > 1024 && crate::gpu::EXECUTOR.is_some() {
         return match crate::gpu::matmul::matmul_f32_impl([m, k, n], in0, in1, out) {
             Ok(()) => Ok(()),
             Err(crate::gpu::GpuNdArrayError::NdArrayError(err)) => Err(err),
