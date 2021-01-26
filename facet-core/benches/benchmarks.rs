@@ -30,7 +30,7 @@ fn _abc(size: u32) -> [NdArray<f32>; 3] {
 mod mat_mul {
     use super::_abc;
     use criterion::{criterion_group, BenchmarkId, Criterion};
-    use facet_core::gpu::matmul::matmul_f32_impl;
+    use facet_core::gpu::matmul::matmul_a_mul_b::matmul_f32_impl;
     use facet_core::ndarray::matrix::matmul_impl;
 
     fn mat_mul(c: &mut Criterion) {
