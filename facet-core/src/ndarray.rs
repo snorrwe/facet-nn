@@ -220,10 +220,10 @@ impl<T> NdArray<T> {
         match &self.shape {
             Shape::Scalar(_) => self,
             Shape::Vector([n]) => Self::new_with_values([*n, 1], self.values).unwrap(),
-            Shape::Matrix([n, m]) => {
+            Shape::Matrix([m, n]) => {
                 let mut values = self.values.clone();
-                matrix::transpose_mat([*n as usize, *m as usize], &self.values, &mut values);
-                Self::new_with_values(Shape::Matrix([*m, *n]), values).unwrap()
+                matrix::transpose_mat([*m as usize, *n as usize], &self.values, &mut values);
+                Self::new_with_values(Shape::Matrix([*n, *m]), values).unwrap()
             }
             shape @ Shape::Tensor(_) => {
                 // inner matrix tmp
