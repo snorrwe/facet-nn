@@ -159,9 +159,9 @@ fn matmul_ab<'a>(
 
     let ((a_buffer, b_buffer), c_buffer) = rayon::join(
         || {
-            rayon::join(
-                || matrix_buffer(device.clone(), false, in0.iter().cloned()),
-                || matrix_buffer(device.clone(), false, in1.iter().cloned()),
+            (
+                matrix_buffer(device.clone(), false, in0.iter().cloned()),
+                matrix_buffer(device.clone(), false, in1.iter().cloned()),
             )
         },
         || matrix_buffer(device.clone(), true, (0..out.len()).map(|_| 0.0f32)),
