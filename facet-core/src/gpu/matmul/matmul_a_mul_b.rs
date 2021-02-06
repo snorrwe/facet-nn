@@ -48,8 +48,8 @@ use super::super::{GpuNdArrayError, EXECUTOR};
 use rayon::prelude::*;
 use vulkano::{
     buffer::{BufferUsage, CpuAccessibleBuffer},
-    descriptor::PipelineLayoutAbstract,
-    // device::Device,
+    command_buffer::AutoCommandBufferBuilder,
+    descriptor::{descriptor_set::PersistentDescriptorSet, PipelineLayoutAbstract},
     sync::GpuFuture,
 };
 
@@ -62,14 +62,14 @@ lazy_static::lazy_static! {
     /// Pipeline for calculating C=A*B on the gpu
     pub static ref AB_PIPE: Arc<vulkano::pipeline::ComputePipeline<PipelineLayout<Layout>>> = {
         let exc = EXECUTOR.as_ref().unwrap();
-        let device = exc.device.clone();
+        let device =Arc::clone(& exc.device);
         let shader = match AB_SHADER.as_ref() {
             Some(shader) => shader,
             None => panic!("{}", GpuNdArrayError::NoShader),
         };
         Arc::new(
             vulkano::pipeline::ComputePipeline::new(
-                device.clone(),
+                device,
                 &shader.main_entry_point(),
                 &(),
                 None,
@@ -78,7 +78,7 @@ lazy_static::lazy_static! {
         )
     };
     pub static ref AB_SHADER: Option<Shader> = {
-        EXECUTOR.as_ref().and_then(|exc|{ Shader::load(exc.device.clone()).ok() })
+        EXECUTOR.as_ref().and_then(|exc|{ Shader::load(Arc::clone(&exc.device)).ok() })
     };
 }
 
@@ -96,12 +96,12 @@ pub fn matmul_f32_impl<'a>(
         Some(e) => e,
         None => return Err(GpuNdArrayError::NoExecutor),
     };
-    let device = exc.device.clone();
-    let compute_pipeline = AB_PIPE.clone();
+    let device = Arc::clone(&exc.device);
+    let compute_pipeline = Arc::clone(&AB_PIPE);
 
     let res = if m > ROW_SPLIT_THRESHOLD {
         // iterate over some of the rows at a time
-        let device = device.clone();
+        let device = Arc::clone(&device);
         out.par_chunks_mut(n as usize * ROW_SPLIT_THRESHOLD as usize)
             .enumerate()
             .try_for_each(move |(subi, submatrix)| {
@@ -111,8 +111,8 @@ pub fn matmul_f32_impl<'a>(
                 debug_assert!(in0[offset * k as usize..].len() >= m * k as usize);
                 matmul_ab(
                     exc,
-                    device.clone(),
-                    compute_pipeline.clone(),
+                    Arc::clone(&device),
+                    Arc::clone(&compute_pipeline),
                     [m as u32, k, n],
                     &in0[offset * k as usize..],
                     in1,
@@ -122,7 +122,7 @@ pub fn matmul_f32_impl<'a>(
     } else {
         matmul_ab(
             exc,
-            device.clone(),
+            Arc::clone(&device),
             compute_pipeline,
             [m, k, n],
             in0,
@@ -160,34 +160,29 @@ fn matmul_ab<'a>(
     let ((a_buffer, b_buffer), c_buffer) = rayon::join(
         || {
             (
-                matrix_buffer(device.clone(), false, in0.iter().cloned()),
-                matrix_buffer(device.clone(), false, in1.iter().cloned()),
+                matrix_buffer(Arc::clone(&device), false, in0.iter().cloned()),
+                matrix_buffer(Arc::clone(&device), false, in1.iter().cloned()),
             )
         },
-        || matrix_buffer(device.clone(), true, (0..out.len()).map(|_| 0.0f32)),
+        || matrix_buffer(Arc::clone(&device), true, (0..out.len()).map(|_| 0.0f32)),
     );
 
     // Descriptor sets
-    let descriptor = vulkano::descriptor::descriptor_set::PersistentDescriptorSet::start(
-        compute_pipeline
-            .layout()
-            .descriptor_set_layout(0)
-            .unwrap()
-            .clone(),
-    )
+    let descriptor = PersistentDescriptorSet::start(Arc::clone(
+        compute_pipeline.layout().descriptor_set_layout(0).unwrap(),
+    ))
     .add_buffer(a_buffer)
     .expect("a buffer")
     .add_buffer(b_buffer)
     .expect("b buffer")
-    .add_buffer(c_buffer.clone())
+    .add_buffer(Arc::clone(&c_buffer))
     .expect("c buffer")
     .build()
     .unwrap();
 
     // Dispatch
     let mut builder =
-        vulkano::command_buffer::AutoCommandBufferBuilder::new(device.clone(), exc.queue.family())
-            .unwrap();
+        AutoCommandBufferBuilder::new(Arc::clone(&device), exc.queue.family()).unwrap();
     let workgroups = [m / LOCAL_SIZE_X, n / LOCAL_SIZE_Y, 1];
     builder
         .dispatch(workgroups, compute_pipeline, descriptor, shape)
@@ -195,13 +190,17 @@ fn matmul_ab<'a>(
     let comand_buffer = builder.build().unwrap();
 
     let finish = vulkano::sync::now(device)
-        .then_execute(exc.queue.clone(), comand_buffer)
+        .then_execute(Arc::clone(&exc.queue), comand_buffer)
         .unwrap()
         .then_signal_fence_and_flush()
         .expect("failed to flush");
 
     // buffers can be reused, ensure 0 initial output value
-    out.par_iter_mut().for_each(|x| *x = 0.0);
+    out.par_chunks_mut(512).for_each(|x| {
+        for x in x.iter_mut() {
+            *x = 0.0
+        }
+    });
 
     // process the remaning columns on the cpu while we await the gpu execution
     // note that the last block is calculated twice, the auther deems this ok for now
