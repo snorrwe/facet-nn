@@ -166,13 +166,11 @@ where
                 }
             }
             (Shape::Tensor(sa), Shape::Tensor(sb)) => {
-                // row size mismatch
                 if sa.last()? != sb.last()? {
+                    // row size mismatch
                     return None;
                 }
-                let num_rows_a: u32 = sa[..sa.len() - 1].iter().product();
-                let num_rows_b: u32 = sb[..sb.len() - 1].iter().product();
-                if num_rows_a != num_rows_b {
+                if self.values.len() != other.values.len() {
                     // number of rows mismatch
                     return None;
                 }

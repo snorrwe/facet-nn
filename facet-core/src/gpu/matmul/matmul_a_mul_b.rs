@@ -157,16 +157,12 @@ fn matmul_ab<'a>(
 ) -> Result<(), GpuNdArrayError> {
     let shape = [m, k, n];
 
-    let ((a_buffer, b_buffer), c_buffer) = rayon::join(
-        || {
-            (
-                matrix_buffer(Arc::clone(&device), false, in0.iter().cloned()),
-                matrix_buffer(Arc::clone(&device), false, in1.iter().cloned()),
-            )
-        },
-        || matrix_buffer(Arc::clone(&device), true, (0..out.len()).map(|_| 0.0f32)),
+    // in theory these can be done in parallel, but microbenchmarks suggest that it's not worth it
+    let (a_buffer, b_buffer, c_buffer) = (
+        matrix_buffer(Arc::clone(&device), false, in0.iter().copied()),
+        matrix_buffer(Arc::clone(&device), false, in1.iter().copied()),
+        matrix_buffer(Arc::clone(&device), true, (0..out.len()).map(|_| 0.0f32)),
     );
-
     // Descriptor sets
     let descriptor = PersistentDescriptorSet::start(Arc::clone(
         compute_pipeline.layout().descriptor_set_layout(0).unwrap(),
