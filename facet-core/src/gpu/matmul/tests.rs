@@ -1,4 +1,4 @@
-use super::matmul_a_mul_b::*;
+use super::gemm_ab::*;
 use crate::prelude::*;
 use rand::Rng;
 

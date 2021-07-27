@@ -3,4 +3,4 @@
 #[cfg(test)]
 mod tests;
 
-pub mod matmul_a_mul_b;
+pub mod gemm_ab;
