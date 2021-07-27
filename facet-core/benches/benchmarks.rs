@@ -27,44 +27,6 @@ fn _abc(size: u32) -> [NdArray<f32>; 3] {
     [a, b, c]
 }
 
-mod mat_mul {
-    use super::_abc;
-    use criterion::{criterion_group, BenchmarkId, Criterion};
-    use facet_core::gpu::matmul::gemm_ab::matmul_f32_impl;
-    use facet_core::ndarray::matrix::matmul_impl;
-
-    fn mat_mul(c: &mut Criterion) {
-        let mut g = c.benchmark_group("matrix multiplication");
-        for size in (16..=550).step_by(128) {
-            g.bench_with_input(
-                BenchmarkId::new("cpu", size),
-                &size,
-                move |bencher, &size| {
-                    let [a, b, mut c] = _abc(size);
-                    bencher.iter(move || {
-                        matmul_impl([size; 3], a.as_slice(), b.as_slice(), c.as_mut_slice())
-                            .unwrap()
-                    })
-                },
-            );
-            g.bench_with_input(
-                BenchmarkId::new("gpu", size),
-                &size,
-                move |bencher, &size| {
-                    let [a, b, mut c] = _abc(size);
-                    bencher.iter(move || {
-                        matmul_f32_impl([size; 3], a.as_slice(), b.as_slice(), c.as_mut_slice())
-                            .unwrap()
-                    })
-                },
-            );
-        }
-        g.finish();
-    }
-
-    criterion_group!(matrices, mat_mul);
-}
-
 mod dense_layer {
     use super::_random_mat;
     use criterion::{criterion_group, BenchmarkId, Criterion};
@@ -94,4 +56,4 @@ mod dense_layer {
     criterion_group!(dense_layer, backward);
 }
 
-criterion_main!(mat_mul::matrices, dense_layer::dense_layer);
+criterion_main!(dense_layer::dense_layer);

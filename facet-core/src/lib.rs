@@ -2,7 +2,6 @@
 //! ## Features
 //!
 //! - `rayon`: Enables CPU parallelism via the rayon crate
-//! - `gpu`: Enables GPU support
 //!
 use ndarray::{shape::Shape, NdArrayError};
 
@@ -12,17 +11,12 @@ pub mod loss;
 pub mod ndarray;
 pub mod prelude;
 
-#[cfg(feature = "gpu")]
-pub mod gpu;
-
 #[cfg(test)]
 mod tests;
 
 #[cfg(feature = "rayon")]
 pub use rayon;
 pub use smallvec;
-#[cfg(feature = "vulkano")]
-pub use vulkano;
 
 pub type DuResult<T> = Result<T, DuError>;
 
