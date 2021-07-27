@@ -50,6 +50,7 @@ use vulkano::{
     buffer::{BufferUsage, CpuAccessibleBuffer},
     command_buffer::AutoCommandBufferBuilder,
     descriptor::{descriptor_set::PersistentDescriptorSet, PipelineLayoutAbstract},
+    pipeline::ComputePipeline,
     sync::GpuFuture,
 };
 
@@ -60,15 +61,15 @@ pub const ROW_SPLIT_THRESHOLD: u32 = 512;
 
 lazy_static::lazy_static! {
     /// Pipeline for calculating C=A*B on the gpu
-    pub static ref AB_PIPE: Arc<vulkano::pipeline::ComputePipeline<PipelineLayout<Layout>>> = {
+    pub static ref AB_PIPE: Arc<ComputePipeline<PipelineLayout<Layout>>> = {
         let exc = EXECUTOR.as_ref().unwrap();
-        let device =Arc::clone(& exc.device);
+        let device = Arc::clone(& exc.device);
         let shader = match AB_SHADER.as_ref() {
             Some(shader) => shader,
             None => panic!("{}", GpuNdArrayError::NoShader),
         };
         Arc::new(
-            vulkano::pipeline::ComputePipeline::new(
+            ComputePipeline::new(
                 device,
                 &shader.main_entry_point(),
                 &(),
@@ -77,6 +78,7 @@ lazy_static::lazy_static! {
             .expect("failed to create compute pipeline"),
         )
     };
+
     pub static ref AB_SHADER: Option<Shader> = {
         EXECUTOR.as_ref().and_then(|exc|{ Shader::load(Arc::clone(&exc.device)).ok() })
     };
@@ -148,7 +150,7 @@ pub fn matmul_f32_impl<'a>(
 fn matmul_ab<'a>(
     exc: &super::super::GpuExecutor,
     device: Arc<Device>,
-    compute_pipeline: Arc<vulkano::pipeline::ComputePipeline<PipelineLayout<Layout>>>,
+    compute_pipeline: Arc<ComputePipeline<PipelineLayout<Layout>>>,
     // matmul params
     [m, k, n]: [u32; 3],
     in0: &'a [f32],
