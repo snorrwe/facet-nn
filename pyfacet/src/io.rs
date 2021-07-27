@@ -9,7 +9,7 @@ use std::{
 
 /// The column names in `labels` will be treated as row labels instead of data points.
 ///
-/// Column names in `meta` will be treated as metadata and ignored.
+/// Column names in `ignore` will be ignored.
 ///
 /// Returns a dict with the loaded data.
 ///
@@ -20,17 +20,17 @@ use std::{
 /// for label, row in zip(dataset["labels"], dataset["data"].iter_cols()):
 ///     print(label, row)
 /// ```
-#[pyfunction(labels = "[].to_vec()", meta = "[].to_vec()", ignore_error = "false")]
+#[pyfunction(labels = "[].to_vec()", ignore = "[].to_vec()", ignore_error = "false")]
 pub fn load_csv<'a, 'py>(
     py: Python<'py>,
     fname: &'a str,
     labels: Vec<&'a str>,
-    meta: Vec<&'a str>,
+    ignore: Vec<&'a str>,
     ignore_error: bool,
 ) -> PyResult<&'py PyDict> {
     let mut column_indices: HashMap<String, usize> = HashMap::new();
-    let mut label_columns = Vec::new();
-    let mut meta_columns = Vec::new();
+    let mut label_columns = Vec::with_capacity(1);
+    let mut ignored_columns = Vec::new();
     let mut columns: Vec<String> = Vec::new();
     let mut data = Data::new();
 
@@ -56,8 +56,8 @@ pub fn load_csv<'a, 'py>(
                 if labels.iter().any(|l| *l == item) {
                     label_columns.push(i);
                 }
-                if meta.iter().any(|l| *l == item) {
-                    meta_columns.push(i);
+                if ignore.iter().any(|l| *l == item) {
+                    ignored_columns.push(i);
                 }
             }
         }
@@ -72,8 +72,14 @@ pub fn load_csv<'a, 'py>(
         rows += 1;
         let mut skipit = label_columns.iter();
         let mut skipind = skipit.next();
+        let mut ignoreit = ignored_columns.iter();
+        let mut ignoreind = ignoreit.next();
         let mut rowlabels = Vec::new();
         for (i, item) in line.split(',').enumerate() {
+            if Some(&i) == ignoreind {
+                ignoreind = ignoreit.next();
+                continue;
+            }
             if Some(&i) == skipind {
                 skipind = skipit.next();
                 rowlabels.push(item.to_string());
