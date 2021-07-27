@@ -38,9 +38,7 @@ pub fn drelu_dz(inputs: &NdArray<f32>, dvalues: &NdArray<f32>) -> NdArray<f32> {
 fn _drelu(dx: &mut [f32], dz: &[f32]) {
     debug_assert_eq!(dx.len(), dz.len());
     for i in 0..dx.len() {
-        if dz[i] <= 0.0 {
-            dx[i] = 0.0;
-        }
+        dx[i] *= (dz[i] > 0.0) as i32 as f32;
     }
 }
 
