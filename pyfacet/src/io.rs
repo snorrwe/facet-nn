@@ -9,7 +9,7 @@ use std::{
 
 /// The column names in `labels` will be treated as row labels instead of data points.
 ///
-/// Column anmes in `meta` will be treated as metadata and ignored.
+/// Column names in `meta` will be treated as metadata and ignored.
 ///
 /// Returns a dict with the loaded data.
 ///
