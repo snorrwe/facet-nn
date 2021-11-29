@@ -7,7 +7,7 @@ fn _random_mat(cols: u32, rows: u32) -> NdArray<f32> {
     NdArray::new_with_values(
         [cols, rows],
         (0..cols as usize * rows as usize)
-            .map(|_| rng.gen_range(-1.0f32, 1.0))
+            .map(|_| rng.gen_range(-1.0f32..=1.0))
             .collect(),
     )
     .unwrap()
@@ -20,8 +20,8 @@ fn _abc(size: u32) -> [NdArray<f32>; 3] {
     let mut b = NdArray::new([size, size]);
     let c = NdArray::new([size, size]);
     for i in 0..size as usize * size as usize {
-        a.as_mut_slice()[i] = rng.gen_range(-1.2f32, 1.2);
-        b.as_mut_slice()[i] = rng.gen_range(-1.2f32, 1.2);
+        a.as_mut_slice()[i] = rng.gen_range(-1.2f32..=1.2);
+        b.as_mut_slice()[i] = rng.gen_range(-1.2f32..=1.2);
     }
 
     [a, b, c]

@@ -43,7 +43,7 @@ impl DenseLayer {
         let weights = NdArray::new_with_values(
             [inputs, outputs],
             (0..inputs as usize * outputs as usize)
-                .map(|_| rand::thread_rng().gen_range(-1., 1.))
+                .map(|_| rand::thread_rng().gen_range(-1.0f32..=1.))
                 .collect(),
         )
         .unwrap();
@@ -51,7 +51,7 @@ impl DenseLayer {
         let biases = NdArray::new_with_values(
             outputs,
             (0..outputs as usize)
-                .map(|_| rand::thread_rng().gen_range(-1., 1.))
+                .map(|_| rand::thread_rng().gen_range(-1.0f32..=1.))
                 .collect(),
         )
         .unwrap();

@@ -46,7 +46,7 @@ fn test_moving_average_matrix() {
 #[test]
 fn test_fast_inv_sqrt_accuracy_f32() {
     let mut rng = rand::thread_rng();
-    let inp: Data<f32> = (0..10000).map(|_| rng.gen_range(0.0, 10.0)).collect();
+    let inp: Data<f32> = (0..10000).map(|_| rng.gen_range(0.0..10.0)).collect();
 
     let inp = NdArray::new_with_values([2000, 5], inp).unwrap();
     let mut out = NdArray::new_default(0);
@@ -72,7 +72,7 @@ fn test_fast_inv_sqrt_accuracy_f32() {
 #[test]
 fn test_f32_vec_norm_accuracy() {
     let mut rng = rand::thread_rng();
-    let inp: Data<f32> = (0..10000).map(|_| rng.gen_range(0.0, 10.0)).collect();
+    let inp: Data<f32> = (0..10000).map(|_| rng.gen_range(0.0..10.0)).collect();
 
     let inp = NdArray::new_with_values([2000, 5], inp).unwrap();
     let mut out = NdArray::new_default(0);
@@ -120,7 +120,7 @@ fn test_veclen_tensor() {
 #[test]
 fn test_fast_inv_sqrt_accuracy_f64() {
     let mut rng = rand::thread_rng();
-    let inp: Data<f64> = (0..10000).map(|_| rng.gen_range(0.0, 10.0)).collect();
+    let inp: Data<f64> = (0..10000).map(|_| rng.gen_range(0.0..10.0)).collect();
 
     let inp = NdArray::new_with_values([2000, 5], inp).unwrap();
     let mut out = NdArray::new_default(0);
@@ -146,7 +146,7 @@ fn test_fast_inv_sqrt_accuracy_f64() {
 #[test]
 fn test_f64_vec_norm_accuracy() {
     let mut rng = rand::thread_rng();
-    let inp: Data<f64> = (0..10000).map(|_| rng.gen_range(0.0, 10.0)).collect();
+    let inp: Data<f64> = (0..10000).map(|_| rng.gen_range(0.0..10.0)).collect();
 
     let inp = NdArray::new_with_values([2000, 5], inp).unwrap();
     let mut out = NdArray::new_default(0);
